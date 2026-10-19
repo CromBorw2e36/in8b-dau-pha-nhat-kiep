@@ -288,7 +288,7 @@ function Auction({ s, act }) {
           const status = <><Ico i={si} size={11} />{st}</>;
           const body = x.sold ? <span className="sv"><Ico i={UI_I.ok} size={14} />Bạn đã mua với giá {fmtGold(x.price)}.</span> : (
             <>
-              <span className="sv"><Ico i={UI_I.members} size={14} />{x.lead === 'npc' ? `${x.rival} đang giữ giá, ${rivalMood(x)}` : `${x.rival} cũng đang để mắt`}</span>
+              <span className="sv"><Ico i={UI_I.members} size={14} />{x.lead === 'npc' ? `${x.rival} đang giữ giá, ${rivalMood(s, x)}` : `${x.rival} cũng đang để mắt`}</span>
               <span className="sv"><Ico i={UI_I.gold} size={14} />Ước giá trị {fmtGold(x.fair)} · giá hiện tại {fmtGold(x.price)}</span>
               <div className="c-act">
                 {[[1, 'Ra giá'], [1.25, 'Nâng mạnh'], [1.6, 'Áp đảo']].map(([k, n]) => {

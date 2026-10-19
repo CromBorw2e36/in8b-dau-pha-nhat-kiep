@@ -12,6 +12,7 @@ import { smithYearly, smithLv, armCost } from './forge.js';
 import { marketTick, consignTick, bidTick } from './exchange.js';
 import { auctionTick } from './auction.js';
 import { troopCount } from './army.js';
+import { emperorYearly, legacyYearly, readLegacy, clearLegacy, applyLegacy, unified } from './emperor.js';
 
 export const EV = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
 const NUM = ['', 'nhất', 'nhị', 'tam', 'tứ', 'ngũ', 'lục', 'thất', 'bát', 'cửu', 'thập'];
@@ -57,8 +58,11 @@ export function newLife() {
   if (special === 'Linh Hồn Thiên Sinh') s.soul = clamp(s.soul + 25);
   if (special === 'Thiên Độc Thể') { s.soul = clamp(s.soul + 8); s.luck = clamp(s.luck - 10); }
   // Truyền thừa: kiếp trước thành Đế và lập người kế thừa thì kiếp này được hưởng phúc ấm
+  const L = readLegacy();
   const prev = readBook()[0];
-  if (prev?.heir) {
+  let gifts = null;
+  if (L) { gifts = applyLegacy(s, L); clearLegacy(); }
+  else if (prev?.heir) {
     s.luck = clamp(s.luck + 8);
     s.gold += 2000 * (1 + origin.wealth);
     s.heirOf = prev.name;
@@ -69,7 +73,8 @@ export function newLife() {
     ? `Bạn là một đứa trẻ bị bỏ rơi ở Hắc Giác Vực, được một bà lão nhặt về nuôi và đặt tên là ${s.name}.`
     : `Bạn chào đời — ${origin.n.charAt(0).toLowerCase() + origin.n.slice(1)}. Phụ mẫu đặt tên bạn là ${s.name}.`;
   s.log.push({ a: 0, st: 'Thơ ấu', items: [{ t: intro, k: 'key' }] });
-  if (s.heirOf) s.log[0].items.push({ t: `Trong huyết mạch bạn còn vương chút đế uy của Đấu Đế ${s.heirOf}. Phúc ấm kiếp trước theo bạn vào đời.`, k: 'good' });
+  if (gifts) s.log[0].items.push({ t: `Kiếp trước, Đấu Đế ${s.heirOf} để lại ngọc giản truyền thừa: ${gifts.join(', ')}. Có món phải chờ bạn đủ cảnh giới mới giải phong.`, k: 'key' });
+  else if (s.heirOf) s.log[0].items.push({ t: `Trong huyết mạch bạn còn vương chút đế uy của Đấu Đế ${s.heirOf}. Phúc ấm kiếp trước theo bạn vào đời.`, k: 'good' });
   return s;
 }
 
@@ -162,6 +167,8 @@ function yearly(s, e, yrs) {
   consignTick(s, e);
   bidTick(s, e);
   auctionTick(s, e);
+  emperorYearly(s, e);
+  legacyYearly(s, e);
 
   if (s.started) {
     const before = realmLabel(s);
@@ -349,7 +356,10 @@ export function summary(s) {
   const r = realm(s);
   let title;
   const lands = landCount(s);
-  if (s.win && (s.land?.daxa || lands >= 24)) title = ['Đế chủ đại lục', `Đấu Đế ngự trị ${lands} vùng đất, từ Ô Thản Thành đến tận Hồn Giới. Vạn cổ không ai sánh bằng.`];
+  if (s.win && s.flags.ascend) title = ['Phá toái hư không', 'Đế cảnh viên mãn, phi thăng rời khỏi đại lục. Hậu thế chỉ còn biết tới bạn qua truyền thuyết.'];
+  else if (s.flags.unified && s.win) title = ['Đế chủ vạn cổ', `Đấu Đế nhất thống ${G.REGIONS.length} vùng đất. Thiên hạ chung một chủ, vạn cổ không ai sánh bằng.`];
+  else if (s.flags.unified) title = ['Nhất thống đại lục', `${s.sect.name} nắm trọn ${G.REGIONS.length} vùng đất từ Ô Thản Thành đến Hồn Giới.`];
+  else if (s.win && (s.land?.daxa || lands >= 24)) title = ['Đế chủ đại lục', `Đấu Đế ngự trị ${lands} vùng đất, từ Ô Thản Thành đến tận Hồn Giới. Vạn cổ không ai sánh bằng.`];
   else if (s.win) title = ['Đấu Đế', 'Vạn cổ nhất nhân. Tên bạn sẽ được khắc vào lịch sử Đấu Khí Đại Lục.'];
   else if (lands >= 10) title = ['Bá chủ đại lục', `${s.sect.name} thống trị ${lands} vùng đất. Nửa đại lục nghe lệnh bạn.`];
   else if (s.sect && lands >= 5) title = ['Khai sơn tổ sư', `${s.sect.name} truyền thừa muôn đời, hậu bối mãi khắc ghi tên bạn.`];
@@ -408,6 +418,7 @@ export function migrate(v) {
   for (const id of Object.keys(v.land)) if (!G.REGIONS.some((r) => r.id === id)) delete v.land[id];
   v.mkt ||= {}; v.cons ||= []; v.bids ||= []; v.exNew ||= 0; v.smithy ||= { lv: 0, prod: true }; v.arms ||= 0; v.orders ||= [];
   v.army ||= { n: {}, armed: 0, train: 0 }; v.stats ||= {};
+  if (v.R >= 11 && v.deSeen == null) v.deSeen = Math.floor((v.step || 0) / 10) * 10; // không báo lại đế pháp đã có
   if (v.sect) { for (const b of G.BUILDS) v.sect.b[b.id] ??= 0; v.sect.vault ||= { inv: {}, gear: [] }; }
   // Bản lưu cũ có chồng vượt giới hạn thì cắt về 9999
   for (const inv of [v.inv, v.sect?.vault?.inv]) if (inv) for (const k of Object.keys(inv)) inv[k] = Math.min(inv[k], G.STACK_MAX);

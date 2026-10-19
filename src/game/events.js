@@ -12,6 +12,7 @@ import {
 import { smithLv, armValue } from './forge.js';
 import { troopCount, armyPower, armyLoss } from './army.js';
 import { shock, itemFair } from './exchange.js';
+import { unified } from './emperor.js';
 
 // Vây thành bằng quân đội: chỉ tính quân và tông môn, bạn không ra trận nên không có rủi ro tính mạng
 const armySiegeP = (s) => clamp(1 / (1 + Math.exp(-(armyPower(s) + sectPower(s) + 10 - regionDef(s, region(s.tmp))) / 8)), 0.04, 0.92);
@@ -601,7 +602,7 @@ export const EVENTS = [
   },
   {
     id: 'raid', w: (s) => 0.5 + landCount(s) * 0.25, cd: 5, icon: '🔥',
-    if: (s) => !!s.sect && landCount(s) > 0,
+    if: (s) => !!s.sect && landCount(s) > 0 && !(unified(s) && s.flags.unified === 'peace'),
     prep: (s) => {
       const id = pick(landIds(s));
       const r = region(id);
@@ -824,11 +825,22 @@ export const EVENTS = [
     ],
   },
   {
+    id: 'unify', once: true, w: 50, icon: '🐉',
+    if: (s) => !!s.sect && landCount(s) >= G.REGIONS.length,
+    text: (s) => `Lá cờ cuối cùng cắm xuống. Từ Ô Thản Thành tới Hồn Giới, ${G.REGIONS.length} vùng đất đều nằm dưới trướng ${s.sect.name}. Chư hầu khắp đại lục quỳ rạp chờ một lời của bạn.`,
+    ch: [
+      { t: 'Đăng cơ Đế chủ, thiên hạ quy về một mối', fx: { fame: 30, tam: 8 }, do: (s) => { s.flags.unified = 'rule'; s.unifiedAt = s.age; },
+        log: (s) => `Bạn đăng cơ trên Thánh Đan Thành. ${s.sect.name} nhất thống đại lục! Thuế khóa gấp đôi, mỏ quặng thêm 50%, đệ tử tối đa +500 — chừng nào còn giữ trọn mọi vùng.`, k: 'key' },
+      { t: 'Phân phong chư hầu, giữ thiên hạ thái bình', fx: { fame: 20, tam: 15 }, do: (s) => { s.flags.unified = 'peace'; s.unifiedAt = s.age; },
+        log: 'Bạn chia đất cho các thế lực quy hàng cai quản. Đại lục thái bình: lãnh địa không còn bị tập kích, cùng mọi ân huệ của nhất thống.', k: 'key' },
+    ],
+  },
+  {
     id: 'heir', r: [11, 11], once: true, w: 3, icon: '📜',
     text: () => 'Đã thành Đế, bạn bắt đầu nghĩ tới hậu thế. Một đạo đế ấn để lại có thể che chở cho kiếp sau của chính bạn trên con đường luân hồi.',
     ch: [
       { t: 'Khắc đế ấn vào ngọc giản truyền thừa', fx: { tam: 6 }, do: (s) => { s.flags.heir = true; },
-        log: 'Bạn khắc đế ấn vào ngọc giản. Kiếp sau, phúc ấm này sẽ theo bạn vào đời (thêm khí vận và gia sản).', k: 'key' },
+        log: 'Bạn khắc đế ấn vào ngọc giản. Ngọc giản truyền thừa có thêm một ô: khi quy ẩn, bạn mang được thêm một món sang kiếp sau.', k: 'key' },
       { t: 'Đế giả không cần hậu thế', fx: { tam: 2 }, log: 'Bạn cười nhạt. Con đường của kiếp sau, để kiếp sau tự đi.' },
     ],
   },

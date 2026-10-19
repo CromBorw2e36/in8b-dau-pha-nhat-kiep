@@ -12,6 +12,7 @@ import {
   GiUpgrade, GiSparkles, GiBrokenShield, GiTombstone,
   GiPauseButton, GiPlayButton, GiFastForwardButton, GiHelp, GiCancel, GiPadlock, GiCheckMark, GiDeathSkull, GiRollingDices,
   GiTrophyCup, GiReceiveMoney, GiPayMoney, GiPriceTag, GiMountaintop, GiTreasureMap, GiWizardFace, GiTowerFlag,
+  GiImperialCrown, GiDragonHead, GiScrollQuill, GiPortal, GiDna1,
   GiAbacus, GiExitDoor, GiThreeFriends, GiTargetDummy, GiHammerDrop, GiFire, GiYinYang, GiOpenBook, GiSpellBook,
 } from 'react-icons/gi';
 
@@ -30,6 +31,9 @@ export const TROOP_I = { bo: GiSpears, cung: GiArcher, ky: GiCavalry, phap: GiWi
 export const EST_I = { tra: GiTeapot, dien: GiSprout, pho: GiStandingPotion, mo: GiGoldMine, dg: GiGavel };
 export const KIND_I = { key: GiScrollUnfurled, up: GiUpgrade, good: GiSparkles, bad: GiBrokenShield, money: GiTwoCoins, death: GiTombstone };
 export const MK_I = { core: GiCrystalGrowth, herb: GiHerbsBundle, ore: GiMetalBar, pill: GiMedicinePills, gear: GiBroadsword, arms: GiSpears };
+// Đế lộ: đế cảnh, nhất thống, truyền thừa, phi thăng
+export const EMP_I = { de: GiImperialCrown, unify: GiDragonHead, legacy: GiScrollQuill, ascend: GiPortal };
+export const LEG_I = { blood: GiDna1, gear: GiBroadsword, fire: GiFire, gong: GiOpenBook, gold: GiTwoCoins, sect: GiPagoda };
 export const UI_I = {
   pause: GiPauseButton, play: GiPlayButton, speed: GiFastForwardButton, help: GiHelp, close: GiCancel, lock: GiPadlock, ok: GiCheckMark,
   deadly: GiDeathSkull, dice: GiRollingDices, ach: GiTrophyCup, sell: GiReceiveMoney, buy: GiPayMoney, tag: GiPriceTag, retire: GiMountaintop,

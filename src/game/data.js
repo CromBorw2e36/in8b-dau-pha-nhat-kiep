@@ -17,8 +17,35 @@ G.REALMS = [
   { n: 'Đấu Tôn',     u: 'tinh', st: 9,  life: 700,  yps: 100, yrs: 4, bt: 0.15 },
   { n: 'Bán Thánh',   u: '',     st: 1,  life: 1000, yps: 1200, yrs: 5, bt: 0.08 },
   { n: 'Đấu Thánh',   u: 'tinh', st: 9,  life: 1600, yps: 250, yrs: 5, bt: 0.01 },
-  { n: 'Đấu Đế',      u: 'trọng', st: 100, life: Infinity, yps: 30, yrs: 5, bt: 0 },
+  { n: 'Đấu Đế',      u: 'trọng', st: 100, life: Infinity, yps: 600, yrs: 5, bt: 0 }, // tu chậm: mỗi 10 trọng mở một đế pháp
 ];
+
+// Đế cảnh tinh tu: mỗi 10 trọng Đấu Đế ngộ ra một đế pháp, hiệu quả cộng dồn
+// fx: power thế lực · mine sản lượng mỏ · enh tỷ lệ cường hóa · craft phẩm chất đồ rèn · def làm yếu địch khi chinh phạt
+//     guard phòng thủ · tax thuế lãnh địa · members đệ tử tối đa · auc hạ giá trần đối thủ đấu giá · regen hồi phục
+//     raid đệ tử xuất chinh · slot ô truyền thừa · ascend mở phi thăng
+G.DE_CANH = [
+  { at: 10,  n: 'Đế uy sơ hiện',     d: 'Thế lực khi chinh chiến +15.', fx: { power: 15 } },
+  { at: 20,  n: 'Đế pháp tự nhiên',  d: 'Sản lượng mỏ lãnh địa +50%.', fx: { mine: 0.5 } },
+  { at: 30,  n: 'Vạn pháp quy tông', d: 'Tỷ lệ cường hóa +10%, đồ rèn dễ ra phẩm chất cao.', fx: { enh: 0.1, craft: 1 } },
+  { at: 40,  n: 'Đế ngôn xuất pháp', d: 'Chinh phạt: phòng thủ của địch giảm 15%.', fx: { def: 0.15 } },
+  { at: 50,  n: 'Đế vực',            d: 'Phòng thủ lãnh địa +30. Ngọc giản truyền thừa thêm 1 ô.', fx: { guard: 30, slot: 1 } },
+  { at: 60,  n: 'Vạn tộc thần phục', d: 'Thuế lãnh địa +50%, đệ tử tối đa +300.', fx: { tax: 0.5, members: 300 } },
+  { at: 70,  n: 'Đế uy áp chế',      d: 'Đối thủ ở phòng đấu giá bỏ cuộc sớm hơn (giá trần −20%).', fx: { auc: 0.2 } },
+  { at: 80,  n: 'Thiên địa đồng thọ', d: 'Mỗi lượt tự hồi thể chất và tâm cảnh.', fx: { regen: 1 } },
+  { at: 90,  n: 'Bán bộ siêu thoát', d: 'Đệ tử xuất chinh gấp đôi, trang bị mang về tốt hơn.', fx: { raid: 1 } },
+  { at: 100, n: 'Đế cảnh viên mãn',  d: 'Mở «Phá toái hư không»: phi thăng thay vì quy ẩn. Truyền thừa thêm 1 ô.', fx: { slot: 1, ascend: 1 } },
+];
+// Truyền thừa: món mang sang kiếp sau khi Đấu Đế quy ẩn / phi thăng
+G.LEGACY = [
+  { id: 'blood', n: 'Đế huyết',        d: 'Kiếp sau tư chất tăng một bậc (tối đa Thiên tài), khí vận +8.' },
+  { id: 'gear',  n: 'Bản mệnh pháp bảo', d: 'Một món trang bị đang mặc, giữ nửa cấp cường hóa. Phong ấn tới khi đủ cảnh giới dùng bậc đó.' },
+  { id: 'fire',  n: 'Dị hỏa',          d: 'Một loại dị hỏa, tự thức tỉnh khi kiếp sau đạt Đấu Linh.' },
+  { id: 'gong',  n: 'Bí tịch',         d: 'Kiếp sau khởi đầu với công pháp và đấu kỹ Huyền giai (nếu kiếp này đã có).' },
+  { id: 'gold',  n: 'Đế khố',          d: 'Một phần tài sản (5%, tối đa 200k kim tệ) trao lại khi kiếp sau tròn 16 tuổi.' },
+  { id: 'sect',  n: 'Di sản tông môn', d: 'Khai tông lại cùng tên, công trình khởi đầu bằng 1/4 cấp cũ, phí khai tông giảm một nửa.' },
+];
+G.UNIFY_BONUS = { tax: 1, mine: 0.5, members: 500 }; // phần thưởng khi nắm trọn đại lục
 
 G.ROOTS = [
   { n: 'Kinh mạch bế tắc', m: 0.15, p: 3,   d: 'Đấu khí vừa ngưng tụ đã tiêu tán. Ai cũng gọi bạn là phế vật.' },

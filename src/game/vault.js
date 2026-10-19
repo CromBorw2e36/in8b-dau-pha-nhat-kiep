@@ -1,6 +1,7 @@
 import G from './data.js';
 import { R, rand, clamp, give, earn, effLv, parseKey, itemName, beastGrade, tierFor, gearName, gearScore, fmtItems, fmtGold } from './util.js';
 import { genGear, obtainGear, gearSell } from './gear.js';
+import { deFx, unifyFx } from './emperor.js';
 
 // ───── Kho tông môn: sản lượng mỏ lãnh địa và chiến lợi phẩm đệ tử đổ về đây ─────
 // Hàng trong kho không bị tự bán; lò rèn lấy nguyên liệu thẳng từ kho khi túi thiếu
@@ -31,7 +32,8 @@ function stockGear(s, it) {
 const ZONE_ORE = [2, 4, 6, 8, 9, 9];
 export const mineGrade = (s, r) => Math.max(ZONE_ORE[r.z] ?? 9, G.ORE_FOR_TIER[tierFor(s)]);
 // Hệ số Linh Khoáng Đường: +25% mỗi cấp hiệu quả
-export const mineK = (s) => 1 + effLv(s.sect?.b?.khoang || 0) * 0.25;
+// Đế pháp và nhất thống cộng thêm
+export const mineK = (s) => (1 + effLv(s.sect?.b?.khoang || 0) * 0.25) * (1 + deFx(s, 'mine') + unifyFx(s, 'mine'));
 // Sản lượng mỗi năm của một vùng: mọi vùng đều có mỏ, vùng quặng (item) cho gấp bội
 export function regionYield(s, r) {
   const dev = 1 + (s.land[r.id]?.dev || 0) / 25;
@@ -51,7 +53,7 @@ export const mineTotal = (s) => {
 };
 
 // Số chuyến xuất chinh mỗi năm: cứ 40 đệ tử một chuyến
-export const raidsPerYear = (s) => (s.sect ? Math.min(30, s.sect.members / 40) : 0);
+export const raidsPerYear = (s) => (s.sect ? Math.min(30, s.sect.members / 40) * (1 + deFx(s, 'raid')) : 0);
 
 export function vaultYearly(s, e, yrs) {
   if (!s.sect) return;
@@ -71,7 +73,7 @@ export function vaultYearly(s, e, yrs) {
     if (R() < 0.4) add('herb', bg, 1 + R() * 3);
     if (R() < 0.5) add('ore', G.ORE_FOR_TIER[tierFor(s)], 2 + R() * 4);
     if (R() < 0.03 * (1 + vo * 0.1)) {
-      const it = genGear(s, { boost: vo / 20 });
+      const it = genGear(s, { boost: vo / 20 + deFx(s, 'raid') * 1.5 });
       stockGear(s, it);
       gear.push(gearName(it));
     }

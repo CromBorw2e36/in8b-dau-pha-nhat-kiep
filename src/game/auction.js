@@ -2,6 +2,7 @@ import G from './data.js';
 import { R, rand, pick, clamp, give, spend, itemName, pillNeed, tierFor, gearName, fmtGold, upgradeGong, upgradeSkill, genName } from './util.js';
 import { genGear, obtainGear } from './gear.js';
 import { itemFair, gearFair } from './exchange.js';
+import { deFx } from './emperor.js';
 
 // ───── Phòng đấu giá Mễ Đặc Nhĩ: mở phiên định kỳ, bán hàng hiếm không có ở chợ ─────
 // s.auc = { at: lượt mở phiên, lots: [...] | null }. Phiên kéo dài G.AUCTION_OPEN lượt.
@@ -50,8 +51,10 @@ export const lotName = (s, x) => {
 // Bước giá tối thiểu 10%
 export const minBid = (x) => Math.round(x.price * (x.lead ? 1.1 : 1));
 // Gợi ý đối thủ còn hăng hay không (không lộ giá trần)
-export const rivalMood = (x) => {
-  const r = x.cap / x.price;
+// Giá trần thực tế: đế uy khiến đối thủ chùn tay
+const capOf = (s, x) => x.cap * (1 - deFx(s, 'auc'));
+export const rivalMood = (s, x) => {
+  const r = capOf(s, x) / x.price;
   return r > 1.4 ? 'còn rất hăng' : r > 1.12 ? 'vẫn bám theo' : r > 1 ? 'bắt đầu do dự' : 'sắp bỏ cuộc';
 };
 
@@ -70,8 +73,8 @@ export function placeAucBid(s, id, bid) {
   bid = Math.max(Math.round(bid), minBid(x));
   if (s.gold < bid) return 'Không đủ kim tệ để ra giá này.';
   // Đối thủ theo nếu giá trần còn cao hơn; nếu không, búa gõ
-  if (x.cap >= bid * 1.05) {
-    x.price = Math.min(x.cap, Math.round(bid * rand(1.05, 1.2)));
+  if (capOf(s, x) >= bid * 1.05) {
+    x.price = Math.min(Math.round(capOf(s, x)), Math.round(bid * rand(1.05, 1.2)));
     x.lead = 'npc';
     return `Bạn ra ${fmtGold(bid)}. ${x.rival} lập tức nâng lên ${fmtGold(x.price)}!`;
   }

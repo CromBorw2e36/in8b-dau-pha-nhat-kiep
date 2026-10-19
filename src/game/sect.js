@@ -2,6 +2,7 @@ import G from './data.js';
 import { R, rand, pick, clamp, cp, unit, earn, spend, lose, give, applyFx, pillNeed, beastGrade, fmtGold, lastEntry, effLv, levelPlan, tierFor } from './util.js';
 import { armyPower, armyLoss, armyYearly } from './army.js';
 import { vaultYearly, conquestLoot } from './vault.js';
+import { deFx, unifyFx } from './emperor.js';
 
 // ───── Tông môn ─────
 export const genSectName = () => pick(G.SECT_NAME.a) + ' ' + pick(G.SECT_NAME.b) + ' ' + pick(G.SECT_NAME.c);
@@ -17,12 +18,15 @@ export const landIds = (s) => Object.keys(s.land || {});
 export const landCount = (s) => landIds(s).length;
 export const region = (id) => G.REGIONS.find((r) => r.id === id);
 
+// Có di sản tông môn kiếp trước thì phí khai tông giảm một nửa
+export const foundCost = (s) => G.SECT_REQ.gold * (s.legacy?.sect ? 0.5 : 1);
+
 export function sectReqs(s) {
   const q = G.SECT_REQ;
   return [
     [`Cảnh giới ${G.REALMS[q.R].n} trở lên`, s.R >= q.R],
     [`Danh vọng ${q.fame} trở lên (hiện ${Math.round(s.fame)})`, s.fame >= q.fame],
-    [`${fmtGold(q.gold)} kim tệ để dựng sơn môn`, s.gold >= q.gold],
+    [`${fmtGold(foundCost(s))} kim tệ để dựng sơn môn${s.legacy?.sect ? ' (di sản giảm một nửa)' : ''}`, s.gold >= foundCost(s)],
     ['Không thuộc Hồn Điện', !s.evil],
   ];
 }
@@ -31,9 +35,15 @@ export const canFound = (s) => !s.sect && sectReqs(s).every((r) => r[1]);
 export function foundSect(s, name) {
   if (!canFound(s)) return null;
   name = (name || '').trim().slice(0, 28) || genSectName();
-  spend(s, 'Khai tông lập phái', G.SECT_REQ.gold);
+  spend(s, 'Khai tông lập phái', foundCost(s));
   const left = s.faction && s.faction !== name ? s.faction : null;
   s.sect = { name, at: s.age, members: 8 + s.disciples * 3, elders: 0, b: Object.fromEntries(G.BUILDS.map((b) => [b.id, 0])), vault: { inv: {}, gear: [] } };
+  // Di sản kiếp trước: công trình khởi đầu bằng 1/4 cấp cũ
+  const old = s.legacy?.sect;
+  if (old) {
+    for (const [k, v] of Object.entries(old.b)) if (k in s.sect.b) s.sect.b[k] = v;
+    delete s.legacy.sect;
+  }
   s.faction = name;
   s.fame += 3;
   const msg = `Bạn khai tông lập phái, dựng nên ${name}${left ? `, rời khỏi ${left}` : ''}. Tám phương chấn động!`;
@@ -41,7 +51,7 @@ export function foundSect(s, name) {
   return msg;
 }
 
-export const memberCap = (s) => !s.sect ? 0 : Math.round(30 + bEff(s, 'hien') * 40 + landCount(s) * 10 + s.fame);
+export const memberCap = (s) => !s.sect ? 0 : Math.round(30 + bEff(s, 'hien') * 40 + landCount(s) * 10 + s.fame + deFx(s, 'members') + unifyFx(s, 'members'));
 
 // Thực lực tông môn (cộng vào chiến lực khi chinh phạt / thủ thành)
 export function sectPower(s) {
@@ -50,8 +60,8 @@ export function sectPower(s) {
   return Math.sqrt(S.members) * (bLv(s, 'kinh') >= 3 ? 1 : 0.8) + S.elders * 2 + bEff(s, 'vo') * 2.5 + landCount(s) * 0.4 + Math.min(5, s.disciples);
 }
 // Càng bành trướng, các thế lực còn lại càng liên kết chống lại bạn
-export const regionDef = (s, r) => Math.round(r.def * (1 + 0.03 * landCount(s)));
-export const warPower = (s) => cp(s) + sectPower(s) + armyPower(s);
+export const regionDef = (s, r) => Math.round(r.def * (1 + 0.03 * landCount(s)) * (1 - deFx(s, 'def')));
+export const warPower = (s) => cp(s) + sectPower(s) + armyPower(s) + deFx(s, 'power');
 export const conquerP = (s, def, bonus = 0) => clamp(1 / (1 + Math.exp(-(warPower(s) - def) / 8)) + bonus, 0.04, 0.95);
 
 export function sectTier(s) {
@@ -87,7 +97,7 @@ export function develop(s, id, want = 1) {
   return `${region(id).n} khai phát lên cấp ${s.land[id].dev}.`;
 }
 // Mỗi cấp khai phát +8% thu nhập vùng đó
-export const regionInc = (s, id) => (region(id)?.inc || 0) * (1 + 0.08 * devLv(s, id));
+export const regionInc = (s, id) => (region(id)?.inc || 0) * (1 + 0.08 * devLv(s, id)) * (1 + deFx(s, 'tax') + unifyFx(s, 'tax'));
 export const landIncome = (s) => landIds(s).reduce((a, id) => a + regionInc(s, id), 0);
 
 const ADJ = {};
@@ -171,6 +181,6 @@ export function loseLand(s, id) {
 }
 
 // Phòng thủ: bản thân + đại trận + quân đội (trận pháp sư tính gấp đôi khi thủ)
-const defPower = (s) => cp(s) + sectPower(s) + armyPower(s, true);
+const defPower = (s) => cp(s) + sectPower(s) + armyPower(s, true) + deFx(s, 'power') + deFx(s, 'guard');
 export const defendP = (s, atk) => clamp(1 / (1 + Math.exp(-(defPower(s) + bEff(s, 'tran') * 7 - atk) / 8)), 0.05, 0.95);
 export const arrayP = (s, atk) => clamp(1 / (1 + Math.exp(-(sectPower(s) * 1.5 + bEff(s, 'tran') * 14 + cp(s) * 0.4 + armyPower(s, true) - atk) / 8)), 0.03, 0.9);

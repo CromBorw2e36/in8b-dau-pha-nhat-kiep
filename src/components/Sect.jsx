@@ -13,7 +13,7 @@ import { vaultOf, mineTotal, mineK, raidsPerYear, takeItem, takeGear, sellVaultG
 import { gearSell } from '../game/gear.js';
 import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy, Card } from './ui.jsx';
 import { GearCard, gradeQ } from './gearUi.jsx';
-import { Ico, NAV_I, UI_I, BUILD_I, TROOP_I, ITEM_I, SLOT_I } from './icons.jsx';
+import { Ico, NAV_I, UI_I, BUILD_I, TROOP_I, ITEM_I, SLOT_I, EMP_I } from './icons.jsx';
 import WorldMap, { RegionCard } from './WorldMap.jsx';
 
 // Hiệu quả ngắn gọn của từng công trình ở cấp hiện tại
@@ -53,7 +53,7 @@ export default function Sect({ s, bump, onClose, initTab }) {
 }
 
 function Found({ s, act }) {
-  const [name, setName] = useState(() => genSectName());
+  const [name, setName] = useState(() => s.legacy?.sect?.name || genSectName());
   return (
     <div className="found">
       <ul className="reqs">
@@ -210,6 +210,10 @@ function MapTab({ s, act, attack }) {
       <div className="wm-legend">
         <span><i className="own" />Của ta</span><span><i className="easy" />Dễ</span><span><i className="mid" />Cân sức</span><span><i className="hard" />Khó</span><span><i className="lock" />Chưa tới</span>
         <span className="muted">· kéo để di chuyển, cuộn hoặc chụm để phóng to</span>
+      </div>
+      <div className="prog">
+        <span className="sv"><Ico i={EMP_I.unify} size={14} />Nhất thống đại lục <b className="num">{landCount(s)}/{G.REGIONS.length}</b>{s.flags.unified ? ' · đã nhất thống' : ''}</span>
+        <div className="lv-track thick"><i style={{ width: `${(landCount(s) / G.REGIONS.length) * 100}%` }} /></div>
       </div>
       <RegionCard s={s} id={sel} onAttack={attack} act={act} />
     </div>

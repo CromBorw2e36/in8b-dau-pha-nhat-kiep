@@ -10,6 +10,7 @@ export const ACH = [
   { id: 'r7', g: 'Tông', n: 'Đấu Tông', d: 'Đạt Đấu Tông, có thể đạp không mà đi.', t: (s) => s.R >= 7 },
   { id: 'r10', g: 'Thánh', n: 'Thánh giả', d: 'Đạt Đấu Thánh.', t: (s) => s.R >= 10 },
   { id: 'r11', g: 'Đế', n: 'Vạn cổ nhất đế', d: 'Thành tựu Đấu Đế.', t: (s) => s.R >= 11 },
+  { id: 'de50', g: 'Vực', n: 'Đế vực', d: 'Đấu Đế 50 trọng.', t: (s) => s.R >= 11 && s.step >= 50 },
   { id: 'r11x', g: 'Cực', n: 'Đế cảnh viên mãn', d: 'Đấu Đế 100 trọng.', t: (s) => s.R >= 11 && s.step >= 100 },
   { id: 'waste', g: 'Nghịch', n: 'Phế vật nghịch thiên', d: 'Sinh ra với kinh mạch bế tắc mà vẫn đạt Đấu Vương.', t: (s) => s.root === 0 && s.R >= 5 },
   { id: 'fire3', g: 'Hỏa', n: 'Tam hỏa đồng thể', d: 'Thôn phệ ba loại dị hỏa.', t: (s) => s.fires.length >= 3 },
@@ -31,6 +32,8 @@ export const ACH = [
   { id: 'rich', g: 'Kim', n: 'Phú khả địch quốc', d: 'Có trong tay một tỷ kim tệ.', t: (s) => s.gold >= 1e9 },
   { id: 'hon', g: 'Hồn', n: 'Diệt Hồn', d: 'Ba lần đánh lui Hồn tộc xâm lấn.', t: (s) => s.stats?.honWins >= 3 },
   { id: 'old', g: 'Thọ', n: 'Ngàn năm', d: 'Sống tới 1000 tuổi.', t: (s) => s.age >= 1000 },
+  { id: 'ascend', g: 'Thăng', n: 'Phá toái hư không', d: 'Đế cảnh viên mãn rồi phi thăng.', t: (s) => !!s.flags?.ascend },
+  { id: 'legacy', g: 'Kế', n: 'Hậu duệ của Đế', d: 'Bắt đầu một kiếp với ngọc giản truyền thừa.', t: (s) => !!s.legacy },
   { id: 'heir', g: 'Truyền', n: 'Đế ấn truyền thừa', d: 'Để lại đế ấn cho kiếp sau.', t: (s) => !!s.flags?.heir },
 ];
 

@@ -1,18 +1,19 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import G from '../game/data.js';
 import { tick, choose, choicesOf, hints, save, EV, breakNow } from '../game/engine.js';
-import { lifeOf, realmLabel, canAlch, cp, retire, holding, holdLeft } from '../game/util.js';
+import { lifeOf, realmLabel, canAlch, cp, holding, holdLeft } from '../game/util.js';
 import { smithLv } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
 import { attackBlock, conquerP, regionDef, landCount } from '../game/sect.js';
 import { checkAch } from '../game/ach.js';
 import { Bar, Hints, Deltas, Sheet, StatHelp, Toasts, STAT_NAME } from './ui.jsx';
 import { Seal, EV_G, NUM_G } from './glyphs.jsx';
-import { Ico, STAT_I, NAV_I, FOCUS_I, KIND_I, UI_I } from './icons.jsx';
+import { Ico, EMP_I, STAT_I, NAV_I, FOCUS_I, KIND_I, UI_I } from './icons.jsx';
 import { stamp, burst, cascade, useCountUp } from './motion.js';
 import Bag from './Bag.jsx';
 import Sect from './Sect.jsx';
 import Market from './Market.jsx';
+import Emperor from './Emperor.jsx';
 import Forge from './Forge.jsx';
 
 // ms mỗi lượt. Mặc định chậm để kịp đọc; tốc độ được nhớ giữa các lần chơi.
@@ -40,7 +41,6 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
   const [major, setMajor] = useState(() => readKey(FEED_KEY, '0') === '1');
   const [open, setOpen] = useState({}); // nhóm năm bình lặng đã mở
   const [toasts, setToasts] = useState([]);
-  const [retireArm, setRetireArm] = useState(false);
   const feed = useRef(null);
   const seen = useRef(s.log.length);
   const goldRef = useCountUp(s.gold);
@@ -157,7 +157,9 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
             <div className="who-name">{s.name}</div>
             <div className="who-sub">{s.faction || 'Tán tu'}{s.evil ? ' · ma đạo' : ''}{s.heirOf ? ' · hậu duệ Đế' : ''}</div>
           </div>
-          <div className="realm-badge" data-r={s.R}><Ico i={UI_I.realm} size={14} /><span>{realmLabel(s)}</span></div>
+          {s.R >= 11
+            ? <button className="realm-badge" data-r={s.R} onClick={() => setPanel('emperor')} title="Đế lộ: đế cảnh, nhất thống, truyền thừa"><Ico i={EMP_I.de} size={14} /><span>{realmLabel(s)}</span></button>
+            : <div className="realm-badge" data-r={s.R}><Ico i={UI_I.realm} size={14} /><span>{realmLabel(s)}</span></div>}
         </div>
 
         <div className="meters">
@@ -197,9 +199,8 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
             {chips.map(([i, v, n, t]) => <span key={n} className="res" title={t}><Ico i={i} size={15} /><span className="r-name">{n}</span><b className="num">{v}</b></span>)}
           </div>
           {s.R >= 11 && !s.dead && (
-            <button className={'res retire' + (retireArm ? ' armed' : '')} title="Quy ẩn: khép lại kiếp này với danh hiệu Đấu Đế"
-              onClick={() => { if (!retireArm) { setRetireArm(true); setTimeout(() => setRetireArm(false), 3000); return; } retire(s); save(s); bump(); }}>
-              <Ico i={UI_I.retire} size={16} />{retireArm ? 'Chắc chắn?' : 'Quy ẩn'}
+            <button className="res retire" title="Chọn truyền thừa rồi quy ẩn, khép lại kiếp này" onClick={() => setPanel('emperor:truyen')}>
+              <Ico i={EMP_I.legacy} size={16} />Truyền thừa
             </button>
           )}
         </div>
@@ -280,6 +281,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
       {panel === 'market' && <Market s={s} bump={bump} initTab={demo?.tab} onClose={() => setPanel(null)} />}
       {panel === 'sect' && <Sect s={s} bump={bump} initTab={demo?.tab} onClose={() => setPanel(null)} />}
       {panel === 'help' && <StatHelp onClose={() => setPanel(null)} />}
+      {panel?.startsWith('emperor') && <Emperor s={s} bump={bump} initTab={panel.split(':')[1] || demo?.tab} onClose={() => setPanel(null)} />}
 
       {showFocus && !result && !peek && (
         <Sheet onClose={s.needFocus ? undefined : () => setFocusOpen(false)} onPeek={s.needFocus ? () => setPeek(true) : undefined}>

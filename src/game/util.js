@@ -175,9 +175,14 @@ function saveByArtifact(s, cause) {
 }
 
 // Đấu Đế tự quy ẩn: kết thúc kiếp này với danh hiệu Đấu Đế
-export function retire(s) {
+// ascend: Đế cảnh viên mãn, phá toái hư không phi thăng
+export function retire(s, ascend = false) {
   if (s.R < 11 || s.dead) return;
   const yrs = s.age - (s.emperorAt ?? s.age);
+  if (ascend) {
+    s.flags.ascend = true;
+    return die(s, `Đế cảnh viên mãn sau ${yrs} năm ngự trị, phá toái hư không phi thăng — đại lục từ đây chỉ còn truyền thuyết`, true);
+  }
   die(s, yrs > 0 ? `Ngự trị đại lục ${yrs} năm, Đấu Đế quy ẩn ngoài thiên ngoại — vạn cổ nhất nhân` : 'Thành tựu Đấu Đế rồi quy ẩn ngoài thiên ngoại — vạn cổ nhất nhân', true);
 }
 

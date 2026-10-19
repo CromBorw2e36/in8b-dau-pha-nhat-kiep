@@ -2,6 +2,7 @@ import G from './data.js';
 import { R, rand, pick, clamp, unit, earn, spend, give, countOf, tierFor, gearName, fmtGold, itemName, levelPlan, mkIdx } from './util.js';
 import { genGear, obtainGear } from './gear.js';
 import { vaultCount, takeFromVault } from './vault.js';
+import { deFx } from './emperor.js';
 
 // ───── Luyện Khí Phòng (lò rèn riêng), cấp 0..100 ─────
 export const smithLv = (s) => s.smithy?.lv || 0;
@@ -49,7 +50,7 @@ export const canCraft = (s, tier) => {
   return tier <= craftTierCap(s) && s.gold >= c.gold && hasMat(s, c.ore, 'ore') && hasMat(s, c.core, 'core');
 };
 // Thêm trọng số phẩm chất cao: cấp lò, dị hỏa, linh hồn
-export const craftBoost = (s) => smithLv(s) / 20 + s.fires.length * 0.4 + Math.max(0, (s.soul - 50) / 50);
+export const craftBoost = (s) => smithLv(s) / 20 + s.fires.length * 0.4 + Math.max(0, (s.soul - 50) / 50) + deFx(s, 'craft');
 
 export function craft(s, sl, tier) {
   if (!canCraft(s, tier)) return 'Thiếu nguyên liệu hoặc kim tệ.';
@@ -69,7 +70,7 @@ export function enhanceCost(it) {
   return { gold: Math.round(G.GEAR_PRICE[it.tier] * 0.05 * Math.pow(1 + en, 1.3)), ore: [oreG(it.tier), 1 + Math.floor(en / 8)] };
 }
 // Dưới +10 chắc chắn thành công, sau đó giảm dần; lò rèn cấp cao bù lại
-export const enhanceP = (s, it) => ((it.en || 0) < 10 ? 1 : clamp(1 - ((it.en || 0) - 9) * 0.011 + smithLv(s) * 0.003, 0.2, 1));
+export const enhanceP = (s, it) => ((it.en || 0) < 10 ? 1 : clamp(1 - ((it.en || 0) - 9) * 0.011 + smithLv(s) * 0.003 + deFx(s, 'enh'), 0.2, 1));
 export const findGear = (s, id) => Object.values(s.gear).find((x) => x?.id === id) || s.armory.find((x) => x.id === id);
 
 export function enhance(s, id) {
