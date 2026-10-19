@@ -164,7 +164,7 @@ Khi tu vi đầy bậc cuối, sự kiện **Bình cảnh** buộc bạn chọn:
 
 - **Xung kích ngay**: tỷ lệ = tỷ lệ cơ bản + bonus từ tâm cảnh, linh hồn, khí vận, thiên phú *Kiên nghị*, số lần đã củng cố.
 - **Uống / mua Phá Chướng Đan** rồi xung kích: tối đa +20% nếu đan đúng phẩm.
-- **Củng cố căn cơ**: lùi lại một chút, lần sau thêm +5% (cộng dồn tối đa 3 lần).
+- **Củng cố căn cơ (3 lượt)** hoặc **Bế quan dài hạn (8 lượt)**: tạm gác đột phá. Trong thời gian này game không ép đột phá, bạn vẫn lịch luyện và gặp sự kiện như thường; tu vi dư tích thành căn cơ (tối đa +10% tỷ lệ). Mỗi lần củng cố thêm +5% (cộng dồn tối đa 3 lần). Muốn xung kích sớm, bấm nút **Xung kích** hiện dưới thanh đấu khí.
 
 Thất bại thì tu vi bị phản phệ. Từ Đấu Tông trở lên có thể chết. Từ Bán Thánh trở lên mất sạch tích lũy. Đột phá thành công thì tăng thọ nguyên, danh vọng, và có thể được gia tộc hay tông môn ban thưởng.
 
@@ -265,7 +265,7 @@ Mở bằng nút **Tông môn**. **Điều kiện khai tông:** cảnh giới Đ
 
 ### Bản đồ & chinh phạt lãnh địa
 
-**Tông môn → Bản đồ** là bản đồ đại lục vẽ tay với **28 vùng đất, 6 khu vực**. Bấm vào một vùng để xem chi tiết và xuất binh. Viền màu cho biết độ khó (xanh dễ, vàng cân sức, đỏ khó, nét đứt là chưa tới được), vùng đã chiếm tô đỏ, đường giữa hai lãnh địa của bạn được nối liền. Trên điện thoại, bản đồ cuộn ngang được.
+**Tông môn → Bản đồ** là một **sa bàn** của đại lục với **28 vùng đất, 6 khu vực**. Địa hình được vẽ bằng canvas: bờ biển dát vàng, núi đổ bóng nổi khối, cồn cát Tây Bắc, rừng rậm Thú Vực, núi tuyết Cổ Giới, hư không Hồn Giới. Mỗi vùng có ranh giới lãnh thổ; đất của bạn phủ son viền vàng, khu vực chưa đủ cảnh giới bị sương mù che. Thành trì có icon theo khu vực, viền màu cho biết độ khó (xanh dễ, vàng cân sức, đỏ khó, nét đứt là chưa tới được). Kéo để di chuyển, lăn chuột hoặc chụm hai ngón để phóng to, có nút + / − / xem toàn bộ. Trên máy tính, sa bàn nằm bên trái và thẻ vùng đất bên phải. Địa hình dựng một lần theo từng đợt nhỏ (lần đầu khoảng nửa giây) rồi giữ trong bộ nhớ ([`mapTerrain.js`](src/components/mapTerrain.js)).
 
 | Khu vực | Mở từ | Vùng (thực lực trấn thủ) |
 |---|---|---|
@@ -347,7 +347,8 @@ Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường 
     │   ├── Forge.jsx        # lò rèn: chế tạo, cường hóa, xưởng quân dụng
     │   ├── Market.jsx       # chợ, sàn giao dịch, sản nghiệp, thu chi
     │   ├── Sect.jsx         # tông môn, công trình, quân đội, bản đồ
-    │   ├── WorldMap.jsx     # bản đồ đại lục (SVG) và thẻ vùng đất
+    │   ├── WorldMap.jsx     # sa bàn: kéo, phóng to, thành trì, thẻ vùng đất
+    │   ├── mapTerrain.js    # vẽ địa hình và lớp lãnh thổ bằng canvas
     │   ├── End.jsx          # bia ký cuối đời
     │   ├── Backup.jsx       # sao lưu / khôi phục
     │   ├── ui.jsx           # Bar, Sheet, Tabs, LevelBuy, GearRow, Toasts, LifeChart…

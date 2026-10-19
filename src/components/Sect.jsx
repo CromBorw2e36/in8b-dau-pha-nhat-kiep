@@ -142,12 +142,13 @@ function MapTab({ s, act, attack }) {
   const first = G.REGIONS.find((r) => !attackBlock(s, r)) || G.REGIONS.find((r) => !s.land[r.id]) || G.REGIONS[0];
   const [sel, setSel] = useState(first.id);
   return (
-    <>
+    <div className="map-layout">
       <WorldMap s={s} sel={sel} onSel={setSel} />
       <div className="wm-legend">
         <span><i className="own" />Của ta</span><span><i className="easy" />Dễ</span><span><i className="mid" />Cân sức</span><span><i className="hard" />Khó</span><span><i className="lock" />Chưa tới</span>
+        <span className="muted">· kéo để di chuyển, cuộn hoặc chụm để phóng to</span>
       </div>
       <RegionCard s={s} id={sel} onAttack={attack} act={act} />
-    </>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import G from './data.js';
 import {
   R, rand, pick, wpick, clamp, realm, nextRealm, lifeOf, unit, hasTrait, canAlch, realmLabel,
-  winP, peer, cp, btChance, advance, btFail, upgradeSkill, upgradeGong, genName, pronoun,
+  winP, peer, cp, btChance, advance, btFail, hold, upgradeSkill, upgradeGong, genName, pronoun,
   beastGrade, pillNeed, priceOf, give, peekBest, takeBest, spend, earn, lose, itemName, fmtGold, tierFor,
 } from './util.js';
 import { genMissions, missionChoice, pillPower } from './economy.js';
@@ -50,9 +50,12 @@ export const EVENTS = [
         roll: (s) => btChance(s, 0.2),
         ok: { do: (s) => { spend(s, `Mua ${itemName('pha', pillNeed(s)).toLowerCase()}`, Math.round(priceOf('pha', pillNeed(s)) * 1.15)); advance(s); }, log: advLog, k: 'key' },
         fail: { fx: { body: -5, tam: -4 }, do: (s) => { spend(s, `Mua ${itemName('pha', pillNeed(s)).toLowerCase()}`, Math.round(priceOf('pha', pillNeed(s)) * 1.15)); btFail(s); }, log: 'Tiền mất, dược lực tan hết mà bình cảnh vẫn không suy suyển.' } },
-      { t: 'Củng cố căn cơ thêm một thời gian', fx: { tam: 3 },
-        do: (s) => { s.wait = Math.min(3, (s.wait || 0) + 1); s.ready = false; s.qi = 88; },
-        log: 'Bạn quyết định không vội vàng, tiếp tục mài giũa căn cơ.' },
+      { t: 'Củng cố căn cơ một thời gian (3 lượt)', sub: 'Không bị ép đột phá, vẫn lịch luyện và gặp kỳ ngộ. Tu vi dư tích thành căn cơ.', fx: { tam: 3 },
+        do: (s) => hold(s, 3),
+        log: 'Bạn quyết định không vội vàng, tiếp tục mài giũa căn cơ. (Muốn xung kích sớm, bấm «Xung kích» trên thanh đấu khí.)' },
+      { t: 'Bế quan dài hạn (8 lượt)', sub: 'Gác chuyện đột phá lâu hơn để làm việc khác. Căn cơ càng vững.', fx: { tam: 6 },
+        do: (s) => hold(s, 8),
+        log: 'Bạn gác lại bình cảnh, để đạo tâm tự nhiên chín muồi. (Có thể xung kích bất cứ lúc nào bằng nút «Xung kích».)' },
     ],
   },
   {

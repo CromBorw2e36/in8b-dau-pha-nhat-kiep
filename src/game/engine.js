@@ -3,7 +3,7 @@ import { EVENTS, MOMENTS, FILLERS } from './events.js';
 import {
   R, rand, pick, wpick, clamp, realm, lifeOf, unit, hasAttr, hasTrait, trait, lastEntry, focusObj,
   canAlch, realmLabel, level, die, addQi, applyFx, snapshot, diff, genName, upgradeSkill,
-  give, earn, pillNeed, priceOf, parseKey, fmtGold, gearSum, gearName, dodgeMult,
+  give, earn, pillNeed, priceOf, parseKey, fmtGold, gearSum, gearName, dodgeMult, holding,
 } from './util.js';
 import { economy, cultivationPill, moneyLine, sellPrice } from './economy.js';
 import { estatesYearly, estateValue, gearSell } from './gear.js';
@@ -248,7 +248,7 @@ export function tick(s) {
   if (s.started && !s.focus) s.needFocus = true;
 
   // Sự kiện bắt buộc (đột phá được ưu tiên hơn bảng nhiệm vụ)
-  if (s.ready && s.pending !== 'breakthrough') setPending(s, EV.breakthrough);
+  if (s.ready && s.pending !== 'breakthrough' && !holding(s)) setPending(s, EV.breakthrough);
   else if (s.pending) { /* đã có bảng nhiệm vụ */ }
   else if (s.flags.duel && s.age >= s.flags.duel) { delete s.flags.duel; setPending(s, EV.duel); }
   else if (s.started && !s.seen.lifeend && lifeOf(s) - s.age <= yrs * 3 && s.R < 10) setPending(s, EV.lifeend);
@@ -285,6 +285,13 @@ export function tick(s) {
   const ml = moneyLine(s);
   if (ml) e.items.push({ t: ml, k: 'money' });
   s.hist.push([s.age, level(s)]);
+}
+
+// Người chơi tự chọn lúc xung kích trong thời gian củng cố
+export function breakNow(s) {
+  if (!s.ready || s.pending || s.dead || s.needFocus) return false;
+  setPending(s, EV.breakthrough);
+  return true;
 }
 
 export const choicesOf = (s) => {

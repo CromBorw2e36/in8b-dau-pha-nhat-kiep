@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import G from '../game/data.js';
-import { tick, choose, choicesOf, hints, save, EV } from '../game/engine.js';
-import { lifeOf, realmLabel, canAlch, cp, retire } from '../game/util.js';
+import { tick, choose, choicesOf, hints, save, EV, breakNow } from '../game/engine.js';
+import { lifeOf, realmLabel, canAlch, cp, retire, holding, holdLeft } from '../game/util.js';
 import { smithLv } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
 import { attackBlock, conquerP, regionDef, landCount } from '../game/sect.js';
@@ -170,8 +170,13 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
             <div className={'meter' + (s.ready ? ' hot' : '')} title="Tiến độ tu luyện">
               <Ico i={STAT_I.qi} size={16} className="m-ico" /><span className="m-name">Đấu khí</span>
               <Bar value={topped ? 100 : s.qi} tone="var(--qi)" thin />
-              <span className="m-val num">{topped ? 'Viên mãn' : s.ready ? 'Bình cảnh' : `${Math.floor(s.qi)}%`}</span>
+              <span className="m-val num">{topped ? 'Viên mãn' : s.ready ? (holding(s) ? `Củng cố · ${holdLeft(s)} lượt` : 'Bình cảnh') : `${Math.floor(s.qi)}%`}</span>
             </div>
+          )}
+          {s.ready && holding(s) && !s.dead && (
+            <button className="break-btn" onClick={() => { if (breakNow(s)) { save(s); bump(); } }} title="Xung kích cảnh giới mới ngay bây giờ">
+              <Ico i={UI_I.up} size={16} /> Xung kích {G.REALMS[s.R + 1]?.n}
+            </button>
           )}
         </div>
 

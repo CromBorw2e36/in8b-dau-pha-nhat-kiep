@@ -155,7 +155,11 @@ export function addQi(s, v) {
   const st = realm(s).st;
   while (s.qi >= 100) {
     if (s.step < st) { s.step++; s.qi -= 100; }
-    else { s.qi = 100; s.ready = s.R < 11; break; } // Đấu Đế 100 trọng là tận cùng
+    else {
+      // Đang củng cố: tu vi tràn ra không mất mà tích thành căn cơ (tối đa +10% tỷ lệ đột phá)
+      if (holding(s)) s.base = Math.min(0.1, (s.base || 0) + ((s.qi - 100) / 100) * 0.02);
+      s.qi = 100; s.ready = s.R < 11; break; // Đấu Đế 100 trọng là tận cùng
+    }
   }
   while (s.qi < 0) {
     if (s.step > 1) { s.step--; s.qi += 100; }
@@ -165,9 +169,20 @@ export function addQi(s, v) {
   return s.step - before;
 }
 
+// Đang trong thời gian củng cố căn cơ (tạm gác đột phá)
+export const holding = (s) => (s.hold || 0) > s.t;
+export const holdLeft = (s) => Math.max(0, (s.hold || 0) - s.t);
+// Củng cố n lượt: không bị ép đột phá, vẫn lịch luyện và gặp sự kiện bình thường
+export function hold(s, n) {
+  s.wait = Math.min(3, (s.wait || 0) + 1);
+  s.hold = s.t + n;
+  s.qi = 100;
+  s.ready = true;
+}
+
 export function btChance(s, bonus = 0) {
   const ring = gearSum(s, 'bt');
-  let extra = bonus + ring + (s.tam - 50) / 200 + (s.soul - 50) / 300 + (s.luck - 50) / 400 + (s.wait || 0) * 0.05;
+  let extra = bonus + ring + (s.tam - 50) / 200 + (s.soul - 50) / 300 + (s.luck - 50) / 400 + (s.wait || 0) * 0.05 + (s.base || 0);
   if (hasTrait(s, 'firm')) extra += 0.03;
   // Đấu Thánh → Đấu Đế gần như bất khả: chỉ dị hỏa và công pháp Thiên giai mới giúp được chút ít
   if (s.R >= 10) return 0.001 + Math.min(0.016, s.fires.length * 0.008 + (s.gong === 4 ? 0.006 : 0) + bonus * 0.05 + ring * 0.05);
@@ -180,6 +195,8 @@ export function advance(s) {
   s.qi = 0;
   s.ready = false;
   s.wait = 0;
+  s.hold = 0;
+  s.base = 0;
   s.fame += s.R >= 5 ? s.R - 3 : 0;
   // Thành Đế không kết thúc kiếp này: thọ nguyên vô tận, tiếp tục xây tông môn, chinh phạt đến khi tự quy ẩn
   if (s.R >= 11) {
@@ -209,6 +226,8 @@ export function btFail(s) {
   if (s.R >= 10) s.step = Math.max(1, s.step - 3); // Đấu Thánh thất bại: tổn hại căn cơ
   s.ready = false;
   s.wait = 0;
+  s.hold = 0;
+  s.base = 0;
 }
 
 const SNAP = ['body', 'soul', 'tam', 'luck', 'gold'];

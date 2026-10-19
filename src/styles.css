@@ -269,6 +269,11 @@ b { font-weight: 700; }
 .meter .bar { flex: 1; }
 .m-ico { color: var(--life); }
 .m-name { font: 600 12.5px var(--ui); color: var(--ink-soft); white-space: nowrap; }
+.break-btn {
+  grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; border-radius: 10px;
+  border: 1px solid #e9845f; background: linear-gradient(180deg, #d4533a, #a22e1c); color: #fff3df; font: 700 14px var(--ui);
+  box-shadow: 0 0 14px rgba(224, 96, 42, 0.35); animation: arm 1.4s ease-in-out infinite;
+}
 .meter:nth-child(2) .m-ico { color: #f08a3c; }
 .meter.hot .m-ico { color: var(--red-hi); animation: arm 1s infinite; }
 .m-val { font-size: 13px; color: var(--ink); white-space: nowrap; }
@@ -645,40 +650,52 @@ b { font-weight: 700; }
 .name-row { display: flex; gap: 8px; }
 .name-row input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--edge-2); background: rgba(0, 0, 0, 0.35); color: var(--gold-hi); font: 700 16px var(--title); }
 
-/* Bản đồ */
-.world-wrap { overflow-x: auto; overscroll-behavior-x: contain; border: 1px solid var(--edge-2); border-radius: 12px; background: radial-gradient(ellipse at 50% 40%, #241812, #0f0a07); scrollbar-width: thin; }
-.world { width: 100%; min-width: 600px; height: auto; display: block; touch-action: pan-x pan-y; }
-.wm-zone-edge { fill: none; stroke: var(--edge-2); stroke-width: 64; stroke-linejoin: round; opacity: 0.6; }
-.wm-zone-fill { stroke-width: 62; stroke-linejoin: round; }
-.wm-zone .wm-zone-fill { fill: var(--zone); stroke: var(--zone); }
-.z-gm { --zone: color-mix(in srgb, var(--panel-2) 82%, var(--gold)); }
-.z-tb { --zone: color-mix(in srgb, var(--panel-2) 80%, var(--life)); }
-.z-tc { --zone: color-mix(in srgb, var(--panel-2) 80%, var(--red)); }
-.z-tv { --zone: color-mix(in srgb, var(--panel-2) 78%, var(--jade)); }
-.z-cg { --zone: color-mix(in srgb, var(--panel-2) 78%, var(--tam)); }
-.z-hg { --zone: color-mix(in srgb, var(--panel-2) 72%, var(--soul)); }
-.wm-zone.closed { opacity: 0.5; }
-.wm-zone-label { font: 700 10.5px var(--ui); letter-spacing: 0.16em; fill: var(--gold); text-transform: uppercase; opacity: 0.8; }
-.wm-road { stroke: var(--ink-dim); stroke-width: 1.1; stroke-dasharray: 3 4; opacity: 0.7; }
-.wm-road.own { stroke: var(--red-hi); stroke-dasharray: none; stroke-width: 2.2; opacity: 0.9; }
+/* Sa bàn */
+.map-layout { display: flex; flex-direction: column; gap: 10px; }
+.world-wrap {
+  position: relative; overflow: hidden; width: 100%; aspect-ratio: 640 / 500; border-radius: 14px; border: 1px solid var(--edge-3);
+  background: radial-gradient(ellipse at 50% 45%, #1b2a2b, #0a1012); touch-action: none; cursor: grab; user-select: none;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.world-wrap:active { cursor: grabbing; }
+.world-stage { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+.world-cv { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.5s; }
+.world-cv.on { opacity: 1; }
+.world { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.world-loading { position: absolute; inset: 0; display: grid; place-items: center; font: italic 14px var(--ui); color: var(--gold); }
+.world-ctrl { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.world-ctrl button {
+  width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font: 700 18px var(--ui); color: var(--gold-hi);
+  background: rgba(15, 10, 7, 0.82); border: 1px solid var(--edge-3); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.world-ctrl button:hover { background: var(--panel-3); }
+.wm-zone-label { font: 700 10px var(--ui); letter-spacing: 0.2em; fill: var(--gold-hi); text-transform: uppercase; paint-order: stroke; stroke: rgba(0, 0, 0, 0.7); stroke-width: 3px; pointer-events: none; }
+.wm-zone-label.closed { fill: var(--ink-dim); }
+.wm-road { fill: none; stroke: rgba(244, 213, 143, 0.5); stroke-width: 1.2; stroke-dasharray: 2 3; stroke-linecap: round; }
+.wm-road.own { stroke: var(--red-hi); stroke-dasharray: none; stroke-width: 2.2; }
 .wm-node { cursor: pointer; outline: none; }
 .wm-hit { fill: transparent; }
-.wm-dot { fill: var(--panel); stroke: var(--ink-dim); stroke-width: 2.2; transition: r 0.15s; }
-.wm-node.easy .wm-dot { stroke: var(--good); stroke-width: 2.8; }
-.wm-node.mid .wm-dot { stroke: var(--gold); stroke-width: 2.8; }
-.wm-node.hard .wm-dot { stroke: var(--bad); stroke-width: 2.8; }
-.wm-node.lock .wm-dot { stroke: var(--ink-dim); stroke-dasharray: 2 2; fill: var(--panel-2); }
-.wm-node.lock .wm-label { fill: var(--ink-dim); }
-.wm-node.own .wm-dot { fill: var(--red); stroke: var(--gold-hi); }
-.wm-node:hover .wm-dot, .wm-node:focus-visible .wm-dot { r: 10.5; }
-.wm-ring { fill: none; stroke: var(--gold-hi); stroke-width: 1.6; animation: wm-pulse 1.6s ease-in-out infinite; }
-@keyframes wm-pulse { 50% { stroke-opacity: 0.25; } }
-.wm-flag { font: 700 7.5px var(--title); fill: #fff3df; pointer-events: none; }
-.wm-label { font: 600 11px var(--ui); fill: var(--ink); paint-order: stroke; stroke: #0f0a07; stroke-width: 3.5px; stroke-linejoin: round; pointer-events: none; }
-.wm-node.own .wm-label, .wm-node.sel .wm-label { fill: var(--gold-hi); font-weight: 700; }
+.wm-plate { fill: rgba(15, 10, 7, 0.88); stroke: var(--ink-dim); stroke-width: 1.6; transition: r 0.15s; }
+.wm-ico { color: var(--ink-soft); pointer-events: none; }
+.wm-node.easy .wm-plate { stroke: var(--good); stroke-width: 2.2; }
+.wm-node.easy .wm-ico { color: var(--good); }
+.wm-node.mid .wm-plate { stroke: var(--gold); stroke-width: 2.2; }
+.wm-node.mid .wm-ico { color: var(--gold-hi); }
+.wm-node.hard .wm-plate { stroke: var(--bad); stroke-width: 2.2; }
+.wm-node.hard .wm-ico { color: var(--bad); }
+.wm-node.lock { opacity: 0.75; }
+.wm-node.lock .wm-plate { stroke-dasharray: 2 2; }
+.wm-node.own .wm-plate { fill: var(--red); stroke: var(--gold-hi); stroke-width: 2; }
+.wm-node.own .wm-ico { color: #fff3df; }
+.wm-node:hover .wm-plate, .wm-node:focus-visible .wm-plate { r: 13; }
+.wm-ring { fill: none; stroke: var(--gold-hi); stroke-width: 1.8; animation: wm-pulse 1.6s ease-in-out infinite; }
+@keyframes wm-pulse { 50% { stroke-opacity: 0.2; } }
+.wm-label { font: 700 10.5px var(--ui); fill: var(--ink); paint-order: stroke; stroke: rgba(10, 7, 5, 0.92); stroke-width: 3.5px; stroke-linejoin: round; pointer-events: none; }
+.wm-node.own .wm-label, .wm-node.sel .wm-label { fill: var(--gold-hi); }
+.wm-node.lock .wm-label { fill: var(--ink-soft); }
 .wm-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--ink-soft); font: 13px var(--ui); }
 .wm-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.wm-legend i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--ink-dim); background: var(--panel); }
+.wm-legend i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--ink-dim); background: var(--panel); }
 .wm-legend i.own { background: var(--red); border-color: var(--gold-hi); }
 .wm-legend i.easy { border-color: var(--good); }
 .wm-legend i.mid { border-color: var(--gold); }
@@ -840,7 +857,7 @@ b { font-weight: 700; }
   .sheet { align-items: center; padding: 24px; }
   .sheet-card { max-width: 680px; border-radius: 18px; border: 1px solid var(--edge-3); max-height: calc(100dvh - 48px); padding: 24px 24px 20px; }
   .sheet-card::before { display: none; }
-  .sheet-card.tall { height: min(900px, calc(100dvh - 48px)); }
+  .sheet-card.tall { max-width: min(1280px, 100%); width: 100%; height: calc(100dvh - 48px); max-height: none; }
   .sheet-body > .detail:first-child { position: sticky; top: 0; z-index: 2; box-shadow: 0 10px 18px rgba(0, 0, 0, 0.45); }
   .grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
   .world { min-width: 0; }
@@ -913,9 +930,17 @@ b { font-weight: 700; }
   /* Bảng là cửa sổ lớn giữa màn hình */
   .sheet { padding: 32px; }
   .sheet-card { max-width: 760px; padding: 28px 30px 24px; }
-  .sheet-card.tall { max-width: 940px; height: min(920px, calc(100dvh - 64px)); }
+  .sheet-card.tall { height: calc(100dvh - 64px); }
+  /* Bản đồ lớn bên trái, thẻ vùng đất bên phải: không phải cuộn mới thấy nút xuất binh */
+  .map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; grid-template-areas: 'map card' 'legend card'; gap: 12px 16px; align-items: start; }
+  .map-layout .world-wrap { grid-area: map; width: min(100%, (100dvh - 270px) * 1.28); justify-self: center; }
+  .map-layout .wm-legend { grid-area: legend; }
+  .map-layout .region-card { grid-area: card; position: sticky; top: 0; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
   .focus-grid { grid-template-columns: repeat(4, 1fr); }
   .up-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .stat-tiles { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
+
+@media (min-width: 1280px) { .up-list { grid-template-columns: repeat(3, 1fr); } }
