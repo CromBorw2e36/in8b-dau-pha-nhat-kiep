@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import G from '../game/data.js';
-import { fmtGold, itemName, countOf, gearName } from '../game/util.js';
+import { fmtGold, itemName, countOf, gearName, gearScore, qualityIdx } from '../game/util.js';
 import {
   smithLv, smithPlan, upgradeSmith, craftTierCap, nextTierAt, craftCost, canCraft, craft, qualityOdds,
-  enhanceCost, enhanceP, enhance, armCost, armValue, armRate, fulfill, sellArms, matHave,
+  enhanceCost, enhanceP, enhance, armCost, armValue, armRate, fulfill, sellArms, matHave, fodderList, fodderBoost, FODDER_MAX,
 } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
 import { placeBid, bidFor, itemFair } from '../game/exchange.js';
@@ -16,13 +16,13 @@ export default function Forge({ s, bump, onClose, initTab }) {
   const lv = smithLv(s);
   const [tab, setTab] = useState(() => initTab || (lv && s.orders.length ? 'arms' : 'craft'));
   const [msg, setMsg] = useState(null);
-  const act = (fn) => { const r = fn(); if (r) setMsg(typeof r === 'string' ? r : r.t); save(s); bump(); };
+  const act = (fn) => { const r = fn(); if (r) setMsg(typeof r === 'string' ? { t: r } : r); save(s); bump(); };
 
   return (
     <Sheet onClose={onClose} tall>
       <SheetHead icon={NAV_I.forge} title="Lò rèn" sub={lv ? `Luyện Khí Phòng cấp ${lv}` : 'Chưa dựng lò'} value={fmtGold(s.gold)} valueIcon={UI_I.gold} valueLabel="Kim tệ" />
       <Tabs tab={tab} onTab={(t) => { setTab(t); setMsg(null); }} tabs={[['craft', 'Chế tạo', UI_I.craft], ['enh', 'Cường hóa', UI_I.up], ['arms', 'Xưởng', TROOP_I.bo, s.orders.some((o) => s.arms >= o.n)]]} />
-      {msg && <p className="bag-msg">{msg}</p>}
+      {msg && <Msg {...msg} />}
       <SheetBody>
         {tab === 'craft' && <Craft s={s} act={act} />}
         {tab === 'enh' && <Enhance s={s} act={act} />}
@@ -30,6 +30,13 @@ export default function Forge({ s, bump, onClose, initTab }) {
       </SheetBody>
     </Sheet>
   );
+}
+
+// Thông báo, tên trang bị (nếu có) tô màu theo phẩm chất
+function Msg({ t, name, q }) {
+  const i = name ? t.indexOf(name) : -1;
+  if (i < 0) return <p className="bag-msg">{t}</p>;
+  return <p className="bag-msg">{t.slice(0, i)}<b className={'q' + q}>{name}</b>{t.slice(i + name.length)}</p>;
 }
 
 function SmithUpgrade({ s, act }) {
@@ -90,13 +97,40 @@ function Mats({ s, act, gold, mats, extra }) {
   );
 }
 
+// Chọn đồ cũ trong túi làm tế phẩm (đồ đã khóa không hiện)
+function FodderPick({ s, sel, setSel, exceptId, hint }) {
+  const list = fodderList(s, exceptId).sort((a, b) => gearScore(a) - gearScore(b));
+  const ids = sel.filter((id) => list.some((it) => it.id === id));
+  const flip = (id) => setSel(ids.includes(id) ? ids.filter((x) => x !== id) : ids.length < FODDER_MAX ? [...ids, id] : ids);
+  // Gợi ý: những món kém hơn đồ đang mặc cùng ô, kém nhất trước
+  const weak = list.filter((it) => s.gear[it.sl] && gearScore(it) < gearScore(s.gear[it.sl])).slice(0, FODDER_MAX).map((it) => it.id);
+  if (!list.length) return null;
+  return (
+    <div className="fodder">
+      <div className="sub-row">
+        <span className="sv"><Ico i={UI_I.craft} size={14} />Tế phẩm <b className="num">{ids.length}/{FODDER_MAX}</b> · {hint}</span>
+        {ids.length ? <button className="mini ghost" onClick={() => setSel([])}>Bỏ chọn</button>
+          : weak.length > 0 && <button className="mini ghost" onClick={() => setSel(weak)}>Chọn đồ kém</button>}
+      </div>
+      <div className="mats">
+        {list.map((it) => (
+          <button key={it.id} type="button" className={'mat' + (ids.includes(it.id) ? ' on' : '')} onClick={() => flip(it.id)} title={gearName(it)}>
+            <Ico i={SLOT_I[it.sl]} size={14} /><span className={'q' + qualityIdx(it)}>{G.QUALITY[qualityIdx(it)][1]}</span><b className="num">{ROMAN[it.tier]}{it.en ? ` +${it.en}` : ''}</b>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Craft({ s, act }) {
   const cap = craftTierCap(s);
   const [sl, setSl] = useState('wep');
   const [tier, setTier] = useState(cap || 1);
   const t = Math.min(tier, cap || 1);
   const c = craftCost(t);
-  const odds = qualityOdds(s);
+  const [fod, setFod] = useState([]);
+  const odds = qualityOdds(s, fodderBoost(s, fod, t));
   return (
     <>
       <SmithUpgrade s={s} act={act} />
@@ -123,8 +157,9 @@ function Craft({ s, act }) {
             <div className="odds-legend">
               {G.QUALITY.map((q, i) => <span key={q[1]} className={'q' + i}><i className={'q-bg' + i} />{(odds[i] * 100).toFixed(odds[i] < 0.01 ? 1 : 0)}%</span>)}
             </div>
+            <FodderPick s={s} sel={fod} setSel={setFod} hint="đốt đồ cũ để tăng tỷ lệ phẩm chất tốt" />
           </div>
-          <button className="btn primary" disabled={!canCraft(s, t)} onClick={() => act(() => craft(s, sl, t))}><Ico i={UI_I.craft} size={20} /> Khai lò</button>
+          <button className="btn primary" disabled={!canCraft(s, t)} onClick={() => { act(() => craft(s, sl, t, fod)); setFod([]); }}><Ico i={UI_I.craft} size={20} /> Khai lò</button>
           <p className="note">Nguyên liệu phẩm cao hơn cũng dùng được. Cấp lò, dị hỏa và linh hồn càng cao, đồ càng dễ ra phẩm chất tốt. Từ Tinh phẩm trở lên, đồ rèn ra có thể mang hiệu ứng pháp khí (Thần phẩm tới 3 hiệu ứng).</p>
         </>
       )}
@@ -135,17 +170,19 @@ function Craft({ s, act }) {
 function Enhance({ s, act }) {
   const lv = smithLv(s);
   const [open, setOpen] = useState(null);
+  const [fod, setFod] = useState([]);
   const list = [...G.GEAR_SLOTS.map((k) => s.gear[k]).filter(Boolean), ...s.armory];
   if (!lv) return <p className="empty"><Ico i={NAV_I.forge} size={28} />Cần dựng lò rèn trước.</p>;
   if (!list.length) return <p className="empty">Chưa có trang bị nào.</p>;
   const tryN = (it, n) => {
     let ok = 0, last = null;
     for (let i = 0; i < n; i++) {
-      const r = enhance(s, it.id);
+      const r = enhance(s, it.id, i ? [] : fod);
       if (!r || typeof r === 'string') { last = r; break; }
       if (r.ok) ok++; else { last = r.t; break; }
     }
-    return ok ? `${gearName(it)}: thành công ${ok} lần${last ? ', rồi thất bại' : ''}.` : last;
+    setFod([]);
+    return ok ? { t: `${gearName(it)}: thành công ${ok} lần${last ? ', rồi thất bại' : ''}.`, name: gearName(it), q: qualityIdx(it) } : last;
   };
   return (
     <>
@@ -153,17 +190,19 @@ function Enhance({ s, act }) {
       <div className="cards">
         {list.map((it) => {
           const c = enhanceCost(it);
-          const p = enhanceP(s, it);
+          const base = enhanceP(s, it);
+          const p = open === it.id ? enhanceP(s, it, fod) : base;
           const max = (it.en || 0) >= G.ENHANCE_MAX;
           const can = !max && s.gold >= c.gold && matHave(s, 'ore', c.ore[0]) >= c.ore[1];
           const worn = s.gear[it.sl]?.id === it.id;
           return (
-            <GearCard key={it.id} it={it} s={s} tag={worn ? 'Đang mặc' : null} open={open === it.id} onToggle={() => setOpen(open === it.id ? null : it.id)}
+            <GearCard key={it.id} it={it} s={s} tag={worn ? 'Đang mặc' : null} open={open === it.id} onToggle={() => { setOpen(open === it.id ? null : it.id); setFod([]); }}
               right={max ? <span className="lvl-max">+100</span> : <span className="price" title="Tỷ lệ thành công"><Ico i={UI_I.dice} size={13} />{Math.round(p * 100)}%</span>}>
               {!max && (
                 <Mats s={s} act={act} gold={c.gold} mats={[{ t: 'ore', g: c.ore[0], n: c.ore[1], buy: c.ore[1] * 5 }]}
                   extra={<span className="mat" title="Tỷ lệ thành công"><Ico i={UI_I.dice} size={14} /><span>Thành công</span><b className="num">{Math.round(p * 100)}%</b></span>} />
               )}
+              {!max && base < 1 && <FodderPick s={s} sel={fod} setSel={setFod} exceptId={it.id} hint="đốt đồ cũ để tăng tỷ lệ thành công lần kế" />}
               <div className="lv-track"><i style={{ width: `${it.en || 0}%` }} /></div>
               {!max && <button className="mini buy" disabled={!can} onClick={() => act(() => tryN(it, 1))}><Ico i={UI_I.up} />Cường hóa lên +{(it.en || 0) + 1}</button>}
               {!max && <button className="mini" disabled={!can} onClick={() => act(() => tryN(it, 5))}><Ico i={UI_I.dice} />Liền 5 lần</button>}

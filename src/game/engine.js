@@ -413,7 +413,7 @@ export function summary(s) {
 export const netWorth = (s) =>
   s.gold + Object.entries(s.inv).reduce((a, [k, n]) => a + sellPrice(...parseKey(k)) * n, 0) + (G.DWELLING[s.dwelling || 0][0] || 0) * 0.7
     + estateValue(s) + [...Object.values(s.gear || {}), ...(s.armory || [])].reduce((a, it) => a + (it ? gearSell(it) : 0), 0)
-    + (s.arms || 0) * armCost(s);
+    + (s.arms || 0) * armCost(s) + (s.sect?.bank || 0);
 
 // ───── Lưu trữ ─────
 const SAVE = 'dpnk_save';

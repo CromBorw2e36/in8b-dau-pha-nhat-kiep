@@ -1,5 +1,6 @@
 import G from './data.js';
-import { R, rand, clamp, give, earn, effLv, parseKey, itemName, beastGrade, tierFor, gearName, gearScore, fmtItems, fmtGold } from './util.js';
+import { R, rand, clamp, give, effLv, parseKey, itemName, beastGrade, tierFor, gearName, fmtItems, fmtGold, qualityIdx, bankIn } from './util.js';
+import { sellPrice } from './economy.js';
 import { genGear, obtainGear, gearSell, dropWorst } from './gear.js';
 import { deFx, unifyFx } from './emperor.js';
 
@@ -15,17 +16,38 @@ export function stock(s, t, g, n) {
   const v = vaultOf(s);
   g = clamp(Math.round(g), 1, 9);
   const k = `${t}:${g}`;
+  const over = (v.inv[k] || 0) + n - G.STACK_MAX;
   v.inv[k] = Math.min((v.inv[k] || 0) + n, G.STACK_MAX);
   if (v.inv[k] <= 0) delete v.inv[k];
+  // Chồng đã đầy: phần dư bán cho thương nhân, tiền vào ngân khố
+  if (over > 0) bankIn(s, 'Bán nguyên liệu dư', sellPrice(t, g, s) * over);
 }
-// Kho đầy trang bị: bán món kém nhất cho ngân khố
+// Tự bán trang bị trong kho từ phẩm này trở xuống (chỉ số trong G.QUALITY); -1 là tắt
+export const autoSellQ = (s) => vaultOf(s)?.sellQ ?? -1;
+const autoSold = (s, it) => !it.lock && qualityIdx(it) <= autoSellQ(s);
+// Nhận trang bị vào kho; trả về false nếu món bị tự bán ngay
 function stockGear(s, it) {
   const v = vaultOf(s);
+  if (autoSold(s, it)) { bankIn(s, 'Kho tự bán trang bị', gearSell(it)); return false; }
   v.gear.push(it);
+  // Kho đầy: bán món kém nhất chưa khóa cho ngân khố
   if (v.gear.length > G.VAULT_GEAR_MAX) {
     const out = dropWorst(v.gear);
-    if (out) earn(s, 'Kho tông môn thanh lý', gearSell(out));
+    if (out) bankIn(s, 'Kho tông môn thanh lý', gearSell(out));
   }
+  return true;
+}
+// Đổi mức tự bán, bán luôn các món đang có trong kho thuộc mức mới
+export function setAutoSellQ(s, q) {
+  const v = vaultOf(s);
+  if (!v) return null;
+  v.sellQ = q;
+  const out = v.gear.filter((it) => autoSold(s, it));
+  if (!out.length) return q < 0 ? 'Đã tắt tự bán trang bị.' : `Kho sẽ tự bán đồ ${G.QUALITY[q][1].toLowerCase()} trở xuống.`;
+  const tot = out.reduce((a, it) => a + gearSell(it), 0);
+  v.gear = v.gear.filter((it) => !out.includes(it));
+  bankIn(s, 'Kho tự bán trang bị', tot);
+  return `Đã bán ${out.length} món trong kho, ${fmtGold(tot)} kim tệ vào ngân khố.`;
 }
 
 // Phẩm quặng theo vùng; không thấp hơn phẩm bạn đang dùng để quặng luôn có ích
@@ -74,8 +96,7 @@ export function vaultYearly(s, e, yrs) {
     if (R() < 0.5) add('ore', G.ORE_FOR_TIER[tierFor(s)], 2 + R() * 4);
     if (R() < 0.03 * (1 + vo * 0.1)) {
       const it = genGear(s, { boost: vo / 20 + deFx(s, 'raid') * 1.5 });
-      stockGear(s, it);
-      gear.push(gearName(it));
+      if (stockGear(s, it)) gear.push(gearName(it));
     }
   }
 
@@ -94,11 +115,10 @@ export function conquestLoot(s, r) {
   const n = 1 + (R() < 0.5 ? 1 : 0) + (r.z >= 3 ? 1 : 0);
   for (let i = 0; i < n; i++) {
     const it = genGear(s, { tier: tierFor(s) + (R() < 0.25 ? 1 : 0), boost: 0.5 + r.z * 0.3 });
-    stockGear(s, it);
-    gear.push(gearName(it));
+    if (stockGear(s, it)) gear.push(gearName(it));
   }
   s.sect.vaultNew = (s.sect.vaultNew || 0) + 1;
-  s.post.push({ t: `Kho báu của ${r.own} được chở về kho tông môn: huyền thiết, ma hạch và ${gear.join(', ')}.`, k: 'good' });
+  s.post.push({ t: `Kho báu của ${r.own} được chở về kho tông môn: huyền thiết, ma hạch${gear.length ? ` và ${gear.join(', ')}` : ''}.`, k: 'good' });
 }
 
 // ───── Lấy đồ ra ─────
@@ -125,8 +145,8 @@ export function sellVaultGear(s, id) {
   if (v.gear[i].lock) return 'Món này đang khóa.';
   const it = v.gear.splice(i, 1)[0];
   const p = gearSell(it);
-  earn(s, 'Bán trang bị trong kho', p);
-  return `Bán ${gearName(it)}, thu ${fmtGold(p)} kim tệ.`;
+  bankIn(s, 'Bán trang bị trong kho', p);
+  return `Bán ${gearName(it)}, ${fmtGold(p)} kim tệ vào ngân khố.`;
 }
 // Lấy từ kho phần nguyên liệu túi còn thiếu (ưu tiên đúng phẩm, rồi phẩm cao hơn)
 export function takeFromVault(s, t, g, n) {

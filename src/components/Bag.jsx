@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import G from '../game/data.js';
 import { parseKey, itemName, fmtGold, gearScore } from '../game/util.js';
-import { equip, unequip, sellGear, sellWorse, gearSell } from '../game/gear.js';
+import { equip, unequip, sellGear, sellWorse, gearSell, bagSellQ, setBagSellQ } from '../game/gear.js';
 import { sell, useItem, sellPrice } from '../game/economy.js';
 import { netWorth, save } from '../game/engine.js';
 import { Sheet, SheetBody, SheetHead, Tabs, Card } from './ui.jsx';
@@ -83,6 +83,15 @@ function Gear({ s, act }) {
       <div className="sub-row">
         <p className="sub-head">Kho <span className="muted num">{s.armory.length}/{G.ARMORY_MAX}</span></p>
         {s.armory.length > 0 && <button className="mini ghost" onClick={() => act(() => sellWorse(s))} title="Bán mọi món kém hơn đồ đang mặc"><Ico i={UI_I.sell} />Bán đồ kém</button>}
+      </div>
+      <div className="icon-filter auto-q" title="Đồ mới vào túi thuộc mức này mà kém hơn đồ đang mặc cùng ô sẽ tự bán; đồ đã khóa thì giữ">
+        <span className="muted small"><Ico i={UI_I.sell} size={14} /> Tự bán:</span>
+        <button className={bagSellQ(s) < 0 ? 'on' : ''} onClick={() => act(() => setBagSellQ(s, -1))}>Tắt</button>
+        {G.QUALITY.slice(0, -1).map((q, i) => (
+          <button key={q[1]} className={bagSellQ(s) === i ? 'on' : ''} onClick={() => act(() => setBagSellQ(s, i))}>
+            <i className={'q-dot q-bg' + i} />{i ? `${q[1]} trở xuống` : q[1]}
+          </button>
+        ))}
       </div>
       {s.armory.length > 0 && (
         <div className="icon-filter">

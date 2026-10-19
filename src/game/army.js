@@ -1,5 +1,5 @@
 import G from './data.js';
-import { clamp, unit, spend, lose, give, countOf, beastGrade, fmtGold, levelPlan, applyFx } from './util.js';
+import { clamp, unit, spend, lose, give, sectPay, sectDrain, countOf, beastGrade, fmtGold, levelPlan, applyFx } from './util.js';
 
 // ───── Quân đội: cần tông môn và Doanh Trại ─────
 const doanhLv = (s) => s.sect?.b?.doanh || 0;
@@ -91,8 +91,8 @@ export function armyYearly(s, e, yrs) {
   if (!troopCount(s)) return;
   issueArms(s);
   const cost = armyUpkeep(s) * yrs;
-  if (!spend(s, 'Quân lương', cost)) {
-    lose(s, 'Quân lương', s.gold);
+  if (!sectPay(s, 'Quân lương', cost)) {
+    sectDrain(s, 'Quân lương');
     const gone = armyLoss(s, 0.2);
     applyFx(s, { tam: -2 });
     e.items.push({ t: `Thiếu quân lương, ${gone} binh sĩ bỏ trốn khỏi doanh trại.`, k: 'bad' });

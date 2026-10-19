@@ -66,6 +66,30 @@ export function lose(s, label, amt) {
   if (amt > 0) { s.gold -= amt; s.led.push([label, -amt]); }
   return amt;
 }
+// ───── Ngân khố tông môn ─────
+// Thu nhập của tông môn đổ vào ngân khố; chi phí tông môn trả từ ngân khố trước, thiếu mới lấy ví chính
+export function bankIn(s, label, amt) {
+  amt = Math.round(amt);
+  if (amt <= 0) return;
+  if (!s.sect) return earn(s, label, amt);
+  s.sect.bank = (s.sect.bank || 0) + amt;
+  (s.sect.bankYr ||= {})[label] = (s.sect.bankYr[label] || 0) + amt;
+}
+// Trả phần ngân khố có, phần thiếu lấy từ ví; không đủ cả hai thì không trả gì
+export function sectPay(s, label, amt) {
+  amt = Math.round(amt);
+  if (amt <= 0) return true;
+  const bank = s.sect?.bank || 0;
+  if (bank + s.gold < amt) return false;
+  const fromBank = Math.min(bank, amt);
+  if (fromBank) { s.sect.bank -= fromBank; (s.sect.bankYr ||= {})[label] = (s.sect.bankYr[label] || 0) - fromBank; }
+  return spend(s, label, amt - fromBank);
+}
+// Vét sạch ngân khố và ví khi không trả nổi
+export function sectDrain(s, label) {
+  if (s.sect?.bank) { (s.sect.bankYr ||= {})[label] = (s.sect.bankYr[label] || 0) - s.sect.bank; s.sect.bank = 0; }
+  lose(s, label, s.gold);
+}
 export const fmtItems = (list) => list.map(([t, g, n]) => `${n} ${itemName(t, g).toLowerCase()}`).join(', ');
 
 export const hasAttr = (s, a) => s.attrs.includes(a);

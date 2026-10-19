@@ -1,6 +1,6 @@
 import G from './data.js';
-import { R, rand, pick, clamp, cp, unit, earn, spend, lose, give, applyFx, pillNeed, beastGrade, fmtGold, lastEntry, effLv, levelPlan, tierFor } from './util.js';
-import { armyPower, armyLoss, armyYearly } from './army.js';
+import { R, rand, pick, clamp, cp, unit, earn, spend, lose, give, bankIn, sectPay, sectDrain, applyFx, pillNeed, beastGrade, fmtGold, lastEntry, effLv, levelPlan, tierFor } from './util.js';
+import { armyPower, armyLoss, armyYearly, armyUpkeep } from './army.js';
 import { vaultYearly, conquestLoot } from './vault.js';
 import { deFx, unifyFx } from './emperor.js';
 
@@ -120,6 +120,29 @@ export function attackBlock(s, r) {
   return null;
 }
 
+// Đệ tử cống nạp mỗi năm
+export const tribute = (s) => (s.sect ? s.sect.members * unit(s) * 0.003 : 0);
+// Chi phí mỗi năm: bổng lộc trưởng lão + duy trì công trình + sinh hoạt đệ tử
+export function sectUpkeep(s) {
+  const S = s.sect;
+  if (!S) return 0;
+  const u = unit(s);
+  const builds = Object.values(S.b).reduce((a, v) => a + effLv(v), 0);
+  return builds * u * 0.06 + S.elders * u * 0.25 + S.members * G.LIVING[Math.min(s.R, 6)] * 0.02;
+}
+// Mức dự trữ nên giữ: hai năm chi phí tông môn và quân lương
+export const bankReserve = (s) => 2 * (sectUpkeep(s) + armyUpkeep(s));
+// Tông chủ rút tiền từ ngân khố về ví
+export function withdraw(s, amt) {
+  const S = s.sect;
+  amt = Math.floor(Math.min(amt, S?.bank || 0));
+  if (amt <= 0) return null;
+  S.bank -= amt;
+  (S.bankYr ||= {})['Chuyển về ví'] = (S.bankYr['Chuyển về ví'] || 0) - amt;
+  earn(s, 'Rút ngân khố tông môn', amt);
+  return `Rút ${fmtGold(amt)} kim tệ từ ngân khố về ví.`;
+}
+
 // Thu chi tông môn & lãnh địa mỗi lượt
 export function sectYearly(s, e, yrs, f) {
   if (!s.sect) return;
@@ -130,21 +153,25 @@ export function sectYearly(s, e, yrs, f) {
   const grow = (cap - S.members) * clamp(0.12 * yrs * (lead ? 2 : 1), 0, 0.8) * rand(0.6, 1.2);
   S.members = Math.max(0, Math.round(S.members + grow));
 
-  const u = unit(s);
-  earn(s, 'Đệ tử cống nạp', S.members * u * 0.003 * yrs * (lead ? 1.6 : 1));
+  // Sổ thu chi ngân khố của năm này (xem ở tab Ngân khố)
+  S.bankYr = {};
+  bankIn(s, 'Đệ tử cống nạp', tribute(s) * yrs * (lead ? 1.6 : 1));
   const inc = landIncome(s);
-  if (inc) earn(s, 'Thuế lãnh địa', inc * yrs * rand(0.85, 1.15) * (lead ? 1.2 : 1));
+  if (inc) bankIn(s, 'Thuế lãnh địa', inc * yrs * rand(0.85, 1.15) * (lead ? 1.2 : 1));
   vaultYearly(s, e, yrs);
 
-  // Chi phí: bổng lộc trưởng lão + duy trì công trình
-  const builds = Object.values(S.b).reduce((a, v) => a + effLv(v), 0);
-  const cost = (builds * u * 0.06 + S.elders * u * 0.25 + S.members * G.LIVING[Math.min(s.R, 6)] * 0.02) * yrs;
-  if (!spend(s, 'Chi phí tông môn', cost)) {
-    lose(s, 'Chi phí tông môn', s.gold);
+  if (!sectPay(s, 'Chi phí tông môn', sectUpkeep(s) * yrs)) {
+    sectDrain(s, 'Chi phí tông môn');
     const gone = Math.ceil(S.members * 0.15);
     S.members -= gone;
     applyFx(s, { tam: -3, fame: -1 });
     e.items.push({ t: `Ngân khố cạn kiệt, ${gone} đệ tử bỏ ${S.name} mà đi.`, k: 'bad' });
+  }
+
+  // Chuyển phần dư (trên mức dự trữ) về ví chính, mặc định bật
+  if (S.bankAuto !== false) {
+    const extra = Math.floor((S.bank || 0) - bankReserve(s));
+    if (extra > 0) { S.bank -= extra; S.bankYr['Chuyển về ví'] = -extra; earn(s, 'Rút ngân khố tông môn', extra); }
   }
 
   // Đan Phòng

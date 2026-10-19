@@ -4,12 +4,12 @@ import { fmtGold, cp, effLv, parseKey, itemName } from '../game/util.js';
 import { save } from '../game/engine.js';
 import {
   sectReqs, canFound, foundSect, genSectName, memberCap, sectPower, warPower, sectTier, bLv, buildPlan, upgradeBuild,
-  landCount, landIncome, regionDef, conquerP, attackBlock, startConquest, bEff,
+  landCount, landIncome, regionDef, conquerP, attackBlock, startConquest, bEff, tribute, sectUpkeep, bankReserve, withdraw,
 } from '../game/sect.js';
 import {
   armyCap, troopCount, troopOpen, recruitCost, maxRecruit, recruit, dismiss, armyPower, armyUpkeep, armedPct, trainPlan, train,
 } from '../game/army.js';
-import { vaultOf, mineTotal, mineK, raidsPerYear, takeItem, takeGear, sellVaultGear } from '../game/vault.js';
+import { vaultOf, mineTotal, mineK, raidsPerYear, takeItem, takeGear, sellVaultGear, autoSellQ, setAutoSellQ } from '../game/vault.js';
 import { gearSell } from '../game/gear.js';
 import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy, Card } from './ui.jsx';
 import { GearCard, LockBtn, gradeQ } from './gearUi.jsx';
@@ -39,12 +39,13 @@ export default function Sect({ s, bump, onClose, initTab }) {
   return (
     <Sheet onClose={onClose} tall>
       <SheetHead icon={NAV_I.sect} title={S ? S.name : 'Tông môn'} sub={S ? sectTier(s) : 'Chưa khai tông'} value={Math.round(warPower(s))} valueIcon={UI_I.power} valueLabel="Thế lực" />
-      <Tabs tab={tab} onTab={go} tabs={[['sect', 'Tông môn', NAV_I.sect], ['vault', 'Kho', UI_I.vault, S?.vaultNew > 0], ['army', 'Quân đội', UI_I.army], ['map', 'Bản đồ', UI_I.map, canHit]]} />
+      <Tabs tab={tab} onTab={go} tabs={[['sect', 'Tông môn', NAV_I.sect], ['vault', 'Kho', UI_I.vault, S?.vaultNew > 0], ['bank', 'Ngân khố', UI_I.gold], ['army', 'Quân đội', UI_I.army], ['map', 'Bản đồ', UI_I.map, canHit]]} />
       {msg && <p className="bag-msg">{msg}</p>}
       <SheetBody>
         {tab === 'sect' && !S && <Found s={s} act={act} />}
         {tab === 'sect' && S && <Builds s={s} act={act} />}
         {tab === 'vault' && <Vault s={s} act={act} />}
+        {tab === 'bank' && <Bank s={s} act={act} />}
         {tab === 'army' && <Army s={s} act={act} />}
         {tab === 'map' && <MapTab s={s} act={act} attack={attack} />}
       </SheetBody>
@@ -152,7 +153,55 @@ function Vault({ s, act }) {
           ))}
         </div>
       ) : <p className="empty"><Ico i={SLOT_I.wep} size={28} />Chưa có trang bị nào. Đệ tử xuất chinh và chiếm vùng mới sẽ mang về.</p>}
-      <p className="note">Kho đầy trang bị thì món kém nhất chưa khóa tự bán vào ngân khố.</p>
+      <div className="sub-row">
+        <p className="sub-head"><Ico i={UI_I.sell} size={18} />Tự bán trang bị</p>
+      </div>
+      <div className="icon-filter">
+        <button className={autoSellQ(s) < 0 ? 'on' : ''} onClick={() => act(() => setAutoSellQ(s, -1))}>Tắt</button>
+        {G.QUALITY.slice(0, -1).map((q, i) => (
+          <button key={q[1]} className={autoSellQ(s) === i ? 'on' : ''} onClick={() => act(() => setAutoSellQ(s, i))}>
+            <i className={'q-dot q-bg' + i} />{i ? `${q[1]} trở xuống` : q[1]}
+          </button>
+        ))}
+      </div>
+      <p className="note">Trang bị chưa khóa thuộc mức đã chọn được bán ngay khi về kho, tiền vào ngân khố. Kho đầy thì món kém nhất chưa khóa cũng tự bán.</p>
+    </>
+  );
+}
+
+// Ngân khố: thu nhập tông môn dồn về đây, chi phí tông môn trả từ đây trước; tông chủ rút về ví khi cần
+function Bank({ s, act }) {
+  const S = s.sect;
+  if (!S) return <p className="empty"><Ico i={NAV_I.sect} size={28} />Cần khai tông lập phái trước.</p>;
+  const bank = S.bank || 0;
+  const inc = tribute(s) + landIncome(s);
+  const cost = sectUpkeep(s) + armyUpkeep(s);
+  const reserve = bankReserve(s);
+  const extra = Math.floor(bank - reserve);
+  const yr = Object.entries(S.bankYr || {}).filter(([, v]) => v).sort((a, b) => b[1] - a[1]);
+  const opts = [['Rút ¼', bank / 4], ['Rút ½', bank / 2], ['Rút phần dư', extra], ['Rút hết', bank]];
+  return (
+    <>
+      <div className="stat-tiles">
+        <div title="Kim tệ trong ngân khố tông môn"><Ico i={UI_I.vault} size={20} /><b className="num">{fmtGold(bank)}</b><small>ngân khố</small></div>
+        <div title="Đệ tử cống nạp và thuế lãnh địa mỗi năm (ước tính)"><Ico i={UI_I.up} size={20} /><b className="num">+{fmtGold(inc)}</b><small>thu/năm</small></div>
+        <div title="Chi phí tông môn và quân lương mỗi năm"><Ico i={UI_I.buy} size={20} /><b className="num">−{fmtGold(cost)}</b><small>chi/năm</small></div>
+        <div title="Nên giữ lại hai năm chi phí để không thiếu hụt"><Ico i={UI_I.lock} size={20} /><b className="num">{fmtGold(reserve)}</b><small>dự trữ</small></div>
+      </div>
+      <div className="row-btns">
+        {opts.map(([n, v]) => <button key={n} className={'mini' + (n === 'Rút phần dư' ? ' buy' : '')} disabled={v < 1} onClick={() => act(() => withdraw(s, v))}><Ico i={UI_I.take} />{n}{v >= 1 ? ` · ${fmtGold(v)}` : ''}</button>)}
+      </div>
+      <label className="switch">
+        <input type="checkbox" checked={S.bankAuto !== false} onChange={(e) => act(() => { S.bankAuto = e.target.checked; return null; })} />
+        <span>Mỗi năm tự chuyển phần dư trên mức dự trữ về ví</span>
+      </label>
+      <p className="sub-head"><Ico i={UI_I.time} size={18} />Thu chi năm nay</p>
+      {yr.length ? (
+        <ul className="bank-led">
+          {yr.map(([k, v]) => <li key={k}><span>{k}</span><b className={'num ' + (v > 0 ? 'good' : 'bad')}>{v > 0 ? '+' : '−'}{fmtGold(Math.abs(v))}</b></li>)}
+        </ul>
+      ) : <p className="empty">Chưa có khoản thu chi nào trong năm.</p>}
+      <p className="note">Ngân khố nhận đệ tử cống nạp, thuế lãnh địa, cống phẩm thượng giới, tiền bán trang bị trong kho và nguyên liệu dư khi kho đầy chồng. Chi phí tông môn và quân lương trả từ ngân khố trước, thiếu mới lấy ví của bạn; cả hai cạn thì đệ tử và binh sĩ bỏ đi.</p>
     </>
   );
 }

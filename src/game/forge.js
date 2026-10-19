@@ -1,5 +1,5 @@
 import G from './data.js';
-import { R, rand, pick, clamp, unit, earn, spend, give, countOf, tierFor, gearName, fmtGold, itemName, levelPlan, mkIdx } from './util.js';
+import { R, rand, pick, clamp, unit, earn, spend, give, countOf, tierFor, gearName, fmtGold, itemName, levelPlan, mkIdx, qualityIdx } from './util.js';
 import { genGear, obtainGear } from './gear.js';
 import { vaultCount, takeFromVault } from './vault.js';
 import { deFx } from './emperor.js';
@@ -52,16 +52,34 @@ export const canCraft = (s, tier) => {
 // Thêm trọng số phẩm chất cao: cấp lò, dị hỏa, linh hồn
 export const craftBoost = (s) => smithLv(s) / 20 + s.fires.length * 0.4 + Math.max(0, (s.soul - 50) / 50) + deFx(s, 'craft');
 
-export function craft(s, sl, tier) {
+// ───── Tế phẩm: dung luyện đồ cũ trong túi để tăng phẩm chất khi rèn hoặc tỷ lệ cường hóa ─────
+export const FODDER_MAX = 5;
+// Đồ dùng làm tế phẩm được: trong túi, chưa khóa
+export const fodderList = (s, exceptId) => s.armory.filter((it) => !it.lock && it.id !== exceptId);
+const pickFodder = (s, ids, exceptId) => fodderList(s, exceptId).filter((it) => ids.includes(it.id)).slice(0, FODDER_MAX);
+// Giá trị một món tế phẩm so với bậc đích: phẩm chất cao, bậc gần và cường hóa nhiều thì quý hơn
+const fodderPts = (it, tier) => (G.QUALITY[qualityIdx(it)][0] + (it.en || 0) / 25) * Math.min(1, it.tier / tier) ** 2;
+export const fodderBoost = (s, ids, tier) => pickFodder(s, ids).reduce((a, it) => a + 0.4 * fodderPts(it, tier), 0);
+export const fodderEnh = (s, ids, it) => pickFodder(s, ids, it.id).reduce((a, x) => a + 0.04 * fodderPts(x, it.tier), 0);
+function burnFodder(s, ids, exceptId) {
+  const used = pickFodder(s, ids, exceptId);
+  s.armory = s.armory.filter((it) => !used.includes(it));
+  return used.length;
+}
+
+export function craft(s, sl, tier, fodder = []) {
   if (!canCraft(s, tier)) return 'Thiếu nguyên liệu hoặc kim tệ.';
   const c = craftCost(tier);
   spend(s, 'Chế tạo trang bị', c.gold);
   takeMat(s, 'ore', ...c.ore);
   takeMat(s, 'core', ...c.core);
-  const it = genGear(s, { sl, tier, boost: craftBoost(s) });
+  const extra = fodderBoost(s, fodder, tier);
+  burnFodder(s, fodder);
+  const it = genGear(s, { sl, tier, boost: craftBoost(s) + extra });
   s.stats.crafted = (s.stats.crafted || 0) + 1;
   if (it.q >= 2) s.stats.legend = (s.stats.legend || 0) + 1;
-  return `Lò rèn đỏ rực ba ngày ba đêm. Thành phẩm: ${obtainGear(s, it)}.`;
+  // name/q: giao diện tô màu tên món theo phẩm chất
+  return { t: `Lò rèn đỏ rực ba ngày ba đêm. Thành phẩm: ${obtainGear(s, it)}.`, name: gearName(it), q: qualityIdx(it) };
 }
 
 // ───── Cường hóa +0 → +100 ─────
@@ -70,10 +88,10 @@ export function enhanceCost(it) {
   return { gold: Math.round(G.GEAR_PRICE[it.tier] * 0.05 * Math.pow(1 + en, 1.3)), ore: [oreG(it.tier), 1 + Math.floor(en / 8)] };
 }
 // Dưới +10 chắc chắn thành công, sau đó giảm dần; lò rèn cấp cao bù lại
-export const enhanceP = (s, it) => ((it.en || 0) < 10 ? 1 : clamp(1 - ((it.en || 0) - 9) * 0.011 + smithLv(s) * 0.003 + deFx(s, 'enh'), 0.2, 1));
+export const enhanceP = (s, it, fodder = []) => ((it.en || 0) < 10 ? 1 : clamp(1 - ((it.en || 0) - 9) * 0.011 + smithLv(s) * 0.003 + deFx(s, 'enh') + fodderEnh(s, fodder, it), 0.2, 1));
 export const findGear = (s, id) => Object.values(s.gear).find((x) => x?.id === id) || s.armory.find((x) => x.id === id);
 
-export function enhance(s, id) {
+export function enhance(s, id, fodder = []) {
   const it = findGear(s, id);
   if (!it || (it.en || 0) >= G.ENHANCE_MAX) return null;
   if (!smithLv(s)) return 'Cần dựng lò rèn trước.';
@@ -81,7 +99,9 @@ export function enhance(s, id) {
   if (s.gold < c.gold || !hasMat(s, c.ore, 'ore')) return 'Thiếu nguyên liệu hoặc kim tệ.';
   spend(s, 'Cường hóa trang bị', c.gold);
   takeMat(s, 'ore', ...c.ore);
-  if (R() < enhanceP(s, it)) {
+  const p = enhanceP(s, it, fodder);
+  if (enhanceP(s, it) < 1) burnFodder(s, fodder, it.id); // chắc chắn thành công thì không đốt tế phẩm
+  if (R() < p) {
     it.en = (it.en || 0) + 1;
     s.stats.enhance = Math.max(s.stats.enhance || 0, it.en);
     return { ok: true, t: `${gearName(it)}: cường hóa thành công!` };
@@ -142,9 +162,9 @@ export function sellArms(s, n) {
 export const matLabel = ([g, n], t) => `${n} ${itemName(t, g).toLowerCase()}`;
 
 // Tỷ lệ ra từng phẩm chất khi chế tạo (để hiển thị)
-export function qualityOdds(s) {
+export function qualityOdds(s, extra = 0) {
   const luckK = Math.max(0.3, 1 + (s.luck - 45) / 60);
-  const b = craftBoost(s);
+  const b = craftBoost(s) + extra;
   const ws = G.QUALITY.map((x) => x[2] * (x[0] > 1 ? luckK * (1 + b * (x[0] - 1)) : 1));
   const tot = ws.reduce((a, w) => a + w, 0);
   return ws.map((w) => w / tot);

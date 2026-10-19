@@ -1,5 +1,5 @@
 import G from './data.js';
-import { R, pick, wpick, clamp, earn, spend, give, tierFor, gearScore, gearName, gearStat, pillNeed, fmtGold, levelPlan, fxSum, unit } from './util.js';
+import { R, pick, wpick, clamp, earn, spend, give, tierFor, gearScore, gearName, gearStat, pillNeed, fmtGold, levelPlan, fxSum, unit, qualityIdx } from './util.js';
 
 // ───── Trang bị ─────
 // boost: cộng thêm trọng số cho phẩm chất cao (lò rèn, sự kiện)
@@ -51,10 +51,23 @@ export function obtainGear(s, it) {
     if (cur) stash(s, cur);
     return `${gearName(it)} (đã tự trang bị)`;
   }
-  stash(s, it);
-  return gearName(it);
+  return stash(s, it) ? `${gearName(it)} (đã tự bán ${fmtGold(gearSell(it))})` : gearName(it);
+}
+// Tự bán đồ trong túi từ phẩm này trở xuống (chỉ số trong G.QUALITY); -1 là tắt.
+// Không bán đồ đã khóa hay tốt hơn món đang mặc cùng ô.
+export const bagSellQ = (s) => s.auto?.gearQ ?? -1;
+const bagSold = (s, it) => !it.lock && qualityIdx(it) <= bagSellQ(s) && !(s.gear[it.sl] && gearScore(it) > gearScore(s.gear[it.sl])) && !!s.gear[it.sl];
+export function setBagSellQ(s, q) {
+  s.auto.gearQ = q;
+  const out = s.armory.filter((it) => bagSold(s, it));
+  if (!out.length) return q < 0 ? 'Đã tắt tự bán trang bị trong túi.' : `Túi sẽ tự bán đồ ${G.QUALITY[q][1].toLowerCase()} trở xuống (kém hơn đồ đang mặc).`;
+  const tot = out.reduce((a, it) => a + gearSell(it), 0);
+  s.armory = s.armory.filter((it) => !out.includes(it));
+  earn(s, 'Tự bán trang bị', tot);
+  return `Đã bán ${out.length} món, thu ${fmtGold(tot)} kim tệ.`;
 }
 function stash(s, it) {
+  if (bagSold(s, it)) { earn(s, 'Tự bán trang bị', gearSell(it)); return true; }
   s.armory.push(it);
   // Kho đầy: tự bán món kém nhất
   if (s.armory.length > G.ARMORY_MAX) {

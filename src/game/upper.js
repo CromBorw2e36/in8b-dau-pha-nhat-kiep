@@ -1,5 +1,5 @@
 import G from './data.js';
-import { R, rand, clamp, pick, earn, give, fmtGold, lastEntry } from './util.js';
+import { R, rand, clamp, pick, earn, give, bankIn, fmtGold, lastEntry } from './util.js';
 import { genGear } from './gear.js';
 import { warPower, upPower } from './sect.js';
 export { upPower };
@@ -79,7 +79,7 @@ export function upYearly(s, e, yrs) {
     inc += r.inc * ngK(s, 'inc') * yrs * rand(0.85, 1.15);
     ore += 15 * yrs;
   }
-  if (inc) earn(s, 'Cống phẩm thượng giới', inc);
+  if (inc) bankIn(s, 'Cống phẩm thượng giới', inc);
   if (ore) { if (vaultOf(s)) stock(s, 'ore', 9, ore); else give(s, 'ore', 9, ore); }
   const left = dechienIn(s);
   if (left === 5) e.items.push({ t: 'Thiên Đế đã biết tới kẻ phi thăng từ hạ giới. Năm lượt nữa, Đế chiến sẽ nổ ra.', k: 'bad' });
