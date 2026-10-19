@@ -6,6 +6,7 @@ import {
   enhanceCost, enhanceP, enhance, armCost, armValue, armRate, fulfill, sellArms,
 } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
+import { placeBid, bidFor, itemFair } from '../game/exchange.js';
 import { save } from '../game/engine.js';
 import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy } from './ui.jsx';
 import { GearCard, ROMAN } from './gearUi.jsx';
@@ -50,6 +51,20 @@ function Mat({ s, t, g, n }) {
   return <span className={'mat ' + (have >= n ? 'ok' : 'no')} title={itemName(t, g)}><Ico i={ITEM_I[t]} size={16} /><small>{g}</small><b className="num">{have}/{n}</b></span>;
 }
 
+// Thiếu nguyên liệu: đặt mua nhanh trên sàn với giá 115% thị trường
+function QuickBid({ s, act, t, g, n }) {
+  const short = n - countOf(s, t, g);
+  if (short <= 0) return null;
+  const bid = bidFor(s, `${t}:${g}`);
+  if (bid) return <span className="muted small"><Ico i={UI_I.tag} size={13} />Đang đặt mua {bid.n} {itemName(t, g).toLowerCase()} trên sàn</span>;
+  const price = Math.round(itemFair(s, t, g) * 1.15);
+  return (
+    <button className="mini" disabled={s.gold < short * price} onClick={() => act(() => placeBid(s, `${t}:${g}`, short, price))}>
+      <Ico i={UI_I.tag} />Đặt mua {short} {itemName(t, g).toLowerCase()} · {fmtGold(short * price)}
+    </button>
+  );
+}
+
 function Craft({ s, act }) {
   const cap = craftTierCap(s);
   const [sl, setSl] = useState('wep');
@@ -81,6 +96,8 @@ function Craft({ s, act }) {
               <Mat s={s} t="ore" g={c.ore[0]} n={c.ore[1]} />
               <Mat s={s} t="core" g={c.core[0]} n={c.core[1]} />
             </div>
+            <QuickBid s={s} act={act} t="ore" g={c.ore[0]} n={c.ore[1]} />
+            <QuickBid s={s} act={act} t="core" g={c.core[0]} n={c.core[1]} />
             <div className="odds-bar" title="Tỷ lệ phẩm chất">
               {G.QUALITY.map((q, i) => <i key={q[1]} className={'q-bg' + i} style={{ width: `${odds[i] * 100}%` }} />)}
             </div>
@@ -134,6 +151,7 @@ function Enhance({ s, act }) {
               <div className="lv-track"><i style={{ width: `${it.en || 0}%` }} /></div>
               {!max && <button className="mini buy" disabled={!can} onClick={() => act(() => tryN(it, 1))}><Ico i={UI_I.up} />Cường hóa lên +{(it.en || 0) + 1}</button>}
               {!max && <button className="mini" disabled={!can} onClick={() => act(() => tryN(it, 5))}>Liền 5 lần</button>}
+              {!max && <QuickBid s={s} act={act} t="ore" g={c.ore[0]} n={c.ore[1] * 5} />}
             </GearCard>
           );
         })}

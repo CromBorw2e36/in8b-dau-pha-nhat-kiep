@@ -9,7 +9,7 @@ import { economy, cultivationPill, moneyLine, sellPrice } from './economy.js';
 import { estatesYearly, estateValue, gearSell, artifactYearly } from './gear.js';
 import { sectYearly, bLv, landCount, sectTier } from './sect.js';
 import { smithYearly, smithLv, armCost } from './forge.js';
-import { marketTick, consignTick } from './exchange.js';
+import { marketTick, consignTick, bidTick } from './exchange.js';
 import { troopCount } from './army.js';
 
 export const EV = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
@@ -44,7 +44,7 @@ export function newLife() {
     age: 0, t: 0, started: false, R: 0, step: 0, qi: 0, ready: false, wait: 0, lifeBonus: 0,
     body: clamp(50 + rand(-8, 8)), soul: clamp(40 + rand(-10, 10)), tam: clamp(50 + rand(-8, 8)), luck: clamp(45 + rand(-15, 15)),
     gold: origin.gold, inv: {}, led: [], gear: Object.fromEntries(G.GEAR_SLOTS.map((k) => [k, null])), armory: [], estates: {}, sect: null, land: {}, war: {}, auto: { sell: true, buy: true }, salary: 0, dwelling: 0, post: [], gong: origin.wealth >= 2 ? 1 : 0, skill: 0, mastery: 0, fires: [], alch: 0, alchXp: 0,
-    mkt: {}, cons: [], ex: null, exNew: 0, smithy: { lv: 0, prod: true }, arms: 0, orders: [], army: { n: {}, armed: 0, train: 0 }, stats: {},
+    mkt: {}, cons: [], bids: [], ex: null, exNew: 0, smithy: { lv: 0, prod: true }, arms: 0, orders: [], army: { n: {}, armed: 0, train: 0 }, stats: {},
     faction: null, master: null, partner: null, lostPartner: null, companion: null, evil: false, fame: 0, disciples: 0, cured: false,
     parents: { alive: origin.id !== 'orphan', age: Math.round(rand(20, 34)) },
     focus: null, needFocus: false, pending: null, tmp: null,
@@ -159,6 +159,7 @@ function yearly(s, e, yrs) {
   smithYearly(s, e, yrs);
   economy(s, e, yrs, f);
   consignTick(s, e);
+  bidTick(s, e);
 
   if (s.started) {
     const before = realmLabel(s);
@@ -403,7 +404,7 @@ export function migrate(v) {
   v.armory ||= []; v.estates ||= {}; v.sect ||= null; v.land ||= {}; v.war ||= {};
   if (v.land.thanhthanh) { delete v.land.thanhthanh; v.land.thanhdan ||= { at: v.age, dev: 0 }; } // vùng cũ đã đổi tên
   for (const id of Object.keys(v.land)) if (!G.REGIONS.some((r) => r.id === id)) delete v.land[id];
-  v.mkt ||= {}; v.cons ||= []; v.exNew ||= 0; v.smithy ||= { lv: 0, prod: true }; v.arms ||= 0; v.orders ||= [];
+  v.mkt ||= {}; v.cons ||= []; v.bids ||= []; v.exNew ||= 0; v.smithy ||= { lv: 0, prod: true }; v.arms ||= 0; v.orders ||= [];
   v.army ||= { n: {}, armed: 0, train: 0 }; v.stats ||= {};
   if (v.sect) for (const b of G.BUILDS) v.sect.b[b.id] ??= 0;
   if (v.focus === 'mon') v.focus = 'nv';

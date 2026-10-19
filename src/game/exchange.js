@@ -114,3 +114,59 @@ export function buyListing(s, id, n = 1) {
   give(s, t, g, n);
   return `Đã mua ${n} ${itemName(t, g).toLowerCase()}.`;
 }
+
+// ───── Đặt mua: treo giá thu mua, tiền cọc giữ trên sàn, mỗi lượt khớp dần ─────
+// Hàng càng hiếm (phẩm cao, Diên Thọ Đan) càng khó gom
+const rarity = (t, g) => (t === 'tho' ? 0.45 : 1) * (g >= 8 ? 0.6 : g >= 6 ? 0.8 : 1);
+// Đúng giá ~45% mỗi lượt, trả cao 30% gần như chắc chắn có người bán
+export const bidChance = (s, x) => {
+  const [t, g] = parseKey(x.key);
+  return clamp((x.price / itemFair(s, t, g) - 0.55) * rarity(t, g), 0.02, 0.9);
+};
+export const bidFor = (s, key) => s.bids.find((x) => x.key === key);
+
+export function placeBid(s, key, n, price) {
+  price = Math.round(price);
+  if (n <= 0 || price <= 0) return null;
+  const [t, g] = parseKey(key);
+  const old = bidFor(s, key);
+  if (!old && s.bids.length >= G.BID_MAX) return 'Đã đủ số đơn đặt mua.';
+  // Đặt lại cùng món: hoàn cọc đơn cũ rồi gộp số lượng theo giá mới
+  const refund = old ? old.n * old.price : 0;
+  const tot = (n + (old?.n || 0)) * price;
+  if (s.gold + refund < tot) return 'Không đủ tiền cọc.';
+  s.gold += refund;
+  if (refund) s.led.push(['Hoàn cọc đặt mua', refund]);
+  spend(s, 'Cọc đặt mua trên sàn', tot);
+  if (old) { old.n += n; old.price = price; old.t = s.t; }
+  else s.bids.push({ id: newId(), key, n, got: 0, price, t: s.t });
+  return `Đã đặt mua ${old ? old.n : n} ${itemName(t, g).toLowerCase()}, giá ${fmtGold(price)} mỗi món. Cọc ${fmtGold(tot)} kim tệ.`;
+}
+
+export function cancelBid(s, id) {
+  const i = s.bids.findIndex((x) => x.id === id);
+  if (i < 0) return null;
+  const x = s.bids.splice(i, 1)[0];
+  earn(s, 'Hoàn cọc đặt mua', x.n * x.price);
+  return `Đã hủy đơn ${itemName(...parseKey(x.key)).toLowerCase()}, hoàn ${fmtGold(x.n * x.price)} kim tệ.`;
+}
+
+export function bidTick(s, e) {
+  if (!s.bids.length) return;
+  const got = [];
+  for (const x of [...s.bids]) {
+    const p = bidChance(s, x);
+    if (R() >= p) continue;
+    const [t, g] = parseKey(x.key);
+    const n = Math.min(x.n, Math.max(1, Math.ceil(x.n * p * rand(0.3, 1))));
+    give(s, t, g, n);
+    x.n -= n;
+    x.got += n;
+    got.push(`${n} ${itemName(t, g).toLowerCase()}`);
+    if (x.n <= 0) s.bids = s.bids.filter((y) => y !== x);
+  }
+  if (!got.length) return;
+  s.exNew = (s.exNew || 0) + got.length;
+  s.stats.exBought = (s.stats.exBought || 0) + got.length;
+  e.items.push({ t: `Sàn Vạn Bảo: gom được ${got.join(', ')} theo đơn đặt mua.`, k: 'money' });
+}

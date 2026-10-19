@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import G from '../game/data.js';
-import { parseKey, itemName, fmtGold, unit } from '../game/util.js';
+import { parseKey, itemName, fmtGold, unit, tierFor, pillNeed } from '../game/util.js';
 import { forgeStock, buyGear, gearBuy, estateLv, estateOpen, estatePlan, buyEstate, estateIncome, estateInc } from '../game/gear.js';
 import { buy, marketList, buyPrice, ledgerSummary } from '../game/economy.js';
 import {
   npcList, buyListing, consignItem, consignGear, cancelConsign, sellChance, itemFair, gearFair, listingName, priceTag, trend,
+  placeBid, cancelBid, bidChance,
 } from '../game/exchange.js';
 import { save } from '../game/engine.js';
 import { Sheet, SheetBody, SheetHead, Tabs, Card, UpRow, LevelBuy, ConfirmBtn } from './ui.jsx';
@@ -159,6 +160,8 @@ function Exchange({ s, act }) {
         </>
       )}
 
+      <Bids s={s} act={act} />
+
       <p className="sub-head">Hàng trên sàn <span className="muted">· đổi mới mỗi 3 lượt</span></p>
       <div className="cards">
         {list.map((x) => {
@@ -178,7 +181,72 @@ function Exchange({ s, act }) {
               </Card>;
         })}
       </div>
-      <p className="note">Giá ký gửi càng sát thị trường càng bán nhanh. Nhãn Rẻ / Đắt so với giá thị trường hôm nay.</p>
+      <p className="note">Giá ký gửi càng sát thị trường càng bán nhanh. Đặt mua thì ngược lại: trả càng cao càng mau gom đủ, hàng phẩm cao khó gom hơn. Tiền cọc hoàn lại khi hủy đơn.</p>
+    </>
+  );
+}
+
+// Đơn đặt mua: treo giá, cọc tiền trước, mỗi lượt có người bán dần cho mình
+function Bids({ s, act }) {
+  const [open, setOpen] = useState(null);
+  const [form, setForm] = useState(false);
+  const [t, setT] = useState('ore');
+  const [g, setG] = useState(() => G.ORE_FOR_TIER[tierFor(s)]);
+  const [qty, setQty] = useState(10);
+  const [mult, setMult] = useState(1.1);
+  const fair = itemFair(s, t, g);
+  const price = Math.max(1, Math.round(fair * mult));
+  const chance = bidChance(s, { key: `${t}:${g}`, price });
+  const old = s.bids.find((x) => x.key === `${t}:${g}`);
+  const deposit = (qty + (old?.n || 0)) * price - (old ? old.n * old.price : 0);
+  const pickT = (k) => { setT(k); setG(k === 'ore' ? G.ORE_FOR_TIER[tierFor(s)] : k === 'core' || k === 'herb' ? g : pillNeed(s)); };
+  return (
+    <>
+      <p className="sub-head">Đơn đặt mua <span className="muted num">{s.bids.length}/{G.BID_MAX}</span></p>
+      <div className="cards">
+        {s.bids.map((x) => {
+          const [bt, bg] = parseKey(x.key);
+          return (
+            <Card key={x.id} icon={ITEM_I[bt]} q={gradeQ(bg)} badge={bg} count={x.n} title={itemName(bt, bg)} tag="Đang gom"
+              sub={<span className="c-desc">Đã gom {x.got} · cọc {fmtGold(x.n * x.price)}</span>}
+              right={<span className="price"><Ico i={UI_I.gold} size={13} />{fmtGold(x.price)}</span>} open={open === x.id} onToggle={() => setOpen(open === x.id ? null : x.id)}>
+              <span className="sv"><Ico i={UI_I.dice} size={14} />Có người bán ~{Math.round(bidChance(s, x) * 100)}% mỗi lượt · thị trường {fmtGold(itemFair(s, bt, bg))}</span>
+              <div className="c-act"><button className="mini ghost" onClick={() => { act(() => cancelBid(s, x.id)); setOpen(null); }}>Hủy, lấy lại cọc</button></div>
+            </Card>
+          );
+        })}
+        {(s.bids.length < G.BID_MAX || form) && (
+          <button className={'card add' + (form ? ' on' : '')} onClick={() => setForm((v) => !v)}>
+            <span className="plus">+</span><span>{form ? 'Thu gọn' : 'Đặt mua món đang thiếu'}</span>
+          </button>
+        )}
+      </div>
+      {form && (
+        <div className="recipe">
+          <div className="forge-pick">
+            {Object.keys(G.ITEMS).map((k) => (
+              <button key={k} className={'slot-btn' + (t === k ? ' on' : '')} onClick={() => pickT(k)} title={G.ITEMS[k].n(g)} aria-label={G.ITEMS[k].n(g)}>
+                <Ico i={ITEM_I[k]} size={24} />
+              </button>
+            ))}
+          </div>
+          <div className="tier-pick">
+            {Array.from({ length: 9 }, (_, i) => i + 1).map((k) => <button key={k} className={g === k ? 'on' : ''} onClick={() => setG(k)}>{k}</button>)}
+          </div>
+          <div className="recipe-title"><Ico i={ITEM_I[t]} size={22} /><b>{itemName(t, g)}</b></div>
+          <span className="muted small">{G.ITEMS[t].d} Thị trường {fmtGold(fair)} mỗi món{s.inv[`${t}:${g}`] ? `, đang có ${s.inv[`${t}:${g}`]}` : ''}.</span>
+          <label className="field"><span className="sv">Số lượng <b className="num">{qty}</b>{old ? ` (gộp với ${old.n} đang gom)` : ''}</span>
+            <input type="range" min="1" max={t === 'tho' ? 5 : 60} value={Math.min(qty, t === 'tho' ? 5 : 60)} onChange={(e) => setQty(+e.target.value)} /></label>
+          <label className="field">
+            <span className="sv">Giá <b className="num">{fmtGold(price)}</b> · {Math.round(mult * 100)}% thị trường · <Ico i={UI_I.dice} size={14} />có hàng ~{Math.round(chance * 100)}% mỗi lượt</span>
+            <input type="range" min="0.7" max="1.8" step="0.05" value={mult} onChange={(e) => setMult(+e.target.value)} />
+          </label>
+          <ConfirmBtn cost={deposit} gold={s.gold} disabled={s.gold < deposit || (!old && s.bids.length >= G.BID_MAX)}
+            onClick={() => { act(() => placeBid(s, `${t}:${g}`, Math.min(qty, t === 'tho' ? 5 : 60), price)); setForm(false); }}>
+            <Ico i={UI_I.tag} />Đặt mua · cọc {fmtGold(deposit)}
+          </ConfirmBtn>
+        </div>
+      )}
     </>
   );
 }
