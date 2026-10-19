@@ -12,7 +12,7 @@ import {
 import { vaultOf, mineTotal, mineK, raidsPerYear, takeItem, takeGear, sellVaultGear } from '../game/vault.js';
 import { gearSell } from '../game/gear.js';
 import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy, Card } from './ui.jsx';
-import { GearCard, gradeQ } from './gearUi.jsx';
+import { GearCard, LockBtn, gradeQ } from './gearUi.jsx';
 import { Ico, NAV_I, UI_I, BUILD_I, TROOP_I, ITEM_I, SLOT_I, EMP_I } from './icons.jsx';
 import WorldMap, { RegionCard } from './WorldMap.jsx';
 
@@ -146,12 +146,13 @@ function Vault({ s, act }) {
           {v.gear.map((it) => (
             <GearCard key={it.id} it={it} s={s} compare open={open === it.id} onToggle={() => toggle(it.id)}>
               <button className="mini buy" onClick={() => { act(() => takeGear(s, it.id)); setOpen(null); }}><Ico i={UI_I.take} />Lấy về</button>
-              <button className="mini" onClick={() => { act(() => sellVaultGear(s, it.id)); setOpen(null); }}><Ico i={UI_I.sell} />Bán · {fmtGold(gearSell(it))}</button>
+              {!it.lock && <button className="mini" onClick={() => { act(() => sellVaultGear(s, it.id)); setOpen(null); }}><Ico i={UI_I.sell} />Bán · {fmtGold(gearSell(it))}</button>}
+              <LockBtn it={it} act={act} />
             </GearCard>
           ))}
         </div>
       ) : <p className="empty"><Ico i={SLOT_I.wep} size={28} />Chưa có trang bị nào. Đệ tử xuất chinh và chiếm vùng mới sẽ mang về.</p>}
-      <p className="note">Kho đầy trang bị thì món kém nhất tự bán vào ngân khố.</p>
+      <p className="note">Kho đầy trang bị thì món kém nhất chưa khóa tự bán vào ngân khố.</p>
     </>
   );
 }

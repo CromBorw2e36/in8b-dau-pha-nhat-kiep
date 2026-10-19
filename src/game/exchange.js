@@ -44,6 +44,7 @@ export function consignGear(s, id, price) {
   if (s.cons.length >= G.CONSIGN_MAX) return 'Quầy ký gửi đã đầy.';
   const i = s.armory.findIndex((x) => x.id === id);
   if (i < 0 || price <= 0) return null;
+  if (s.armory[i].lock) return 'Món này đang khóa.';
   const it = s.armory.splice(i, 1)[0];
   s.cons.push({ id: newId(), kind: 'gear', it, n: 1, price: Math.round(price), t: s.t });
   return `Đã ký gửi ${gearName(it)}, giá ${fmtGold(price)}.`;

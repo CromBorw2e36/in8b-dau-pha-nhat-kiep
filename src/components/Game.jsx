@@ -155,7 +155,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
           <button className="icon-btn home" onClick={onHome} aria-label="Về trang chủ" title="Về trang chủ"><Ico i={UI_I.home} size={18} /></button>
           <div className="who">
             <div className="who-name">{s.name}</div>
-            <div className="who-sub">{s.faction || 'Tán tu'}{s.evil ? ' · ma đạo' : ''}{s.heirOf ? ' · hậu duệ Đế' : ''}</div>
+            <div className="who-sub">{s.faction || 'Tán tu'}{s.evil ? ' · ma đạo' : ''}{s.heirOf ? ' · hậu duệ Đế' : ''}{s.up ? ' · Thượng giới' : ''}{s.ng ? ` · trùng sinh ${s.ng}` : ''}</div>
           </div>
           {s.R >= 11
             ? <button className="realm-badge" data-r={s.R} onClick={() => setPanel('emperor')} title="Đế lộ: đế cảnh, nhất thống, truyền thừa"><Ico i={EMP_I.de} size={14} /><span>{realmLabel(s)}</span></button>
@@ -165,7 +165,13 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
         <div className="meters">
           <div className="meter" title="Tuổi / thọ nguyên">
             <Ico i={STAT_I.life} size={16} className="m-ico" /><span className="m-name">Tuổi</span>
-            <Bar value={s.age} max={life === Infinity ? s.age : life} tone="var(--life)" thin />
+            <div className="age-track">
+              <Bar value={s.age} max={life === Infinity ? s.age : life} tone="var(--life)" thin />
+              {/* Tiến độ năm hiện tại: đầy 100% thì sang năm mới; khởi động lại cùng nhịp với bộ đếm tick */}
+              <div className={'yr-line' + (blocked ? ' stop' : '')} title={blocked ? 'Thời gian đang dừng' : 'Tiến độ năm nay'}>
+                {!blocked && <i key={`${ver}-${speed}`} style={{ animationDuration: `${SPEEDS[speed] * (s.started ? 1 : 0.6)}ms` }} />}
+              </div>
+            </div>
             <span className="m-val num">{s.age}<small>/{life === Infinity ? '∞' : life}</small></span>
           </div>
           {s.started && (

@@ -58,10 +58,20 @@ function stash(s, it) {
   s.armory.push(it);
   // Kho đầy: tự bán món kém nhất
   if (s.armory.length > G.ARMORY_MAX) {
-    s.armory.sort((a, b) => gearScore(b) - gearScore(a));
-    const out = s.armory.pop();
-    earn(s, 'Bán trang bị cũ', gearSell(out));
+    const out = dropWorst(s.armory);
+    if (out) earn(s, 'Bán trang bị cũ', gearSell(out));
   }
+}
+// Rút món kém nhất chưa khóa ra khỏi danh sách; mọi món đều khóa thì giữ nguyên (kho được vượt hạn mức)
+export function dropWorst(list) {
+  let i = -1;
+  list.forEach((x, k) => { if (!x.lock && (i < 0 || gearScore(x) < gearScore(list[i]))) i = k; });
+  return i < 0 ? null : list.splice(i, 1)[0];
+}
+// Khóa đồ: không bị tự bán, bán đồ kém, bán tay hay ký gửi
+export function toggleLock(it) {
+  it.lock = !it.lock;
+  return it.lock ? `Đã khóa ${gearName(it)}.` : `Đã mở khóa ${gearName(it)}.`;
 }
 
 export function equip(s, id) {
@@ -82,13 +92,14 @@ export function unequip(s, sl) {
 export function sellGear(s, id) {
   const i = s.armory.findIndex((x) => x.id === id);
   if (i < 0) return null;
+  if (s.armory[i].lock) return 'Món này đang khóa.';
   const it = s.armory.splice(i, 1)[0];
   earn(s, 'Bán trang bị', gearSell(it));
   return `Đã bán ${gearName(it)}, thu ${fmtGold(gearSell(it))} kim tệ.`;
 }
 // Bán mọi món trong kho kém hơn đồ đang mặc cùng ô
 export function sellWorse(s) {
-  const worse = s.armory.filter((it) => s.gear[it.sl] && gearScore(it) <= gearScore(s.gear[it.sl]));
+  const worse = s.armory.filter((it) => !it.lock && s.gear[it.sl] && gearScore(it) <= gearScore(s.gear[it.sl]));
   if (!worse.length) return 'Không có món nào kém hơn đồ đang mặc.';
   const tot = worse.reduce((a, it) => a + gearSell(it), 0);
   s.armory = s.armory.filter((it) => !worse.includes(it));

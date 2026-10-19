@@ -47,6 +47,30 @@ G.LEGACY = [
 ];
 G.UNIFY_BONUS = { tax: 1, mine: 0.5, members: 500 }; // phần thưởng khi nắm trọn đại lục
 
+// ───── Thượng giới: mở sau khi phá toái hư không phi thăng ─────
+// xy theo khung 400×300 của tinh đồ · def: phòng thủ · inc: cống phẩm mỗi năm
+G.UP_REGIONS = [
+  { id: 'phithang', xy: [52, 250],  n: 'Phi Thăng Đài',      own: 'Tiếp Dẫn Sứ',          def: 680,  inc: 2e8,   d: 'Nơi kẻ phi thăng từ hạ giới đặt chân, bị các thế lực canh giữ.', start: true },
+  { id: 'vanlinh',  xy: [128, 196], n: 'Vạn Linh Thánh Vực',  own: 'Vạn Linh Tộc',          def: 710,  inc: 2.6e8, d: 'Thảo nguyên linh khí đặc quánh, linh thú thành bầy.' },
+  { id: 'tinhha',   xy: [70, 120],  n: 'Tinh Hà Cổ Đạo',      own: 'Tinh Thần Các',         def: 740,  inc: 3.2e8, d: 'Con đường lát bằng tinh thần vụn, nối các thánh vực.' },
+  { id: 'luyenthan',xy: [200, 250], n: 'Luyện Thần Lô',       own: 'Đan Thần Điện',         def: 770,  inc: 4e8,   d: 'Lò đan cổ cao vạn trượng, lửa chưa từng tắt.' },
+  { id: 'thiencot', xy: [196, 140], n: 'Thiên Cốt Sơn',       own: 'Cổ Thần Tộc',           def: 800,  inc: 5e8,   d: 'Núi xếp từ xương thần thú viễn cổ.' },
+  { id: 'hongmong', xy: [142, 58],  n: 'Hồng Mông Hải',       own: 'Hồng Mông Thánh Địa',   def: 830,  inc: 6.4e8, d: 'Biển hỗn độn, sóng là đạo văn chưa thành hình.' },
+  { id: 'luanhoi',  xy: [282, 196], n: 'Luân Hồi Cốc',        own: 'Luân Hồi Điện',         def: 860,  inc: 8e8,   d: 'Nơi linh hồn đi qua trước khi chuyển thế.' },
+  { id: 'cuuthien', xy: [272, 90],  n: 'Cửu Thiên Thần Khuyết', own: 'Cửu Thiên Đế Tộc',    def: 890, inc: 1e9,   d: 'Chín tầng cung khuyết lơ lửng giữa trời.' },
+  { id: 'thiende',  xy: [352, 140], n: 'Thiên Đế Điện',       own: 'Thiên Đế',              def: 950, inc: 1.4e9, d: 'Ngai vàng của kẻ đứng đầu thượng giới.' },
+];
+G.UP_ROADS = [
+  ['phithang', 'vanlinh'], ['phithang', 'luyenthan'], ['vanlinh', 'tinhha'], ['vanlinh', 'thiencot'], ['vanlinh', 'luyenthan'],
+  ['tinhha', 'hongmong'], ['thiencot', 'hongmong'], ['thiencot', 'luanhoi'], ['luyenthan', 'luanhoi'], ['thiencot', 'cuuthien'],
+  ['hongmong', 'cuuthien'], ['luanhoi', 'thiende'], ['cuuthien', 'thiende'],
+];
+G.UP_POWER = 45;      // đế nguyên: thế lực cộng thêm cho mỗi vùng thượng giới đã chiếm
+G.UP_SETTLE = 6;      // vùng vừa chiếm cần ngần ấy lượt bình định mới làm bàn đạp đánh tiếp
+G.UP_DECHIEN = { base: 1000, grow: 3, after: 60 }; // Đế chiến: thực lực Thiên Đế, tăng mỗi lượt; muộn nhất sau 60 lượt
+// Trùng sinh sau Đế chiến: ng = số lần, mỗi lần đại lục khó hơn và thưởng nhiều hơn
+G.NG = { def: 0.12, peer: 2, inc: 0.15, qi: 0.15, luck: 3, special: 0.15 };
+
 G.ROOTS = [
   { n: 'Kinh mạch bế tắc', m: 0.15, p: 3,   d: 'Đấu khí vừa ngưng tụ đã tiêu tán. Ai cũng gọi bạn là phế vật.' },
   { n: 'Hạ phẩm',          m: 0.6,  p: 42,  d: 'Tư chất bình thường như phần lớn người trên đại lục.' },

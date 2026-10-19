@@ -688,9 +688,13 @@ button.realm-badge:hover { filter: brightness(1.1); box-shadow: 0 0 12px rgba(24
 .recipe-title { display: flex; align-items: center; gap: 8px; color: var(--gold-hi); font: 700 16px var(--ui); }
 .mats { display: flex; flex-wrap: wrap; gap: 6px; }
 .mat {
-  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font: 600 13px var(--ui);
-  background: var(--panel-2); border: 1px solid var(--edge); color: var(--ink);
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font: 600 12px var(--ui);
+  background: var(--panel-2); border: 1px solid var(--edge); color: var(--ink); line-height: 1.5;
 }
+.mat > span { color: var(--ink-dim); font-weight: 500; }
+button.mat { cursor: pointer; }
+button.mat:hover { border-color: var(--gold); }
+.mat.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, var(--panel-2)); }
 .mat small { font-size: 10.5px; color: var(--ink-dim); margin-left: -2px; }
 .mat .ico { color: var(--gold); }
 .mat.ok b { color: var(--good); }
@@ -1023,3 +1027,33 @@ button.realm-badge:hover { filter: brightness(1.1); box-shadow: 0 0 12px rgba(24
 .end-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 .end-acts .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .btn.armed { background: var(--red); color: #fff; border-color: var(--red-hi); animation: arm 0.9s ease-in-out infinite; }
+
+/* ─── Tinh đồ Thượng giới ─── */
+.um-wrap { border-radius: 12px; overflow: hidden; border: 1px solid var(--edge-2); box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6); }
+.um { display: block; width: 100%; height: auto; }
+.um-road line { stroke: #8a7cc0; stroke-width: 1.2; stroke-dasharray: 3 3; opacity: 0.55; }
+.um-road.own line { stroke: var(--gold-hi); stroke-dasharray: none; opacity: 1; stroke-width: 1.8; }
+.um-road .um-halo { stroke: var(--gold); stroke-width: 5; opacity: 0.5; }
+.um-node { cursor: pointer; outline: none; }
+.um-aura { fill: #9f8cff; opacity: 0.35; }
+.um-core { fill: #1a1430; stroke: #b9adf0; stroke-width: 1.6; }
+.um-node.own .um-aura { fill: var(--gold); opacity: 0.6; }
+.um-node.own .um-core { fill: var(--gold); stroke: #fff3df; }
+.um-node.easy .um-core { stroke: var(--good); stroke-width: 2.2; }
+.um-node.mid .um-core { stroke: var(--gold-hi); stroke-width: 2.2; }
+.um-node.hard .um-core { stroke: var(--bad); stroke-width: 2.2; }
+.um-node.lock { opacity: 0.6; }
+.um-node.lock .um-core { stroke-dasharray: 2 2; }
+.um-sel { fill: none; stroke: #fff; stroke-width: 1.2; stroke-dasharray: 4 3; animation: um-spin 6s linear infinite; }
+.um-node:hover .um-core, .um-node:focus-visible .um-core { stroke: #fff; }
+.um-label { fill: #e6defc; font: 600 10px var(--ui); text-anchor: middle; paint-order: stroke; stroke: #07060f; stroke-width: 3px; }
+.um-node.own .um-label, .um-node.sel .um-label { fill: var(--gold-hi); }
+@keyframes um-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .um-sel { animation: none; } }
+.gear-lock { display: inline-flex; vertical-align: -1px; margin-right: 4px; color: var(--gold); }
+.mini.on { border-color: var(--gold); color: var(--gold-hi); }
+.age-track { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.yr-line { height: 2px; border-radius: 2px; background: rgba(0, 0, 0, 0.35); overflow: hidden; }
+.yr-line i { display: block; height: 100%; background: var(--gold); transform-origin: left; animation: yr-fill linear forwards; }
+.yr-line.stop { opacity: 0.4; }
+@keyframes yr-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }

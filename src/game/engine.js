@@ -13,6 +13,7 @@ import { marketTick, consignTick, bidTick } from './exchange.js';
 import { auctionTick } from './auction.js';
 import { troopCount } from './army.js';
 import { emperorYearly, legacyYearly, readLegacy, clearLegacy, applyLegacy, unified } from './emperor.js';
+import { upYearly, dechienReady, readRebirth, clearRebirth, rebirthRoot, applyRebirth } from './upper.js';
 
 export const EV = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
 const NUM = ['', 'nhất', 'nhị', 'tam', 'tứ', 'ngũ', 'lục', 'thất', 'bát', 'cửu', 'thập'];
@@ -22,6 +23,9 @@ export function newLife() {
   const g = R() < 0.5 ? 'm' : 'f';
   let root = wpick(G.ROOTS.map((_, i) => i), (i) => G.ROOTS[i].p);
   if (origin.rootUp && root < 5 && R() < 0.6) root++;
+  // Trùng sinh sau Đế chiến: căn cốt mạnh hơn
+  const Rb = readRebirth();
+  if (Rb) root = rebirthRoot(root, Rb.lv);
   const special = root === 5 ? pick(G.SPECIAL_BODIES) : null;
 
   const attrs = [origin.fireAttr || special === 'Viêm Mạch Chi Thể' ? 'Hỏa' : wpick(G.ATTRS, (a) => a[1])[0]];
@@ -57,6 +61,7 @@ export function newLife() {
   if (special === 'Bất Diệt Kim Thân') s.body = clamp(s.body + 20);
   if (special === 'Linh Hồn Thiên Sinh') s.soul = clamp(s.soul + 25);
   if (special === 'Thiên Độc Thể') { s.soul = clamp(s.soul + 8); s.luck = clamp(s.luck - 10); }
+  if (Rb) { applyRebirth(s, Rb); clearRebirth(); }
   // Truyền thừa: kiếp trước thành Đế và lập người kế thừa thì kiếp này được hưởng phúc ấm
   const L = readLegacy();
   const prev = readBook()[0];
@@ -73,6 +78,7 @@ export function newLife() {
     ? `Bạn là một đứa trẻ bị bỏ rơi ở Hắc Giác Vực, được một bà lão nhặt về nuôi và đặt tên là ${s.name}.`
     : `Bạn chào đời — ${origin.n.charAt(0).toLowerCase() + origin.n.slice(1)}. Phụ mẫu đặt tên bạn là ${s.name}.`;
   s.log.push({ a: 0, st: 'Thơ ấu', items: [{ t: intro, k: 'key' }] });
+  if (s.rebornFrom) s.log[0].items.push({ t: `Trùng sinh lần ${s.ng}: ký ức của Đấu Đế ${s.rebornFrom} sau trận Đế chiến vẫn còn trong thức hải. Căn cốt ${G.ROOTS[s.root].n.toLowerCase()}, tu luyện nhanh hơn — nhưng đại lục kiếp này cũng hiểm ác hơn.`, k: 'key' });
   if (gifts) s.log[0].items.push({ t: `Kiếp trước, Đấu Đế ${s.heirOf} để lại ngọc giản truyền thừa: ${gifts.join(', ')}. Có món phải chờ bạn đủ cảnh giới mới giải phong.`, k: 'key' });
   else if (s.heirOf) s.log[0].items.push({ t: `Trong huyết mạch bạn còn vương chút đế uy của Đấu Đế ${s.heirOf}. Phúc ấm kiếp trước theo bạn vào đời.`, k: 'good' });
   return s;
@@ -106,6 +112,7 @@ function qiGain(s, yrs, f, pill) {
   m *= G.GONG_MULT[s.gong];
   m *= 1 + Math.min(0.75, 0.25 * s.fires.length);
   for (const id of s.traits) if (trait(id)?.qi) m *= trait(id).qi;
+  m *= 1 + (s.ng || 0) * G.NG.qi;       // ký ức kiếp trước
   if (s.faction) m *= 1.12;
   if (s.master) m *= 1.25;
   if (s.evil) m *= 1.35;
@@ -169,6 +176,7 @@ function yearly(s, e, yrs) {
   auctionTick(s, e);
   emperorYearly(s, e);
   legacyYearly(s, e);
+  upYearly(s, e, yrs);
 
   if (s.started) {
     const before = realmLabel(s);
@@ -263,6 +271,7 @@ export function tick(s) {
   if (s.ready && s.pending !== 'breakthrough' && !holding(s)) setPending(s, EV.breakthrough);
   else if (s.pending) { /* đã có bảng nhiệm vụ */ }
   else if (s.flags.duel && s.age >= s.flags.duel) { delete s.flags.duel; setPending(s, EV.duel); }
+  else if (dechienReady(s)) setPending(s, EV.dechien);
   else if (s.started && !s.seen.lifeend && lifeOf(s) - s.age <= yrs * 3 && s.R < 10) setPending(s, EV.lifeend);
 
   // Khoảnh khắc
@@ -356,7 +365,9 @@ export function summary(s) {
   const r = realm(s);
   let title;
   const lands = landCount(s);
-  if (s.win && s.flags.ascend) title = ['Phá toái hư không', 'Đế cảnh viên mãn, phi thăng rời khỏi đại lục. Hậu thế chỉ còn biết tới bạn qua truyền thuyết.'];
+  if (s.flags.dechien === 'win') title = ['Thượng giới chi chủ', 'Đánh bại Thiên Đế trong Đế chiến, rồi đế thể vỡ nát, chuyển thế trùng tu. Hai giới đều khắc ghi tên bạn.'];
+  else if (s.flags.dechien === 'lose') title = ['Vẫn lạc Đế chiến', 'Ngã xuống trước Thiên Đế trên Thượng giới. Một tia chân linh chui vào luân hồi, chờ ngày trùng sinh.'];
+  else if (s.win && s.up) title = ['Phá toái hư không', 'Đế cảnh viên mãn, phi thăng lên Thượng giới. Hậu thế ở hạ giới chỉ còn biết tới bạn qua truyền thuyết.'];
   else if (s.flags.unified && s.win) title = ['Đế chủ vạn cổ', `Đấu Đế nhất thống ${G.REGIONS.length} vùng đất. Thiên hạ chung một chủ, vạn cổ không ai sánh bằng.`];
   else if (s.flags.unified) title = ['Nhất thống đại lục', `${s.sect.name} nắm trọn ${G.REGIONS.length} vùng đất từ Ô Thản Thành đến Hồn Giới.`];
   else if (s.win && (s.land?.daxa || lands >= 24)) title = ['Đế chủ đại lục', `Đấu Đế ngự trị ${lands} vùng đất, từ Ô Thản Thành đến tận Hồn Giới. Vạn cổ không ai sánh bằng.`];
@@ -438,6 +449,6 @@ export function addToBook(s) {
   const sm = summary(s);
   const book = readBook();
   if (book.some((b) => b.id === s.id)) return;
-  book.unshift({ id: s.id, name: s.name, realm: sm.realm, R: s.R, age: s.age, title: sm.title[0], cause: s.cause, win: s.win, heir: !!(s.win && s.flags.heir), hist: s.hist });
+  book.unshift({ id: s.id, name: s.name, realm: sm.realm, R: s.R, age: s.age, title: sm.title[0], cause: s.cause, win: s.win, heir: !!(s.win && s.flags.heir), ng: s.ng || 0, up: !!s.up, hist: s.hist });
   try { localStorage.setItem(BOOK, JSON.stringify(book.slice(0, 50))); } catch {}
 }

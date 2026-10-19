@@ -1,7 +1,7 @@
 // Phần hiển thị trang bị dùng chung cho Túi, Chợ, Sàn, Lò rèn
 import G from '../game/data.js';
 import { gearName, gearStat, qualityIdx, fxText } from '../game/util.js';
-import { gearDelta } from '../game/gear.js';
+import { gearDelta, toggleLock } from '../game/gear.js';
 import { Tile, Card } from './ui.jsx';
 import { Ico, SLOT_I, STAT_I, UI_I } from './icons.jsx';
 
@@ -70,10 +70,19 @@ export function FxList({ it }) {
 export function GearCard({ it, s, open, onToggle, compare, right, tag, tone, children }) {
   return (
     <Card icon={SLOT_I[it.sl]} q={qualityIdx(it)} badge={ROMAN[it.tier]} count={it.en ? `+${it.en}` : null} fx={it.fx?.length > 0}
-      title={gearName(it)} sub={<GearSummary it={it} s={s} compare={compare} />} right={right} tag={tag} tone={tone} open={open} onToggle={onToggle}>
+      title={it.lock ? <><span className="gear-lock" title="Đã khóa"><Ico i={UI_I.lock} size={13} /></span>{gearName(it)}</> : gearName(it)} sub={<GearSummary it={it} s={s} compare={compare} />} right={right} tag={tag} tone={tone} open={open} onToggle={onToggle}>
       <GearStats it={it} s={s} compare={compare} />
       <FxList it={it} />
       {children && <div className="c-act">{children}</div>}
     </Card>
+  );
+}
+
+// Nút khóa / mở khóa: đồ khóa không bị tự bán, bán đồ kém hay ký gửi
+export function LockBtn({ it, act }) {
+  return (
+    <button className={'mini ghost' + (it.lock ? ' on' : '')} onClick={() => act(() => toggleLock(it))} title="Đồ khóa không bị tự bán, bán đồ kém hay ký gửi">
+      <Ico i={UI_I.lock} />{it.lock ? 'Mở khóa' : 'Khóa'}
+    </button>
   );
 }

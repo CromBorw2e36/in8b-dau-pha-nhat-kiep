@@ -5,7 +5,7 @@ import { equip, unequip, sellGear, sellWorse, gearSell } from '../game/gear.js';
 import { sell, useItem, sellPrice } from '../game/economy.js';
 import { netWorth, save } from '../game/engine.js';
 import { Sheet, SheetBody, SheetHead, Tabs, Card } from './ui.jsx';
-import { GearCard, gradeQ } from './gearUi.jsx';
+import { GearCard, LockBtn, gradeQ } from './gearUi.jsx';
 import { Ico, ITEM_I, SLOT_I, NAV_I, UI_I } from './icons.jsx';
 
 const ORDER = ['tho', 'pha', 'tuk', 'lieu', 'hon', 'calm', 'ore', 'herb', 'core'];
@@ -74,6 +74,7 @@ function Gear({ s, act }) {
           return (
             <GearCard key={k} it={it} s={s} open={open === it.id} onToggle={() => toggle(it.id)}>
               <button className="mini ghost" onClick={() => act(() => unequip(s, k))}>Tháo</button>
+              <LockBtn it={it} act={act} />
             </GearCard>
           );
         })}
@@ -96,7 +97,8 @@ function Gear({ s, act }) {
               tag={s.gear[it.sl] && gearScore(it) > gearScore(s.gear[it.sl]) ? 'Tốt hơn' : null}
               right={<span className="price"><Ico i={UI_I.sell} size={13} />{fmtGold(gearSell(it))}</span>}>
               <button className="mini buy" onClick={() => act(() => equip(s, it.id))}>Mặc vào</button>
-              <button className="mini ghost" onClick={() => act(() => sellGear(s, it.id))}><Ico i={UI_I.sell} />Bán {fmtGold(gearSell(it))}</button>
+              {!it.lock && <button className="mini ghost" onClick={() => act(() => sellGear(s, it.id))}><Ico i={UI_I.sell} />Bán {fmtGold(gearSell(it))}</button>}
+              <LockBtn it={it} act={act} />
             </GearCard>
           ))}
         </div>

@@ -5,21 +5,29 @@ import { save } from '../game/engine.js';
 import {
   deStep, deReached, deNext, landsHeld, unifyLeft, unified, legacySlots, canAscend, legacyAvail, legacyGold, bestGear, writeLegacy,
 } from '../game/emperor.js';
-import { regionDef } from '../game/sect.js';
+import { regionDef, warPower } from '../game/sect.js';
+import { ascendUp, upRegion, upBlock, upP, upDef, upHeld, upTurns, dechienIn, bossPower, dechienP, attackUp } from '../game/upper.js';
+import UpperMap, { upState } from './UpperMap.jsx';
 import { Sheet, SheetBody, SheetHead, Tabs, Card } from './ui.jsx';
-import { Ico, EMP_I, LEG_I, UI_I, STAT_I } from './icons.jsx';
+import { Ico, EMP_I, LEG_I, UI_I, STAT_I, ITEM_I } from './icons.jsx';
 
 // Đế lộ: con đường sau khi thành Đấu Đế
 export default function Emperor({ s, bump, onClose, initTab }) {
-  const [tab, setTab] = useState(initTab || 'de');
+  const [tab, setTab] = useState(initTab || (s.up ? 'up' : 'de'));
+  const [msg, setMsg] = useState(null);
+  const act = (fn) => { const r = fn(); if (r) setMsg(r); save(s); bump(); };
+  const go = (t) => { setTab(t); setMsg(null); };
+  const upOpen = !!s.up || canAscend(s);
   return (
     <Sheet onClose={onClose} tall>
       <SheetHead icon={EMP_I.de} title="Đế lộ" sub={`Đấu Đế ${deStep(s)} trọng`} value={`${deReached(s).length}/${G.DE_CANH.length}`} valueIcon={EMP_I.de} valueLabel="Đế pháp" />
-      <Tabs tab={tab} onTab={setTab} tabs={[['de', 'Đế cảnh', EMP_I.de], ['thong', 'Nhất thống', EMP_I.unify, unified(s)], ['truyen', 'Truyền thừa', EMP_I.legacy]]} />
+      <Tabs tab={tab} onTab={go} tabs={[['de', 'Đế cảnh', EMP_I.de], ['thong', 'Nhất thống', EMP_I.unify, unified(s)], upOpen && ['up', 'Thượng giới', EMP_I.ascend, !!s.up && dechienIn(s) <= 5], ['truyen', 'Truyền thừa', EMP_I.legacy]].filter(Boolean)} />
+      {msg && <p className="bag-msg">{msg}</p>}
       <SheetBody>
         {tab === 'de' && <DeCanh s={s} />}
         {tab === 'thong' && <Unify s={s} />}
-        {tab === 'truyen' && <Legacy s={s} bump={bump} onClose={onClose} />}
+        {tab === 'up' && <Upper s={s} act={act} onAscend={() => go('truyen')} />}
+        {tab === 'truyen' && <Legacy s={s} bump={bump} onClose={onClose} onAscended={() => go('up')} />}
       </SheetBody>
     </Sheet>
   );
@@ -99,7 +107,7 @@ function Unify({ s }) {
   );
 }
 
-function Legacy({ s, bump, onClose }) {
+function Legacy({ s, bump, onClose, onAscended }) {
   const slots = legacySlots(s);
   const [picks, setPicks] = useState({});
   const [armed, setArmed] = useState(null);
@@ -114,7 +122,9 @@ function Legacy({ s, bump, onClose }) {
   const finish = (ascend) => {
     if (armed !== ascend) { setArmed(ascend); setTimeout(() => setArmed(null), 3000); return; }
     writeLegacy(s, { ...picks, ascend });
-    retire(s, ascend);
+    // Phi thăng: kiếp này tiếp tục trên Thượng giới, ngọc giản đã ghi sẵn cho kiếp sau
+    if (ascend) { ascendUp(s); save(s); bump(); onAscended(); return; }
+    retire(s);
     save(s);
     bump();
     onClose();
@@ -160,13 +170,70 @@ function Legacy({ s, bump, onClose }) {
         <button className={'btn' + (armed === false ? ' armed' : '')} onClick={() => finish(false)}>
           <Ico i={UI_I.retire} size={20} /> {armed === false ? 'Bấm lần nữa để quy ẩn' : 'Quy ẩn · khép lại kiếp này'}
         </button>
-        {canAscend(s) && (
+        {canAscend(s) && !s.up && (
           <button className={'btn primary' + (armed === true ? ' armed' : '')} onClick={() => finish(true)}>
             <Ico i={EMP_I.ascend} size={20} /> {armed === true ? 'Bấm lần nữa để phi thăng' : 'Phá toái hư không · phi thăng'}
           </button>
         )}
       </div>
       {!canAscend(s) && <p className="note center">Đạt Đấu Đế 100 trọng để mở «Phá toái hư không».</p>}
+      {canAscend(s) && !s.up && <p className="note center">Phi thăng: ngọc giản ghi ngay các món đã chọn, kiếp này tiếp tục trên Thượng giới cho tới trận Đế chiến.</p>}
+      {s.up && <p className="note center">Ngọc giản đã ghi lúc phi thăng. Chọn lại rồi quy ẩn sẽ ghi đè. Đế chiến cũng khép lại kiếp này và mở ra trùng sinh.</p>}
+    </>
+  );
+}
+
+// Thượng giới: tinh đồ, chinh phạt các thánh vực, chờ Đế chiến
+function Upper({ s, act, onAscend }) {
+  const first = G.UP_REGIONS.find((r) => !upBlock(s, r)) || G.UP_REGIONS[0];
+  const [sel, setSel] = useState(first.id);
+  if (!s.up) {
+    return (
+      <>
+        <p className="empty"><Ico i={EMP_I.ascend} size={28} />Đế cảnh đã viên mãn. Phá toái hư không để lên Thượng giới.</p>
+        <ul className="perk-list">
+          <li><Ico i={UI_I.map} size={16} />{G.UP_REGIONS.length} thánh vực mới, phòng thủ {G.UP_REGIONS[0].def}–{G.UP_REGIONS[G.UP_REGIONS.length - 1].def}</li>
+          <li><Ico i={UI_I.power} size={16} />Mỗi vùng chiếm được: đế nguyên +{G.UP_POWER} thế lực, cống phẩm khổng lồ, quặng 9 phẩm</li>
+          <li><Ico i={UI_I.cp} size={16} />Cuối cùng là Đế chiến với Thiên Đế — thắng hay thua, kiếp này khép lại và bạn trùng sinh với căn cốt mạnh hơn</li>
+        </ul>
+        <button className="btn primary" onClick={onAscend}><Ico i={EMP_I.ascend} size={20} /> Chọn truyền thừa rồi phi thăng</button>
+      </>
+    );
+  }
+  const r = upRegion(sel);
+  const st = upState(s, r);
+  const block = upBlock(s, r);
+  const p = upP(s, r);
+  const left = dechienIn(s);
+  return (
+    <>
+      <div className="stat-tiles">
+        <div title="Thánh vực đã chiếm"><Ico i={UI_I.land} size={20} /><b className="num">{upHeld(s)}<small>/{G.UP_REGIONS.length}</small></b><small>thánh vực</small></div>
+        <div title="Thế lực của bạn (gồm đế nguyên)"><Ico i={UI_I.power} size={20} /><b className="num">{Math.round(warPower(s))}</b><small>thế lực</small></div>
+        <div title="Thực lực Thiên Đế, tăng dần mỗi lượt"><Ico i={UI_I.cp} size={20} /><b className="num">{bossPower(s)}</b><small>Thiên Đế</small></div>
+        <div title="Lượt còn lại trước Đế chiến"><Ico i={UI_I.time} size={20} /><b className="num">{upHeld(s) >= G.UP_REGIONS.length ? 0 : left}</b><small>lượt tới Đế chiến</small></div>
+      </div>
+      <div className="prog">
+        <span className="sv"><Ico i={UI_I.cp} size={14} />Tỷ lệ thắng Đế chiến nếu nổ ra lúc này <b className="num">~{Math.round(dechienP(s) * 100)}%</b></span>
+        <div className="lv-track thick"><i style={{ width: `${dechienP(s) * 100}%` }} /></div>
+      </div>
+      <div className="um-wrap"><UpperMap s={s} sel={sel} onSel={setSel} /></div>
+      <div className="wm-legend">
+        <span><i className="own" />Của ta</span><span><i className="easy" />Dễ</span><span><i className="mid" />Cân sức</span><span><i className="hard" />Khó</span><span><i className="lock" />Chưa tới</span>
+      </div>
+      <div className="recipe">
+        <div className="recipe-title"><Ico i={r.id === 'thiende' ? EMP_I.de : UI_I.land} size={22} /><b>{r.n}</b></div>
+        <span className="sv muted"><Ico i={UI_I.help} size={14} />{r.d}</span>
+        <span className="sv"><Ico i={UI_I.members} size={14} />Chủ nhân: {r.own}</span>
+        <span className="sv"><Ico i={UI_I.cp} size={14} />Phòng thủ <b className="num">{upDef(s, r)}</b> · thế lực ta <b className="num">{Math.round(warPower(s))}</b></span>
+        <span className="sv"><Ico i={UI_I.gold} size={14} />Cống phẩm {fmtGold(r.inc)}/năm · <Ico i={ITEM_I.ore} size={14} />15 huyền thiết 9 phẩm/năm</span>
+        {st === 'own'
+          ? <span className="sv"><Ico i={UI_I.ok} size={14} />Đã thuộc về bạn · đế nguyên +{G.UP_POWER}</span>
+          : block
+            ? <span className="sv muted"><Ico i={UI_I.lock} size={14} />{block}</span>
+            : <button className="btn primary" onClick={() => act(() => attackUp(s, r.id))}><Ico i={UI_I.army} size={20} /> Chinh phạt · ~{Math.round(p * 100)}%</button>}
+      </div>
+      <p className="note">Đế chiến nổ ra khi chiếm trọn {G.UP_REGIONS.length} thánh vực, hoặc muộn nhất sau {G.UP_DECHIEN.after} lượt kể từ khi phi thăng ({upTurns(s)} lượt đã qua). Thiên Đế mạnh dần theo thời gian — chiếm càng nhiều đế nguyên càng dễ thắng.</p>
     </>
   );
 }

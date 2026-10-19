@@ -46,22 +46,47 @@ function SmithUpgrade({ s, act }) {
   );
 }
 
-function Mat({ s, t, g, n }) {
+// Chip nguyên liệu: bấm vào để mở đặt mua nhanh
+function Mat({ s, t, g, n, on, onPick }) {
   const have = matHave(s, t, g);
-  return <span className={'mat ' + (have >= n ? 'ok' : 'no')} title={`${itemName(t, g)}: túi ${countOf(s, t, g)}, kho tông môn ${have - countOf(s, t, g)}`}><Ico i={ITEM_I[t]} size={16} /><small>{g}</small><b className="num">{have}/{n}</b></span>;
+  return (
+    <button type="button" className={'mat ' + (have >= n ? 'ok' : 'no') + (on ? ' on' : '')} onClick={onPick}
+      title={`${itemName(t, g)}: túi ${countOf(s, t, g)}, kho tông môn ${have - countOf(s, t, g)}. Bấm để đặt mua.`}>
+      <Ico i={ITEM_I[t]} size={14} /><span>{itemName(t, g)}</span><b className="num">{have}/{n}</b>
+    </button>
+  );
 }
 
-// Thiếu nguyên liệu: đặt mua nhanh trên sàn với giá 115% thị trường
+// Đặt mua nhanh trên sàn với giá 115% thị trường: thiếu thì mua phần thiếu, đủ thì mua thêm một mẻ
 function QuickBid({ s, act, t, g, n }) {
   const short = n - matHave(s, t, g);
-  if (short <= 0) return null;
   const bid = bidFor(s, `${t}:${g}`);
   if (bid) return <span className="sv muted"><Ico i={UI_I.time} size={14} />Sàn đang gom {bid.n} {itemName(t, g).toLowerCase()} cho bạn</span>;
+  const q = short > 0 ? short : n;
   const price = Math.round(itemFair(s, t, g) * 1.15);
   return (
-    <button className="mini" disabled={s.gold < short * price} onClick={() => act(() => placeBid(s, `${t}:${g}`, short, price))}>
-      <Ico i={UI_I.buy} />Đặt mua {short} {itemName(t, g).toLowerCase()} · {fmtGold(short * price)}
+    <button className="mini" disabled={s.gold < q * price} onClick={() => act(() => placeBid(s, `${t}:${g}`, q, price))}>
+      <Ico i={UI_I.buy} />{short > 0 ? 'Đặt mua' : 'Mua thêm'} {q} {itemName(t, g).toLowerCase()} · {fmtGold(q * price)}
     </button>
+  );
+}
+
+// Danh sách nguyên liệu kèm ô đặt mua nhanh cho món đang chọn
+function Mats({ s, act, gold, mats, extra }) {
+  const [pick, setPick] = useState(null);
+  const cur = mats.find((m) => `${m.t}:${m.g}` === pick);
+  return (
+    <>
+      <div className="mats">
+        {gold != null && <span className={'mat ' + (s.gold >= gold ? 'ok' : 'no')} title="Kim tệ"><Ico i={UI_I.gold} size={14} /><span>Kim tệ</span><b className="num">{fmtGold(gold)}</b></span>}
+        {mats.map((m) => {
+          const k = `${m.t}:${m.g}`;
+          return <Mat key={k} s={s} {...m} on={pick === k} onPick={() => setPick(pick === k ? null : k)} />;
+        })}
+        {extra}
+      </div>
+      {cur && <QuickBid s={s} act={act} t={cur.t} g={cur.g} n={cur.buy || cur.n} />}
+    </>
   );
 }
 
@@ -91,13 +116,7 @@ function Craft({ s, act }) {
           </div>
           <div className="recipe">
             <div className="recipe-title"><Ico i={SLOT_I[sl]} size={22} /><b>{G.GEAR[sl].n} · {G.TIERS[t]}</b></div>
-            <div className="mats">
-              <span className={'mat ' + (s.gold >= c.gold ? 'ok' : 'no')} title="Kim tệ"><Ico i={UI_I.gold} size={16} /><b className="num">{fmtGold(c.gold)}</b></span>
-              <Mat s={s} t="ore" g={c.ore[0]} n={c.ore[1]} />
-              <Mat s={s} t="core" g={c.core[0]} n={c.core[1]} />
-            </div>
-            <QuickBid s={s} act={act} t="ore" g={c.ore[0]} n={c.ore[1]} />
-            <QuickBid s={s} act={act} t="core" g={c.core[0]} n={c.core[1]} />
+            <Mats s={s} act={act} gold={c.gold} mats={[{ t: 'ore', g: c.ore[0], n: c.ore[1] }, { t: 'core', g: c.core[0], n: c.core[1] }]} />
             <div className="odds-bar" title="Tỷ lệ phẩm chất">
               {G.QUALITY.map((q, i) => <i key={q[1]} className={'q-bg' + i} style={{ width: `${odds[i] * 100}%` }} />)}
             </div>
@@ -142,16 +161,12 @@ function Enhance({ s, act }) {
             <GearCard key={it.id} it={it} s={s} tag={worn ? 'Đang mặc' : null} open={open === it.id} onToggle={() => setOpen(open === it.id ? null : it.id)}
               right={max ? <span className="lvl-max">+100</span> : <span className="price" title="Tỷ lệ thành công"><Ico i={UI_I.dice} size={13} />{Math.round(p * 100)}%</span>}>
               {!max && (
-                <div className="mats">
-                  <span className={'mat ' + (s.gold >= c.gold ? 'ok' : 'no')}><Ico i={UI_I.gold} size={16} /><b className="num">{fmtGold(c.gold)}</b></span>
-                  <Mat s={s} t="ore" g={c.ore[0]} n={c.ore[1]} />
-                  <span className="mat" title="Tỷ lệ thành công"><Ico i={UI_I.dice} size={16} />Thành công <b className="num">{Math.round(p * 100)}%</b></span>
-                </div>
+                <Mats s={s} act={act} gold={c.gold} mats={[{ t: 'ore', g: c.ore[0], n: c.ore[1], buy: c.ore[1] * 5 }]}
+                  extra={<span className="mat" title="Tỷ lệ thành công"><Ico i={UI_I.dice} size={14} /><span>Thành công</span><b className="num">{Math.round(p * 100)}%</b></span>} />
               )}
               <div className="lv-track"><i style={{ width: `${it.en || 0}%` }} /></div>
               {!max && <button className="mini buy" disabled={!can} onClick={() => act(() => tryN(it, 1))}><Ico i={UI_I.up} />Cường hóa lên +{(it.en || 0) + 1}</button>}
               {!max && <button className="mini" disabled={!can} onClick={() => act(() => tryN(it, 5))}><Ico i={UI_I.dice} />Liền 5 lần</button>}
-              {!max && <QuickBid s={s} act={act} t="ore" g={c.ore[0]} n={c.ore[1] * 5} />}
             </GearCard>
           );
         })}

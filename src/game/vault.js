@@ -1,6 +1,6 @@
 import G from './data.js';
 import { R, rand, clamp, give, earn, effLv, parseKey, itemName, beastGrade, tierFor, gearName, gearScore, fmtItems, fmtGold } from './util.js';
-import { genGear, obtainGear, gearSell } from './gear.js';
+import { genGear, obtainGear, gearSell, dropWorst } from './gear.js';
 import { deFx, unifyFx } from './emperor.js';
 
 // ───── Kho tông môn: sản lượng mỏ lãnh địa và chiến lợi phẩm đệ tử đổ về đây ─────
@@ -23,8 +23,8 @@ function stockGear(s, it) {
   const v = vaultOf(s);
   v.gear.push(it);
   if (v.gear.length > G.VAULT_GEAR_MAX) {
-    v.gear.sort((a, b) => gearScore(b) - gearScore(a));
-    earn(s, 'Kho tông môn thanh lý', gearSell(v.gear.pop()));
+    const out = dropWorst(v.gear);
+    if (out) earn(s, 'Kho tông môn thanh lý', gearSell(out));
   }
 }
 
@@ -122,6 +122,7 @@ export function sellVaultGear(s, id) {
   const v = vaultOf(s);
   const i = v?.gear.findIndex((x) => x.id === id) ?? -1;
   if (i < 0) return null;
+  if (v.gear[i].lock) return 'Món này đang khóa.';
   const it = v.gear.splice(i, 1)[0];
   const p = gearSell(it);
   earn(s, 'Bán trang bị trong kho', p);

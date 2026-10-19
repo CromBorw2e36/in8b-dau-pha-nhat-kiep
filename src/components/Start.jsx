@@ -97,7 +97,7 @@ export default function Start({ onNew, onResume }) {
               <li key={b.id} className={b.win ? 'win' : ''}>
                 <div>
                   <b>{b.name}</b>
-                  <small>{b.title} · hưởng thọ {b.age}</small>
+                  <small>{b.title} · hưởng thọ {b.age}{b.ng ? ` · trùng sinh ${b.ng}` : ''}{b.up ? ' · Thượng giới' : ''}</small>
                 </div>
                 <span className="tag">{b.realm.replace(/ \d+ (tinh|đoạn|trọng)/, '')}</span>
               </li>

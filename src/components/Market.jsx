@@ -93,7 +93,7 @@ function Exchange({ s, act }) {
 
   const sellables = [
     ...Object.entries(s.inv).map(([k, n]) => ({ kind: 'item', key: k, n, fair: itemFair(s, ...parseKey(k)) })),
-    ...s.armory.map((it) => ({ kind: 'gear', id: it.id, it, n: 1, fair: gearFair(s, it) })),
+    ...s.armory.filter((it) => !it.lock).map((it) => ({ kind: 'gear', id: it.id, it, n: 1, fair: gearFair(s, it) })),
   ];
   const tagEl = (x) => { const [t, c] = TAG[priceTag(s, x)]; return <span className={'ptag ' + c}>{t}</span>; };
   const priceEl = (p) => <span className="price"><Ico i={UI_I.gold} size={13} />{fmtGold(p)}</span>;

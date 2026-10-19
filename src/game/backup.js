@@ -1,5 +1,6 @@
 import { load, save, clearSave, readBook, writeBook, migrate } from './engine.js';
 import { readLegacy } from './emperor.js';
+import { readRebirth } from './upper.js';
 
 // Mã sao lưu: "DPNK1." + 'z' (gzip) hoặc 'p' (không nén) + base64(JSON)
 const PREFIX = 'DPNK1.';
@@ -27,7 +28,7 @@ export function hasData() {
 }
 
 export async function makeCode() {
-  const data = { v: 1, at: Date.now(), save: load(), book: readBook(), legacy: readLegacy() };
+  const data = { v: 1, at: Date.now(), save: load(), book: readBook(), legacy: readLegacy(), rebirth: readRebirth() };
   const raw = new TextEncoder().encode(JSON.stringify(data));
   const z = await gzip(raw, 'c');
   return PREFIX + (z ? 'z' : 'p') + toB64(z || raw);
@@ -59,6 +60,7 @@ export function applyBackup(data) {
   writeBook(merged);
   // Ngọc giản truyền thừa chờ kiếp sau (mã cũ không có thì giữ nguyên của máy này)
   if (data.legacy) { try { localStorage.setItem('dpnk_legacy', JSON.stringify(data.legacy)); } catch {} }
+  if (data.rebirth) { try { localStorage.setItem('dpnk_rebirth', JSON.stringify(data.rebirth)); } catch {} }
 }
 
 export function describe(data) {

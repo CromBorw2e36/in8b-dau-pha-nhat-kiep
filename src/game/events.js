@@ -2,7 +2,7 @@ import G from './data.js';
 import {
   R, rand, pick, wpick, clamp, realm, nextRealm, lifeOf, unit, hasTrait, canAlch, realmLabel,
   winP, peer, cp, btChance, advance, btFail, hold, upgradeSkill, upgradeGong, genName, pronoun,
-  beastGrade, pillNeed, priceOf, give, peekBest, takeBest, spend, earn, lose, itemName, fmtGold, tierFor,
+  beastGrade, pillNeed, priceOf, give, peekBest, takeBest, spend, earn, lose, itemName, fmtGold, tierFor, die,
 } from './util.js';
 import { genMissions, missionChoice, pillPower } from './economy.js';
 import { genGear, obtainGear, gearDesc, estateIncome } from './gear.js';
@@ -13,6 +13,7 @@ import { smithLv, armValue } from './forge.js';
 import { troopCount, armyPower, armyLoss } from './army.js';
 import { shock, itemFair } from './exchange.js';
 import { unified } from './emperor.js';
+import { bossPower, dechienP, upHeld, writeRebirth } from './upper.js';
 
 // Vây thành bằng quân đội: chỉ tính quân và tông môn, bạn không ra trận nên không có rủi ro tính mạng
 const armySiegeP = (s) => clamp(1 / (1 + Math.exp(-(armyPower(s) + sectPower(s) + 10 - regionDef(s, region(s.tmp))) / 8)), 0.04, 0.92);
@@ -822,6 +823,19 @@ export const EVENTS = [
         ok: { do: (s) => { s.tmp = obtainGear(s, genGear(s, { tier: 6, q: pick([1.6, 2, 2, 2.6]) })); }, fx: { fame: 4 }, log: (s) => `Thần thú gục ngã. Bạn rèn từ xương nó ra ${s.tmp}.`, k: 'key' },
         fail: { fx: { body: -35 }, log: 'Một tiếng gầm, bạn văng xa trăm trượng.', dieP: 0.15, die: 'Vẫn lạc dưới móng vuốt thần thú viễn cổ' } },
       { t: 'Không kinh động nó', fx: { tam: 1 }, log: 'Bạn lặng lẽ rời Thú Vực.' },
+    ],
+  },
+  {
+    // Ép xảy ra từ engine khi đủ điều kiện (xem dechienReady), không rút ngẫu nhiên
+    id: 'dechien', w: 0, once: true, force: true, icon: '⚔️',
+    text: (s) => `Trời thượng giới tối sầm. Thiên Đế đích thân giáng lâm, đế uy ép nát mây trời: kẻ phi thăng từ hạ giới không được phép đứng ngang hàng. Đế chiến không thể tránh (Thiên Đế ~${bossPower(s)}, ta ${Math.round(warPower(s))}).`,
+    ch: [
+      { t: (s) => `Nghênh chiến Thiên Đế (~${Math.round(dechienP(s) * 100)}%)`, roll: (s) => dechienP(s),
+        ok: { do: (s) => { writeRebirth(s, true); die(s, 'Đánh bại Thiên Đế trong Đế chiến, đế thể vỡ nát, chân linh chuyển thế trùng tu', true, false); }, log: 'Một quyền xuyên thủng Thiên Đế Điện. Thiên Đế ngã xuống — nhưng đế thể của bạn cũng nứt toác như đồ sứ.', k: 'key' },
+        fail: { do: (s) => { writeRebirth(s, false); die(s, 'Vẫn lạc trong Đế chiến trên Thượng giới, một tia chân linh rơi vào luân hồi', false, false); }, log: 'Đế uy của Thiên Đế nghiền nát đế thể của bạn.', k: 'bad' } },
+      { t: (s) => `Thiêu đốt toàn bộ đế nguyên, liều chết một trận (~${Math.round(dechienP(s, 0.15) * 100)}%)`, if: (s) => upHeld(s) > 0, roll: (s) => dechienP(s, 0.15),
+        ok: { do: (s) => { writeRebirth(s, true); die(s, 'Thiêu đốt đế nguyên đồng quy với Thiên Đế, chân linh chuyển thế trùng tu', true, false); }, log: 'Đế nguyên bùng cháy như mặt trời thứ hai. Thiên Đế tan biến cùng bạn trong ánh sáng.', k: 'key' },
+        fail: { do: (s) => { writeRebirth(s, false); die(s, 'Thiêu đốt đế nguyên vẫn không địch nổi Thiên Đế, chân linh rơi vào luân hồi', false, false); }, log: 'Ngọn lửa đế nguyên tắt lịm trước Thiên Đế.', k: 'bad' } },
     ],
   },
   {

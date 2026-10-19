@@ -145,7 +145,8 @@ export function levelPlan(cost, lv, max, gold, want) {
 }
 // Bậc trang bị tương xứng với cảnh giới
 export const tierFor = (s) => (s.R <= 1 ? 1 : s.R <= 3 ? 2 : s.R <= 5 ? 3 : s.R <= 7 ? 4 : s.R <= 9 ? 5 : 6);
-export const peer = (s, d = 0) => s.R * 10 + 5 + d;
+// Kẻ địch ngang tầm; trùng sinh càng nhiều lần đại lục càng hiểm
+export const peer = (s, d = 0) => s.R * 10 + 5 + d + (s.ng || 0) * G.NG.peer;
 export const winP = (s, enemy) => clamp(1 / (1 + Math.exp(-(cp(s) - enemy) / 3)), 0.03, 0.97);
 
 // guard: cho phép pháp khí Hộ Mệnh đỡ cái chết (không áp dụng khi hết thọ nguyên)
@@ -175,14 +176,10 @@ function saveByArtifact(s, cause) {
 }
 
 // Đấu Đế tự quy ẩn: kết thúc kiếp này với danh hiệu Đấu Đế
-// ascend: Đế cảnh viên mãn, phá toái hư không phi thăng
-export function retire(s, ascend = false) {
+export function retire(s) {
   if (s.R < 11 || s.dead) return;
   const yrs = s.age - (s.emperorAt ?? s.age);
-  if (ascend) {
-    s.flags.ascend = true;
-    return die(s, `Đế cảnh viên mãn sau ${yrs} năm ngự trị, phá toái hư không phi thăng — đại lục từ đây chỉ còn truyền thuyết`, true);
-  }
+  if (s.up) return die(s, `Ngự trị ${yrs} năm, rồi từ Thượng giới quy ẩn vào hư không — vạn cổ nhất nhân`, true);
   die(s, yrs > 0 ? `Ngự trị đại lục ${yrs} năm, Đấu Đế quy ẩn ngoài thiên ngoại — vạn cổ nhất nhân` : 'Thành tựu Đấu Đế rồi quy ẩn ngoài thiên ngoại — vạn cổ nhất nhân', true);
 }
 

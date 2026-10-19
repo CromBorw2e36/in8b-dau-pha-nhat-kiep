@@ -33,6 +33,9 @@ export const ACH = [
   { id: 'hon', g: 'Hồn', n: 'Diệt Hồn', d: 'Ba lần đánh lui Hồn tộc xâm lấn.', t: (s) => s.stats?.honWins >= 3 },
   { id: 'old', g: 'Thọ', n: 'Ngàn năm', d: 'Sống tới 1000 tuổi.', t: (s) => s.age >= 1000 },
   { id: 'ascend', g: 'Thăng', n: 'Phá toái hư không', d: 'Đế cảnh viên mãn rồi phi thăng.', t: (s) => !!s.flags?.ascend },
+  { id: 'upper', g: 'Thượng', n: 'Thượng giới', d: 'Phi thăng lên Thượng giới.', t: (s) => !!s.up },
+  { id: 'dechien', g: 'Chiến', n: 'Thượng giới chi chủ', d: 'Thắng trận Đế chiến.', t: (s) => s.flags?.dechien === 'win' },
+  { id: 'reborn', g: 'Sinh', n: 'Trùng sinh', d: 'Bắt đầu một kiếp trùng sinh sau Đế chiến.', t: (s) => (s.ng || 0) >= 1 },
   { id: 'legacy', g: 'Kế', n: 'Hậu duệ của Đế', d: 'Bắt đầu một kiếp với ngọc giản truyền thừa.', t: (s) => !!s.legacy },
   { id: 'heir', g: 'Truyền', n: 'Đế ấn truyền thừa', d: 'Để lại đế ấn cho kiếp sau.', t: (s) => !!s.flags?.heir },
 ];

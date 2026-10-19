@@ -60,8 +60,10 @@ export function sectPower(s) {
   return Math.sqrt(S.members) * (bLv(s, 'kinh') >= 3 ? 1 : 0.8) + S.elders * 2 + bEff(s, 'vo') * 2.5 + landCount(s) * 0.4 + Math.min(5, s.disciples);
 }
 // Càng bành trướng, các thế lực còn lại càng liên kết chống lại bạn
-export const regionDef = (s, r) => Math.round(r.def * (1 + 0.03 * landCount(s)) * (1 - deFx(s, 'def')));
-export const warPower = (s) => cp(s) + sectPower(s) + armyPower(s) + deFx(s, 'power');
+export const regionDef = (s, r) => Math.round(r.def * (1 + 0.03 * landCount(s)) * (1 - deFx(s, 'def')) * (1 + (s.ng || 0) * G.NG.def));
+// Đế nguyên: mỗi vùng thượng giới đã chiếm cộng thêm thế lực
+export const upPower = (s) => Object.keys(s.up?.land || {}).length * G.UP_POWER;
+export const warPower = (s) => cp(s) + sectPower(s) + armyPower(s) + deFx(s, 'power') + upPower(s);
 export const conquerP = (s, def, bonus = 0) => clamp(1 / (1 + Math.exp(-(warPower(s) - def) / 8)) + bonus, 0.04, 0.95);
 
 export function sectTier(s) {
@@ -97,7 +99,7 @@ export function develop(s, id, want = 1) {
   return `${region(id).n} khai phát lên cấp ${s.land[id].dev}.`;
 }
 // Mỗi cấp khai phát +8% thu nhập vùng đó
-export const regionInc = (s, id) => (region(id)?.inc || 0) * (1 + 0.08 * devLv(s, id)) * (1 + deFx(s, 'tax') + unifyFx(s, 'tax'));
+export const regionInc = (s, id) => (region(id)?.inc || 0) * (1 + 0.08 * devLv(s, id)) * (1 + deFx(s, 'tax') + unifyFx(s, 'tax')) * (1 + (s.ng || 0) * G.NG.inc);
 export const landIncome = (s) => landIds(s).reduce((a, id) => a + regionInc(s, id), 0);
 
 const ADJ = {};
@@ -181,6 +183,6 @@ export function loseLand(s, id) {
 }
 
 // Phòng thủ: bản thân + đại trận + quân đội (trận pháp sư tính gấp đôi khi thủ)
-const defPower = (s) => cp(s) + sectPower(s) + armyPower(s, true) + deFx(s, 'power') + deFx(s, 'guard');
+const defPower = (s) => cp(s) + sectPower(s) + armyPower(s, true) + deFx(s, 'power') + deFx(s, 'guard') + upPower(s);
 export const defendP = (s, atk) => clamp(1 / (1 + Math.exp(-(defPower(s) + bEff(s, 'tran') * 7 - atk) / 8)), 0.05, 0.95);
 export const arrayP = (s, atk) => clamp(1 / (1 + Math.exp(-(sectPower(s) * 1.5 + bEff(s, 'tran') * 14 + cp(s) * 0.4 + armyPower(s, true) - atk) / 8)), 0.03, 0.9);
