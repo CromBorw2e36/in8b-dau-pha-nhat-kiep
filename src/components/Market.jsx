@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import G from '../game/data.js';
-import { parseKey, itemName, fmtGold, unit, tierFor, pillNeed } from '../game/util.js';
+import { parseKey, itemName, fmtGold, unit, tierFor, pillNeed, roomOf } from '../game/util.js';
 import { forgeStock, buyGear, gearBuy, estateLv, estateOpen, estatePlan, buyEstate, estateIncome, estateInc } from '../game/gear.js';
 import { buy, marketList, buyPrice, ledgerSummary } from '../game/economy.js';
 import {
@@ -11,7 +11,7 @@ import { aucOpen, aucWait, aucLeft, lotName, minBid, rivalMood, placeAucBid } fr
 import { save } from '../game/engine.js';
 import { Sheet, SheetBody, SheetHead, Tabs, Card, UpRow, LevelBuy, ConfirmBtn } from './ui.jsx';
 import { GearCard, gradeQ } from './gearUi.jsx';
-import { Ico, ITEM_I, NAV_I, UI_I, EST_I, MK_I } from './icons.jsx';
+import { Ico, ITEM_I, NAV_I, UI_I, EST_I, MK_I, SLOT_I } from './icons.jsx';
 
 const MK_SHORT = { core: 'Ma hạch', herb: 'Dược liệu', ore: 'Huyền thiết', pill: 'Đan', gear: 'Trang bị', arms: 'Binh khí' };
 const TAG = { cheap: ['Rẻ', 'good'], dear: ['Đắt', 'bad'], fair: ['Đúng giá', 'fair'] };
@@ -62,14 +62,14 @@ function Shop({ s, act }) {
               right={<span className="price"><Ico i={UI_I.gold} size={13} />{fmtGold(p)}</span>} open={open === k} onToggle={() => toggle(k)}>
               <p className="d-desc">{G.ITEMS[t].d}</p>
               <div className="c-act">
-                <button className="mini buy" disabled={s.gold < p} onClick={() => act(() => (buy(s, t, g) ? `Đã mua ${itemName(t, g)}.` : 'Không đủ tiền.'))}><Ico i={UI_I.buy} />Mua 1 · {fmtGold(p)}</button>
-                <button className="mini" disabled={s.gold < p * 10} onClick={() => act(() => (buy(s, t, g, 10) ? `Đã mua 10 ${itemName(t, g).toLowerCase()}.` : 'Không đủ tiền.'))}>Mua 10 · {fmtGold(p * 10)}</button>
+                <button className="mini buy" disabled={s.gold < p || roomOf(s, `${t}:${g}`) < 1} onClick={() => act(() => (buy(s, t, g) ? `Đã mua ${itemName(t, g)}.` : 'Không đủ tiền.'))}><Ico i={UI_I.buy} />Mua 1 · {fmtGold(p)}</button>
+                <button className="mini" disabled={s.gold < p * 10 || roomOf(s, `${t}:${g}`) < 10} onClick={() => act(() => (buy(s, t, g, 10) ? `Đã mua 10 ${itemName(t, g).toLowerCase()}.` : 'Không đủ tiền.'))}><Ico i={UI_I.buy} />Mua 10 · {fmtGold(p * 10)}</button>
               </div>
             </Card>
           );
         })}
       </div>
-      <p className="sub-head">Binh Khí Phường <span className="muted">· đổi hàng mỗi 3 lượt</span></p>
+      <p className="sub-head"><Ico i={SLOT_I.wep} size={18} />Binh Khí Phường <span className="muted">· đổi hàng mỗi 3 lượt</span></p>
       <div className="cards">
         {gear.map((it) => (
           <GearCard key={it.id} it={it} s={s} compare open={open === it.id} onToggle={() => toggle(it.id)}
@@ -105,7 +105,7 @@ function Exchange({ s, act }) {
     return (
       <div className="consign">
         {x.kind === 'item' && x.n > 1 && (
-          <label className="field"><span className="sv">Số lượng <b className="num">{Math.min(qty, x.n)}</b> / {x.n}</span>
+          <label className="field"><span className="sv"><Ico i={NAV_I.bag} size={14} />Số lượng <b className="num">{Math.min(qty, x.n)}</b> / {x.n}</span>
             <input type="range" min="1" max={x.n} value={Math.min(qty, x.n)} onChange={(e) => setQty(+e.target.value)} /></label>
         )}
         <label className="field">
@@ -122,7 +122,7 @@ function Exchange({ s, act }) {
   return (
     <>
       <div className="sub-row">
-        <p className="sub-head">Quầy của bạn <span className="muted num">{s.cons.length}/{G.CONSIGN_MAX}</span></p>
+        <p className="sub-head"><Ico i={UI_I.tag} size={18} />Quầy của bạn <span className="muted num">{s.cons.length}/{G.CONSIGN_MAX}</span></p>
         <span className="muted small">phí sàn {fee}%</span>
       </div>
       <div className="cards">
@@ -130,7 +130,7 @@ function Exchange({ s, act }) {
           const body = (
             <>
               <span className="sv"><Ico i={UI_I.dice} size={14} />Bán được ~{Math.round(sellChance(s, x) * 100)}% mỗi lượt</span>
-              <div className="c-act"><button className="mini ghost" onClick={() => { act(() => cancelConsign(s, x.id)); setOpen(null); }}>Rút về</button></div>
+              <div className="c-act"><button className="mini ghost" onClick={() => { act(() => cancelConsign(s, x.id)); setOpen(null); }}><Ico i={UI_I.take} />Rút về</button></div>
             </>
           );
           return x.kind === 'gear'
@@ -147,7 +147,7 @@ function Exchange({ s, act }) {
 
       {picking && (
         <>
-          <p className="sub-head">Chọn món đem bán</p>
+          <p className="sub-head"><Ico i={NAV_I.bag} size={18} />Chọn món đem bán</p>
           {sellables.length ? (
             <div className="cards">
               {sellables.map((x) => {
@@ -158,19 +158,19 @@ function Exchange({ s, act }) {
                       sub={<span className="c-desc">Thị trường {fmtGold(x.fair)} mỗi món</span>} open={open === k} onToggle={() => { toggle(k); setQty(x.n); }}>{consignForm(x)}</Card>;
               })}
             </div>
-          ) : <p className="empty">Không có gì để bán.</p>}
+          ) : <p className="empty"><Ico i={NAV_I.bag} size={28} />Không có gì để bán.</p>}
         </>
       )}
 
       <Bids s={s} act={act} />
 
-      <p className="sub-head">Hàng trên sàn <span className="muted">· đổi mới mỗi 3 lượt</span></p>
+      <p className="sub-head"><Ico i={NAV_I.market} size={18} />Hàng trên sàn <span className="muted">· đổi mới mỗi 3 lượt</span></p>
       <div className="cards">
         {list.map((x) => {
           const buyBtns = (
             <div className="c-act">
               <ConfirmBtn cost={x.price} gold={s.gold} disabled={s.gold < x.price} onClick={() => act(() => buyListing(s, x.id))}><Ico i={UI_I.buy} />Mua · {fmtGold(x.price)}</ConfirmBtn>
-              {x.n > 1 && <button className="mini" disabled={s.gold < x.price * x.n} onClick={() => act(() => buyListing(s, x.id, x.n))}>Mua hết {x.n} · {fmtGold(x.price * x.n)}</button>}
+              {x.n > 1 && <button className="mini" disabled={s.gold < x.price * x.n} onClick={() => act(() => buyListing(s, x.id, x.n))}><Ico i={UI_I.buy} />Mua hết {x.n} · {fmtGold(x.price * x.n)}</button>}
             </div>
           );
           return x.kind === 'gear'
@@ -204,16 +204,21 @@ function Bids({ s, act }) {
   const pickT = (k) => { setT(k); setG(k === 'ore' ? G.ORE_FOR_TIER[tierFor(s)] : k === 'core' || k === 'herb' ? g : pillNeed(s)); };
   return (
     <>
-      <p className="sub-head">Đơn đặt mua <span className="muted num">{s.bids.length}/{G.BID_MAX}</span></p>
+      <p className="sub-head"><Ico i={UI_I.buy} size={18} />Đơn đặt mua <span className="muted num">{s.bids.length}/{G.BID_MAX}</span></p>
       <div className="cards">
         {s.bids.map((x) => {
           const [bt, bg] = parseKey(x.key);
           return (
-            <Card key={x.id} icon={ITEM_I[bt]} q={gradeQ(bg)} badge={bg} count={x.n} title={itemName(bt, bg)} tag="Đang gom"
-              sub={<span className="c-desc">Đã gom {x.got} · cọc {fmtGold(x.n * x.price)}</span>}
+            <Card key={x.id} icon={ITEM_I[bt]} q={gradeQ(bg)} badge={bg} count={x.n} title={itemName(bt, bg)} tag={<><Ico i={UI_I.time} size={11} />Đang gom</>} tone="info"
+              sub={<span className="c-desc">Còn thiếu {x.n} · cọc {fmtGold(x.n * x.price)}</span>}
               right={<span className="price"><Ico i={UI_I.gold} size={13} />{fmtGold(x.price)}</span>} open={open === x.id} onToggle={() => setOpen(open === x.id ? null : x.id)}>
-              <span className="sv"><Ico i={UI_I.dice} size={14} />Có người bán ~{Math.round(bidChance(s, x) * 100)}% mỗi lượt · thị trường {fmtGold(itemFair(s, bt, bg))}</span>
-              <div className="c-act"><button className="mini ghost" onClick={() => { act(() => cancelBid(s, x.id)); setOpen(null); }}>Hủy, lấy lại cọc</button></div>
+              <div className="prog">
+                <span className="sv"><Ico i={UI_I.ok} size={14} />Đã gom <b className="num">{x.got}/{x.got + x.n}</b></span>
+                <div className="lv-track thick"><i style={{ width: `${(x.got / (x.got + x.n)) * 100}%` }} /></div>
+              </div>
+              <span className="sv"><Ico i={UI_I.dice} size={14} />Có người bán ~{Math.round(bidChance(s, x) * 100)}% mỗi lượt</span>
+              <span className="sv"><Ico i={UI_I.gold} size={14} />Thị trường {fmtGold(itemFair(s, bt, bg))} · bạn trả {fmtGold(x.price)}</span>
+              <div className="c-act"><button className="mini ghost" onClick={() => { act(() => cancelBid(s, x.id)); setOpen(null); }}><Ico i={UI_I.close} />Hủy, lấy lại cọc</button></div>
             </Card>
           );
         })}
@@ -236,11 +241,12 @@ function Bids({ s, act }) {
             {Array.from({ length: 9 }, (_, i) => i + 1).map((k) => <button key={k} className={g === k ? 'on' : ''} onClick={() => setG(k)}>{k}</button>)}
           </div>
           <div className="recipe-title"><Ico i={ITEM_I[t]} size={22} /><b>{itemName(t, g)}</b></div>
-          <span className="muted small">{G.ITEMS[t].d} Thị trường {fmtGold(fair)} mỗi món{s.inv[`${t}:${g}`] ? `, đang có ${s.inv[`${t}:${g}`]}` : ''}.</span>
+          <span className="sv muted"><Ico i={UI_I.help} size={14} />{G.ITEMS[t].d}</span>
+          <span className="sv"><Ico i={UI_I.gold} size={14} />Thị trường {fmtGold(fair)} mỗi món{s.inv[`${t}:${g}`] ? `, đang có ${s.inv[`${t}:${g}`]}` : ''}.</span>
           <label className="field"><span className="sv">Số lượng <b className="num">{qty}</b>{old ? ` (gộp với ${old.n} đang gom)` : ''}</span>
             <input type="range" min="1" max={t === 'tho' ? 5 : 60} value={Math.min(qty, t === 'tho' ? 5 : 60)} onChange={(e) => setQty(+e.target.value)} /></label>
           <label className="field">
-            <span className="sv">Giá <b className="num">{fmtGold(price)}</b> · {Math.round(mult * 100)}% thị trường · <Ico i={UI_I.dice} size={14} />có hàng ~{Math.round(chance * 100)}% mỗi lượt</span>
+            <span className="sv"><Ico i={UI_I.gold} size={14} />Giá <b className="num">{fmtGold(price)}</b> · {Math.round(mult * 100)}% thị trường · <Ico i={UI_I.dice} size={14} />có hàng ~{Math.round(chance * 100)}% mỗi lượt</span>
             <input type="range" min="0.7" max="1.8" step="0.05" value={mult} onChange={(e) => setMult(+e.target.value)} />
           </label>
           <ConfirmBtn cost={deposit} gold={s.gold} disabled={s.gold < deposit || (!old && s.bids.length >= G.BID_MAX)}
@@ -269,17 +275,21 @@ function Auction({ s, act }) {
   const priceEl = (p) => <span className="price"><Ico i={UI_I.gold} size={13} />{fmtGold(p)}</span>;
   return (
     <>
-      <div className="sub-row">
-        <p className="sub-head">Phiên đấu giá <span className="muted">· còn {aucLeft(s)} lượt</span></p>
-        <span className="muted small">{lots.filter((x) => x.sold === 'me').length}/{lots.length} đã thắng</span>
+      <div className="stat-tiles">
+        <div title="Phiên còn mở bao nhiêu lượt"><Ico i={UI_I.time} size={20} /><b className="num">{aucLeft(s)}</b><small>lượt còn lại</small></div>
+        <div title="Số món bạn đã thắng"><Ico i={UI_I.ach} size={20} /><b className="num">{lots.filter((x) => x.sold === 'me').length}<small>/{lots.length}</small></b><small>đã thắng</small></div>
+        <div title="Kim tệ đang có"><Ico i={UI_I.gold} size={20} /><b className="num">{fmtGold(s.gold)}</b><small>kim tệ</small></div>
       </div>
+      <p className="sub-head"><Ico i={UI_I.auction} size={18} />Vật phẩm lên sàn</p>
       <div className="cards">
         {lots.map((x) => {
           const mb = minBid(x);
-          const status = x.sold === 'me' ? 'Đã thắng' : x.lead === 'npc' ? 'Bị vượt giá' : 'Chưa ai ra giá';
-          const body = x.sold ? <span className="sv">Bạn đã mua với giá {fmtGold(x.price)}.</span> : (
+          const [st, tone, si] = x.sold === 'me' ? ['Đã thắng', 'good', UI_I.ach] : x.lead === 'npc' ? ['Bị vượt giá', 'bad', UI_I.up] : ['Chưa ai ra giá', 'fair', UI_I.time];
+          const status = <><Ico i={si} size={11} />{st}</>;
+          const body = x.sold ? <span className="sv"><Ico i={UI_I.ok} size={14} />Bạn đã mua với giá {fmtGold(x.price)}.</span> : (
             <>
-              <span className="sv"><Ico i={UI_I.members} size={14} />{x.lead === 'npc' ? `${x.rival} đang giữ giá, ${rivalMood(x)}` : `${x.rival} cũng đang để mắt`} · ước giá trị {fmtGold(x.fair)}</span>
+              <span className="sv"><Ico i={UI_I.members} size={14} />{x.lead === 'npc' ? `${x.rival} đang giữ giá, ${rivalMood(x)}` : `${x.rival} cũng đang để mắt`}</span>
+              <span className="sv"><Ico i={UI_I.gold} size={14} />Ước giá trị {fmtGold(x.fair)} · giá hiện tại {fmtGold(x.price)}</span>
               <div className="c-act">
                 {[[1, 'Ra giá'], [1.25, 'Nâng mạnh'], [1.6, 'Áp đảo']].map(([k, n]) => {
                   const b = Math.round(mb * k);
@@ -289,9 +299,9 @@ function Auction({ s, act }) {
             </>
           );
           return x.kind === 'gear'
-            ? <GearCard key={x.id} it={x.it} s={s} compare tag={status} right={priceEl(x.price)} open={open === x.id} onToggle={() => setOpen(open === x.id ? null : x.id)}>{body}</GearCard>
+            ? <GearCard key={x.id} it={x.it} s={s} compare tag={status} tone={tone} right={priceEl(x.price)} open={open === x.id} onToggle={() => setOpen(open === x.id ? null : x.id)}>{body}</GearCard>
             : <Card key={x.id} icon={x.kind === 'item' ? ITEM_I[x.t] : x.kind === 'gong' ? UI_I.gong : UI_I.skill} q={x.kind === 'item' ? gradeQ(x.g) : 3} badge={x.g} count={x.n > 1 ? x.n : null}
-                title={lotName(s, x)} tag={status} dim={x.sold === 'me'}
+                title={lotName(s, x)} tag={status} tone={tone} dim={x.sold === 'me'}
                 sub={<span className="c-desc">{x.kind === 'item' ? G.ITEMS[x.t].d : 'Nâng cảnh giới công pháp / đấu kỹ lên một bậc.'}</span>}
                 right={priceEl(x.price)} open={open === x.id} onToggle={() => setOpen(open === x.id ? null : x.id)}>{body}</Card>;
         })}

@@ -534,7 +534,10 @@ b { font-weight: 700; }
 .c-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .card.open .c-desc { display: none; }
 .c-right { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-.c-tag { font: 700 10.5px var(--ui); padding: 1px 6px; border-radius: 6px; color: #10261c; background: var(--good); white-space: nowrap; }
+.c-tag { font: 700 10.5px var(--ui); padding: 1px 6px; border-radius: 6px; color: #10261c; background: var(--good); white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
+.c-tag.bad { color: #2a0d07; background: var(--bad); }
+.c-tag.fair { color: var(--ink-soft); background: transparent; border: 1px solid var(--edge-2); }
+.c-tag.info { color: #2a1a08; background: var(--gold); }
 .price { display: inline-flex; align-items: center; gap: 3px; font: 700 13px var(--ui); color: var(--gold-hi); white-space: nowrap; }
 .price .ico { color: var(--gold); }
 .c-body { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px 68px; }
@@ -594,6 +597,7 @@ b { font-weight: 700; }
 .sv.cmp.down { color: var(--bad); }
 .sub-head { display: flex; align-items: baseline; gap: 8px; font: 700 15px var(--title); color: var(--gold); letter-spacing: 0.04em; margin-top: 4px; }
 .sub-head .muted { font: 400 13px var(--ui); }
+.sub-head > .ico { align-self: center; flex: none; }
 .sub-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .icon-filter { display: flex; gap: 4px; flex-wrap: wrap; }
 .icon-filter button {
@@ -640,6 +644,8 @@ b { font-weight: 700; }
 .lvl-max { display: inline-flex; align-items: center; gap: 4px; font: 700 13px var(--ui); color: var(--gold); }
 .lv-track { height: 3px; background: rgba(0, 0, 0, 0.45); border-radius: 2px; overflow: hidden; }
 .lv-track i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold-deep), var(--gold-hi)); }
+.lv-track.thick { height: 6px; border-radius: 3px; }
+.prog { display: flex; flex-direction: column; gap: 4px; flex-basis: 100%; }
 
 /* Thị trường */
 .mkt-strip { display: flex; gap: 6px; flex-wrap: wrap; }

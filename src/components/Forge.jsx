@@ -56,11 +56,11 @@ function QuickBid({ s, act, t, g, n }) {
   const short = n - matHave(s, t, g);
   if (short <= 0) return null;
   const bid = bidFor(s, `${t}:${g}`);
-  if (bid) return <span className="muted small"><Ico i={UI_I.tag} size={13} />Đang đặt mua {bid.n} {itemName(t, g).toLowerCase()} trên sàn</span>;
+  if (bid) return <span className="sv muted"><Ico i={UI_I.time} size={14} />Sàn đang gom {bid.n} {itemName(t, g).toLowerCase()} cho bạn</span>;
   const price = Math.round(itemFair(s, t, g) * 1.15);
   return (
     <button className="mini" disabled={s.gold < short * price} onClick={() => act(() => placeBid(s, `${t}:${g}`, short, price))}>
-      <Ico i={UI_I.tag} />Đặt mua {short} {itemName(t, g).toLowerCase()} · {fmtGold(short * price)}
+      <Ico i={UI_I.buy} />Đặt mua {short} {itemName(t, g).toLowerCase()} · {fmtGold(short * price)}
     </button>
   );
 }
@@ -150,7 +150,7 @@ function Enhance({ s, act }) {
               )}
               <div className="lv-track"><i style={{ width: `${it.en || 0}%` }} /></div>
               {!max && <button className="mini buy" disabled={!can} onClick={() => act(() => tryN(it, 1))}><Ico i={UI_I.up} />Cường hóa lên +{(it.en || 0) + 1}</button>}
-              {!max && <button className="mini" disabled={!can} onClick={() => act(() => tryN(it, 5))}>Liền 5 lần</button>}
+              {!max && <button className="mini" disabled={!can} onClick={() => act(() => tryN(it, 5))}><Ico i={UI_I.dice} />Liền 5 lần</button>}
               {!max && <QuickBid s={s} act={act} t="ore" g={c.ore[0]} n={c.ore[1] * 5} />}
             </GearCard>
           );

@@ -67,10 +67,10 @@ export function FxList({ it }) {
 }
 
 // Thẻ trang bị: tóm tắt hiện sẵn, mở ra xem đủ chỉ số, hiệu ứng và nút thao tác
-export function GearCard({ it, s, open, onToggle, compare, right, tag, children }) {
+export function GearCard({ it, s, open, onToggle, compare, right, tag, tone, children }) {
   return (
     <Card icon={SLOT_I[it.sl]} q={qualityIdx(it)} badge={ROMAN[it.tier]} count={it.en ? `+${it.en}` : null} fx={it.fx?.length > 0}
-      title={gearName(it)} sub={<GearSummary it={it} s={s} compare={compare} />} right={right} tag={tag} open={open} onToggle={onToggle}>
+      title={gearName(it)} sub={<GearSummary it={it} s={s} compare={compare} />} right={right} tag={tag} tone={tone} open={open} onToggle={onToggle}>
       <GearStats it={it} s={s} compare={compare} />
       <FxList it={it} />
       {children && <div className="c-act">{children}</div>}
