@@ -672,12 +672,6 @@ button.realm-badge:hover { filter: brightness(1.1); box-shadow: 0 0 12px rgba(24
 .ledger { display: flex; flex-direction: column; gap: 10px; }
 
 /* Lò rèn */
-.forge-pick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.slot-btn {
-  aspect-ratio: 1; border-radius: 12px; display: grid; place-items: center; border: 1.5px solid var(--edge); color: var(--ink-dim);
-  background: radial-gradient(circle at 50% 40%, var(--panel-3), var(--panel));
-}
-.slot-btn.on { color: var(--gold-hi); border-color: var(--gold); box-shadow: 0 0 14px rgba(217, 173, 91, 0.25); }
 .tier-pick { display: flex; gap: 6px; }
 .tier-pick button {
   flex: 1; padding: 7px 0; border-radius: 9px; border: 1px solid var(--edge); background: var(--panel-2); color: var(--ink-soft);

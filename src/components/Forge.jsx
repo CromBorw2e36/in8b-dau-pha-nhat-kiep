@@ -102,10 +102,10 @@ function Craft({ s, act }) {
       <SmithUpgrade s={s} act={act} />
       {cap > 0 && (
         <>
-          <div className="forge-pick">
+          <div className="icon-filter">
             {G.GEAR_SLOTS.map((k) => (
-              <button key={k} className={'slot-btn' + (sl === k ? ' on' : '')} onClick={() => setSl(k)} title={G.GEAR[k].n} aria-label={G.GEAR[k].n}>
-                <Ico i={SLOT_I[k]} size={26} />
+              <button key={k} className={sl === k ? 'on' : ''} onClick={() => setSl(k)}>
+                <Ico i={SLOT_I[k]} size={16} /> {G.GEAR[k].n}
               </button>
             ))}
           </div>

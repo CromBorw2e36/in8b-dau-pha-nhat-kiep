@@ -188,6 +188,9 @@ function Exchange({ s, act }) {
   );
 }
 
+// Tên loại hàng bỏ phần cấp/phẩm: «Huyền thiết 9 phẩm» → «Huyền thiết»
+const kindName = (k) => G.ITEMS[k].n(1).replace(/\s*(cấp\s*)?1(\s*phẩm)?$/, '');
+
 // Đơn đặt mua: treo giá, cọc tiền trước, mỗi lượt có người bán dần cho mình
 function Bids({ s, act }) {
   const [open, setOpen] = useState(null);
@@ -230,10 +233,10 @@ function Bids({ s, act }) {
       </div>
       {form && (
         <div className="recipe">
-          <div className="forge-pick">
+          <div className="icon-filter">
             {Object.keys(G.ITEMS).map((k) => (
-              <button key={k} className={'slot-btn' + (t === k ? ' on' : '')} onClick={() => pickT(k)} title={G.ITEMS[k].n(g)} aria-label={G.ITEMS[k].n(g)}>
-                <Ico i={ITEM_I[k]} size={24} />
+              <button key={k} className={t === k ? 'on' : ''} onClick={() => pickT(k)} title={G.ITEMS[k].d}>
+                <Ico i={ITEM_I[k]} size={16} /> {kindName(k)}
               </button>
             ))}
           </div>
