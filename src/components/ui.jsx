@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import G from '../game/data.js';
-import { fmtGold, itemName, gearName, qualityIdx } from '../game/util.js';
-import { gearDesc, gearDelta } from '../game/gear.js';
-import { STAT_G, Seal, SLOT_G } from './glyphs.jsx';
+import { fmtGold, itemName } from '../game/util.js';
+import { Ico, STAT_I, ITEM_I, UI_I } from './icons.jsx';
 
 export function Bar({ value, max = 100, tone, thin }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
@@ -13,36 +12,37 @@ export function Bar({ value, max = 100, tone, thin }) {
   );
 }
 
-const HINT_NAME = { body: 'Thể chất', soul: 'Linh hồn', tam: 'Tâm cảnh', luck: 'Khí vận', gold: 'Kim tệ', qi: 'Đấu khí', item: 'Vật phẩm', life: 'Thọ nguyên' };
+export const STAT_NAME = { body: 'Thể chất', soul: 'Linh hồn', tam: 'Tâm cảnh', luck: 'Khí vận', gold: 'Kim tệ', qi: 'Đấu khí', item: 'Vật phẩm', life: 'Thọ nguyên' };
+
+// Gợi ý ảnh hưởng của một lựa chọn: icon chỉ số + mũi tên
 export function Hints({ h }) {
   return (
     <span className="hints">
       {h.list.map(({ k, sign }) => (
-        <span key={k} className={'hint ' + (sign === 2 ? 'mix' : sign > 0 ? 'up' : 'down')}>
-          {HINT_NAME[k] || STAT_G[k]} {sign === 2 ? '±' : sign > 0 ? '↑' : '↓'}
+        <span key={k} className={'hint ' + (sign === 2 ? 'mix' : sign > 0 ? 'up' : 'down')} title={`${STAT_NAME[k]} ${sign === 2 ? 'có thể tăng hoặc giảm' : sign > 0 ? 'tăng' : 'giảm'}`}>
+          <Ico i={STAT_I[k]} size={15} /><span className="h-name">{STAT_NAME[k]}</span>{sign === 2 ? '±' : sign > 0 ? '▲' : '▼'}
         </span>
       ))}
-      {h.risky && <span className="hint dice">may rủi</span>}
-      {h.deadly && <span className="hint deadly">nguy hiểm tính mạng</span>}
+      {h.risky && <span className="hint dice" title="Có tung xúc xắc"><Ico i={UI_I.dice} size={15} /><span className="h-name">May rủi</span></span>}
+      {h.deadly && <span className="hint deadly" title="Thất bại có thể mất mạng"><Ico i={UI_I.deadly} size={15} /><span className="h-name">Nguy hiểm</span></span>}
     </span>
   );
 }
 
-const NAME = { body: 'Thể chất', soul: 'Linh hồn', tam: 'Tâm cảnh', luck: 'Khí vận', gold: 'Kim tệ' };
 export function Deltas({ d }) {
-  const keys = Object.keys(d).filter((k) => NAME[k]);
+  const keys = Object.keys(d).filter((k) => ['body', 'soul', 'tam', 'luck', 'gold'].includes(k));
   if (!keys.length && !d.lv && !d.items) return null;
   return (
     <div className="deltas">
-      {d.lv && <span className="delta up big">Đột phá: {d.lv}</span>}
+      {d.lv && <span className="delta up big"><Ico i={UI_I.up} />{d.lv}</span>}
       {d.items?.map(([t, g, n]) => (
-        <span key={t + g} className={'delta ' + (n > 0 ? 'up' : 'down')}>
-          {itemName(t, g)} {n > 0 ? '+' : '−'}{Math.abs(n)}
+        <span key={t + g} className={'delta ' + (n > 0 ? 'up' : 'down')} title={itemName(t, g)}>
+          <Ico i={ITEM_I[t]} /><small>{g}</small>{n > 0 ? '+' : '−'}{Math.abs(n)}
         </span>
       ))}
       {keys.map((k) => (
-        <span key={k} className={'delta ' + (d[k] > 0 ? 'up' : 'down')}>
-          {NAME[k]} {d[k] > 0 ? '+' : '−'}{k === 'gold' ? fmtGold(Math.abs(d[k])) : Math.round(Math.abs(d[k]))}
+        <span key={k} className={'delta ' + (d[k] > 0 ? 'up' : 'down')} title={STAT_NAME[k]}>
+          <Ico i={STAT_I[k]} />{STAT_NAME[k]} {d[k] > 0 ? '+' : '−'}{k === 'gold' ? fmtGold(Math.abs(d[k])) : Math.round(Math.abs(d[k]))}
         </span>
       ))}
     </div>
@@ -50,18 +50,17 @@ export function Deltas({ d }) {
 }
 
 // onPeek: tạm ẩn bảng để xem thông số phía sau (bấm nền mờ cũng có tác dụng tương tự)
-// mark: chữ Hán in chìm trên cuộn giấy
-// tall: bảng cao cố định, phần đầu đứng yên, nội dung đặt trong <SheetBody> tự cuộn
+// mark: chữ in chìm trên nền bảng · tall: bảng cao cố định, nội dung trong <SheetBody> tự cuộn
 export function Sheet({ children, onClose, onPeek, mark, tall }) {
   return (
     <div className="sheet">
       <div className="sheet-backdrop" onClick={onClose || onPeek} />
       <div className={'sheet-card' + (tall ? ' tall' : '')}>
-        <div className="scroll-rod" aria-hidden="true" />
         {mark && <div className="watermark" aria-hidden="true">{mark}</div>}
         {onPeek && (
-          <button className="peek-btn" onClick={onPeek} title="Tạm ẩn để xem thông số (Esc)">Xem thông số</button>
+          <button className="peek-btn" onClick={onPeek} title="Tạm ẩn để xem thông số (Esc)" aria-label="Xem thông số"><Ico i={UI_I.realm} size={16} /> Xem</button>
         )}
+        {onClose && <button className="close-btn" onClick={onClose} aria-label="Đóng"><Ico i={UI_I.close} size={18} /></button>}
         {children}
       </div>
     </div>
@@ -72,16 +71,80 @@ export function SheetBody({ children }) {
   return <div className="sheet-body">{children}</div>;
 }
 
-// Thanh tab: tabs = [[id, nhãn, chấm báo?]]
+// Đầu bảng: icon lớn trong vòng vàng, tiêu đề, dòng phụ, và một con số chính bên phải
+export function SheetHead({ icon, title, sub, value, valueIcon, valueLabel }) {
+  return (
+    <div className="sheet-head">
+      <span className="head-ico"><Ico i={icon} size={26} /></span>
+      <div className="head-text">
+        {sub && <small>{sub}</small>}
+        <h3>{title}</h3>
+      </div>
+      {value != null && (
+        <div className="head-val" title={valueLabel}>
+          <Ico i={valueIcon} size={16} /><b className="num">{value}</b>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Thanh tab: tabs = [[id, nhãn ngắn, icon, chấm báo?]]
 export function Tabs({ tabs, tab, onTab }) {
   return (
     <div className="tabs" role="tablist">
-      {tabs.map(([id, n, dot]) => (
+      {tabs.map(([id, n, icon, dot]) => (
         <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => onTab(id)}>
-          {n}{dot ? <i className="dot" aria-label="có việc mới" /> : null}
+          {icon && <Ico i={icon} size={18} />}<span>{n}</span>{dot ? <i className="dot" aria-label="có việc mới" /> : null}
         </button>
       ))}
     </div>
+  );
+}
+
+// Ô vuông kiểu game: icon, phẩm chất (viền màu), nhãn ở góc trên, số lượng ở góc dưới
+export function Tile({ icon, q = 0, badge, count, foot, sel, onClick, dim, title, mark }) {
+  return (
+    <button className={`tile q-b${q}` + (sel ? ' sel' : '') + (dim ? ' dim' : '')} onClick={onClick} title={title} aria-label={title} aria-pressed={!!sel}>
+      <Ico i={icon} size={30} />
+      {badge != null && <span className="t-badge">{badge}</span>}
+      {count != null && <span className="t-count num">{count}</span>}
+      {mark && <span className={'t-mark ' + mark} />}
+      {foot != null && <span className="t-foot num">{foot}</span>}
+    </button>
+  );
+}
+
+// Bảng chi tiết của ô đang chọn
+export function Detail({ icon, q = 0, title, children, actions }) {
+  return (
+    <div className={`detail q-b${q}`}>
+      <div className="d-top">
+        <span className="d-ico"><Ico i={icon} size={34} /></span>
+        <div className="d-main">
+          <b className={'q' + q}>{title}</b>
+          {children}
+        </div>
+      </div>
+      {actions && <div className="d-act">{actions}</div>}
+    </div>
+  );
+}
+
+// Một dòng nâng cấp: icon, tên, cấp, hiệu quả ngắn; bấm vào tên để xem mô tả
+export function UpRow({ icon, name, lv, max, eff, desc, children, on, locked }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <li className={'up-row' + (on ? ' on' : '') + (locked ? ' locked' : '')}>
+      <button className="up-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="up-ico"><Ico i={locked ? UI_I.lock : icon} size={24} /></span>
+        <span className="up-name">{name}{lv != null && <small className="num">{lv}/{max}</small>}</span>
+        {eff && <span className="up-eff num">{eff}</span>}
+      </button>
+      {lv != null && max ? <div className="lv-track"><i style={{ width: `${(lv / max) * 100}%` }} /></div> : null}
+      {open && desc && <p className="up-desc">{desc}</p>}
+      {children && <div className="up-act">{children}</div>}
+    </li>
   );
 }
 
@@ -99,27 +162,27 @@ export function ConfirmBtn({ cost, gold, onClick, className = 'mini buy', disabl
   return (
     <button className={className + (armed ? ' armed' : '')} disabled={disabled}
       onClick={() => { if (big && !armed) return arm(1); reset(); onClick(); }}>
-      {armed ? `Chắc chắn? ${fmtGold(cost)}` : children}
+      {armed ? <>Chắc chắn? {fmtGold(cost)}</> : children}
     </button>
   );
 }
 
 // Nút mua cấp: +1, +10, tối đa. plan(want) → { n, tot, next }
-export function LevelBuy({ lv, max, gold, plan, onBuy, label = 'Nâng' }) {
+export function LevelBuy({ lv, max, gold, plan, onBuy }) {
   const [armed, arm, reset] = useArmed();
-  if (lv >= max) return <span className="lvl-max">Tối đa</span>;
-  const opts = [[1, label], [10, '+10'], [Infinity, 'Tối đa']];
+  if (lv >= max) return <span className="lvl-max"><Ico i={UI_I.ok} size={14} /> Tối đa</span>;
   return (
     <div className="lvl-buy">
-      {opts.map(([want, txt]) => {
+      {[1, 10, Infinity].map((want) => {
         const p = plan(want);
         if (want !== 1 && p.n <= 1) return null;
         if (want === Infinity && p.n <= 10) return null;
-        const show = want === 1 ? `${txt} · ${fmtGold(p.next)}` : `${want === Infinity ? 'Tối đa ' : ''}+${p.n} · ${fmtGold(p.tot)}`;
         return (
           <button key={want} className={'mini buy' + (armed === want ? ' armed' : '')} disabled={!p.n}
+            title={want === Infinity ? 'Mua tối đa số cấp có thể' : `Lên ${want === 1 ? 1 : p.n} cấp`}
             onClick={() => { if (p.tot > gold * 0.4 && armed !== want) return arm(want); reset(); onBuy(want); }}>
-            {armed === want ? `Chắc chắn? ${fmtGold(p.tot)}` : show}
+            {armed === want ? 'Chắc chắn?' : <><Ico i={UI_I.up} size={14} />{want === 1 ? '+1' : `${want === Infinity ? 'max ' : ''}+${p.n}`}</>}
+            <span className="cost"><Ico i={UI_I.gold} size={12} />{fmtGold(want === 1 ? p.next : p.tot)}</span>
           </button>
         );
       })}
@@ -127,55 +190,39 @@ export function LevelBuy({ lv, max, gold, plan, onBuy, label = 'Nâng' }) {
   );
 }
 
-// Một dòng trang bị: dấu ô, tên theo màu phẩm chất, chỉ số, so sánh với đồ đang mặc
-export function GearRow({ it, s, compare, children, sub }) {
-  const d = compare ? gearDelta(s, it) : 0;
-  return (
-    <li className="gear-row">
-      <Seal ch={SLOT_G[it.sl]} tone={compare ? 'outline' : 'red'} />
-      <div className="it-main">
-        <b className={'q' + qualityIdx(it)}>{gearName(it)}</b>
-        <small>{gearDesc(it)}</small>
-        {compare && Math.abs(d) >= 0.05 && <small className={'cmp ' + (d > 0 ? 'up' : 'down')}>{d > 0 ? '▲' : '▼'} {Math.abs(d).toFixed(1)} chiến lực so với đồ đang mặc</small>}
-        {sub}
-      </div>
-      {children && <div className="it-act">{children}</div>}
-    </li>
-  );
-}
-
 // Giải thích các chỉ số: bấm vào bảng chỉ số ở HUD để mở
-export const STAT_HELP = [
-  { k: 'body', n: 'Thể chất', d: 'Sức khỏe thân thể. Cao thì chiến lực mạnh hơn, lịch luyện săn được nhiều ma hạch hơn. Dưới 30 là trọng thương (tự uống Liệu Thương Đan), dưới 25 tu luyện chậm hẳn, dưới 10 rất dễ mất mạng. Tự hồi dần về 50; về già sẽ suy giảm.' },
-  { k: 'soul', n: 'Linh hồn', d: 'Linh hồn lực, tức sức mạnh tinh thần. Là gốc của nghề luyện dược: cần từ 55 để luyện đan (nếu không có Mộc thuộc tính), linh hồn càng mạnh càng lên phẩm nhanh, thành đan nhiều, rèn đồ phẩm chất cao. Cũng giúp đột phá dễ hơn một chút. Dưỡng Hồn Đan tăng chỉ số này.' },
-  { k: 'tam', n: 'Tâm cảnh', d: 'Sự vững vàng của đạo tâm. Ảnh hưởng mạnh nhất tới tỷ lệ đột phá cảnh giới. Dưới 35 hay gặp tâm ma (có thể tẩu hỏa nhập ma), dưới 30 tu luyện chậm gần một nửa. Tự trôi dần về 50; «Tĩnh tâm» và Thanh Tâm Đan giúp tăng nhanh.' },
-  { k: 'luck', n: 'Khí vận', d: 'Vận may. Tăng tỷ lệ thành công ở nhiều lựa chọn may rủi (thám hiểm, bỏ chạy, đấu giá…), dễ nhặt được trang bị và trang bị phẩm chất cao hơn, giúp đột phá thêm chút ít. Trôi dần về mức lúc mới sinh.' },
+const STAT_HELP = [
+  { k: 'body', d: 'Sức khỏe thân thể. Cao thì chiến lực mạnh hơn, lịch luyện săn được nhiều ma hạch hơn. Dưới 30 là trọng thương, dưới 25 tu luyện chậm hẳn, dưới 10 rất dễ mất mạng. Tự hồi dần về 50.' },
+  { k: 'soul', d: 'Linh hồn lực. Gốc của luyện dược (cần từ 55 nếu không có Mộc thuộc tính), giúp rèn đồ phẩm chất cao và đột phá dễ hơn. Dưỡng Hồn Đan tăng chỉ số này.' },
+  { k: 'tam', d: 'Đạo tâm. Ảnh hưởng mạnh nhất tới tỷ lệ đột phá. Dưới 35 hay gặp tâm ma, dưới 30 tu luyện chậm gần một nửa. Tĩnh tâm và Thanh Tâm Đan giúp tăng.' },
+  { k: 'luck', d: 'Vận may. Tăng tỷ lệ thành công khi may rủi, dễ nhặt được trang bị và trang bị phẩm chất cao.' },
+  { k: 'qi', d: 'Tiến độ tu luyện. Đầy thì lên một tinh; hết tinh thì gặp bình cảnh và phải đột phá. Đấu Đế tu tới 100 trọng.' },
+  { k: 'life', d: 'Thọ nguyên. Lên cảnh giới cao hoặc uống Diên Thọ Đan sẽ sống lâu hơn; Đấu Đế bất tử.' },
+  { k: 'gold', d: 'Kim tệ. Mua đan dược, trang bị, sản nghiệp, xây tông môn, nuôi quân.' },
 ];
-export const MORE_HELP = [
-  ['Kim tệ', 'Tiền. Mua đan dược, trang bị, sản nghiệp, xây tông môn, nuôi quân.'],
-  ['Đấu khí', 'Thanh tiến độ tu luyện. Đầy 100% thì lên một tinh; hết tinh thì gặp bình cảnh và phải đột phá. Đấu Đế tu tiếp tới 100 trọng.'],
-  ['Thọ nguyên', 'Số năm còn sống. Lên cảnh giới cao hoặc uống Diên Thọ Đan sẽ sống lâu hơn; Đấu Đế thì bất tử.'],
-  ['Chiến lực', 'Sức đánh của riêng bạn: cảnh giới, thể chất, đấu kỹ, dị hỏa, trang bị. Quyết định thắng thua khi giao chiến.'],
-  ['Thế lực', 'Chiến lực của bạn cộng thực lực tông môn và quân đội. Dùng khi chinh phạt và giữ lãnh địa.'],
+const MORE_HELP = [
+  [UI_I.cp, 'Chiến lực', 'Sức đánh của riêng bạn: cảnh giới, thể chất, đấu kỹ, dị hỏa, trang bị.'],
+  [UI_I.power, 'Thế lực', 'Chiến lực cộng thực lực tông môn và quân đội. Dùng khi chinh phạt và giữ lãnh địa.'],
+  [UI_I.fame, 'Danh vọng', 'Cần để khai tông, thu hút đệ tử, ép địch quy hàng.'],
+  [UI_I.dice, 'May rủi', 'Lựa chọn có tung xúc xắc, có thể thành hoặc bại.'],
+  [UI_I.deadly, 'Nguy hiểm', 'Thất bại có thể mất mạng.'],
 ];
 
 export function StatHelp({ onClose }) {
   return (
-    <Sheet onClose={onClose} mark="Giải" tall>
-      <h3>Các chỉ số nghĩa là gì?</h3>
+    <Sheet onClose={onClose} tall>
+      <SheetHead icon={UI_I.help} title="Các chỉ số" sub="Bấm vào bảng chỉ số để xem lại bất cứ lúc nào" />
       <SheetBody>
-        <dl className="help">
+        <ul className="help">
           {STAT_HELP.map((x) => (
-            <div key={x.k}>
-              <dt><span className="help-dot" style={{ background: `var(--${x.k})` }} />{x.n} <span className="muted">({STAT_G[x.k]})</span></dt>
-              <dd>{x.d}</dd>
-            </div>
+            <li key={x.k}><span className="help-ico" style={{ color: `var(--${x.k})` }}><Ico i={STAT_I[x.k]} size={24} /></span><div><b>{STAT_NAME[x.k]}</b><p>{x.d}</p></div></li>
           ))}
-          {MORE_HELP.map(([n, d]) => (<div key={n}><dt>{n}</dt><dd>{d}</dd></div>))}
-        </dl>
-        <p className="muted small">Ở mỗi lựa chọn, ký hiệu như «Tâm cảnh ↑» nghĩa là chỉ số đó sẽ tăng, «↓» là giảm, «±» là có thể tăng hoặc giảm tùy may rủi. Mọi chỉ số đều từ 0 đến 100, mức 50 là bình thường.</p>
+          {MORE_HELP.map(([i, n, d]) => (
+            <li key={n}><span className="help-ico"><Ico i={i} size={24} /></span><div><b>{n}</b><p>{d}</p></div></li>
+          ))}
+        </ul>
+        <p className="note">Trên mỗi lựa chọn: icon chỉ số kèm ▲ là tăng, ▼ là giảm, ± là tùy may rủi. Mọi chỉ số từ 0 đến 100, mức 50 là bình thường.</p>
       </SheetBody>
-      <button className="btn" onClick={onClose}>Đã hiểu</button>
     </Sheet>
   );
 }
@@ -192,7 +239,7 @@ export function Toasts({ list, onDone }) {
     <div className="toasts" aria-live="polite">
       {list.slice(0, 2).map((x) => (
         <div key={x.id} className={'toast t-' + (x.k || 'info')}>
-          {x.seal && <Seal ch={x.seal} size="sm" tone={x.k === 'ach' ? 'gold' : 'red'} />}
+          {x.icon && <span className="toast-ico"><Ico i={x.icon} size={20} /></span>}
           <span>{x.t}</span>
         </div>
       ))}

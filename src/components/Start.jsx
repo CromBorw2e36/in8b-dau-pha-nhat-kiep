@@ -108,7 +108,7 @@ export default function Start({ onNew, onResume }) {
 
       <Backup onRestored={reload} />
 
-      <p className="fineprint">Fan game phi thương mại, lấy cảm hứng từ «Đấu Phá Thương Khung» của Thiên Tằm Thổ Đậu.<br />Tiến trình được lưu trên trình duyệt này.</p>
+      <p className="fineprint">Fan game phi thương mại, lấy cảm hứng từ «Đấu Phá Thương Khung» của Thiên Tằm Thổ Đậu.<br />Tiến trình được lưu trên trình duyệt này.<br />Icon: <a href="https://game-icons.net" target="_blank" rel="noreferrer">game-icons.net</a> (CC BY 3.0).</p>
     </div>
   );
 }

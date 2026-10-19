@@ -6,8 +6,9 @@ import { smithLv } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
 import { attackBlock, conquerP, regionDef, landCount } from '../game/sect.js';
 import { checkAch } from '../game/ach.js';
-import { Bar, Hints, Deltas, Sheet, StatHelp, Toasts } from './ui.jsx';
-import { Seal, FOCUS_G, EV_G, NUM_G } from './glyphs.jsx';
+import { Bar, Hints, Deltas, Sheet, StatHelp, Toasts, STAT_NAME } from './ui.jsx';
+import { Seal, EV_G, NUM_G } from './glyphs.jsx';
+import { Ico, STAT_I, NAV_I, FOCUS_I, KIND_I, UI_I } from './icons.jsx';
 import { stamp, burst, cascade, useCountUp } from './motion.js';
 import Bag from './Bag.jsx';
 import Sect from './Sect.jsx';
@@ -39,11 +40,12 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
   const [major, setMajor] = useState(() => readKey(FEED_KEY, '0') === '1');
   const [open, setOpen] = useState({}); // nhóm năm bình lặng đã mở
   const [toasts, setToasts] = useState([]);
+  const [retireArm, setRetireArm] = useState(false);
   const feed = useRef(null);
   const seen = useRef(s.log.length);
   const goldRef = useCountUp(s.gold);
 
-  const toast = (t, k, seal) => setToasts((l) => [...l, { id: Math.random(), t, k, seal }].slice(-4));
+  const toast = (t, k, icon) => setToasts((l) => [...l, { id: Math.random(), t, k, icon }].slice(-4));
 
   // Mỗi quyết định mới đều hiện bảng ra trước
   useEffect(() => { setPeek(false); }, [s.pending, s.needFocus, result]);
@@ -61,10 +63,10 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
     const fresh = s.log.slice(seen.current).flatMap((e) => e.items);
     seen.current = s.log.length;
     for (const it of fresh) {
-      if (it.k === 'up') toast(it.t, 'up', 'Tiến');
-      else if (it.k === 'key' && it.t.length < 140) toast(it.t, 'key', 'Sự');
+      if (it.k === 'up') toast(it.t, 'up', UI_I.up);
+      else if (it.k === 'key' && it.t.length < 140) toast(it.t, 'key', KIND_I.key);
     }
-    for (const a of checkAch(s)) toast(`Thành tựu: ${a.n}`, 'ach', a.g);
+    for (const a of checkAch(s)) toast(a.n, 'ach', UI_I.ach);
   }, [ver]);
 
   useEffect(() => {
@@ -99,6 +101,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
   const ev = s.pending ? EV[s.pending] : null;
   const showFocus = (s.needFocus || focusOpen) && !s.dead;
   const f = G.FOCUS.find((x) => x.id === s.focus);
+  const topped = s.R >= 11 && s.step >= 100;
 
   // Chấm báo trên thanh điều hướng
   const dots = {
@@ -130,81 +133,98 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
 
   const toggleMajor = () => setMajor((m) => { writeKey(FEED_KEY, m ? '0' : '1'); return !m; });
 
+  // Các chỉ báo nhỏ trên HUD: icon + số, di chuột/nhấn giữ để xem tên
+  const chips = [
+    // [icon, giá trị, nhãn ngắn, chú thích đầy đủ]
+    s.started && [UI_I.cp, Math.round(cp(s)), 'Chiến lực', 'Chiến lực của bản thân'],
+    s.fame >= 1 && [UI_I.fame, Math.round(s.fame), 'Danh vọng', 'Danh vọng'],
+    s.gong > 0 && [UI_I.gong, G.GRADES[s.gong], 'Công pháp', `Công pháp ${G.GRADES[s.gong]}`],
+    s.skill > 0 && [UI_I.skill, G.GRADES[s.skill], 'Đấu kỹ', `Đấu kỹ ${G.GRADES[s.skill]}`],
+    s.alch > 0 && [UI_I.alch, `${s.alch} phẩm`, 'Luyện dược', `Luyện dược sư ${s.alch} phẩm`],
+    s.fires.length > 0 && [UI_I.fire, s.fires.length, 'Dị hỏa', `Dị hỏa: ${s.fires.join(', ')}`],
+    s.sect && [UI_I.members, s.sect.members, 'Đệ tử', `${s.sect.name} · ${s.sect.members} đệ tử`],
+    landCount(s) > 0 && [UI_I.land, `${landCount(s)}/${G.REGIONS.length}`, 'Lãnh địa', 'Lãnh địa đã chiếm'],
+    troopCount(s) > 0 && [UI_I.army, troopCount(s), 'Quân', 'Quân đội'],
+    smithLv(s) > 0 && [NAV_I.forge, smithLv(s), 'Lò rèn', `Lò rèn cấp ${smithLv(s)}`],
+  ].filter(Boolean);
+
   return (
     <div className="screen game">
       <header className="hud">
         <div className="hud-top">
-          <button className="icon-btn home" onClick={onHome} aria-label="Về trang chủ">‹</button>
+          <button className="icon-btn home" onClick={onHome} aria-label="Về trang chủ" title="Về trang chủ"><Ico i={UI_I.home} size={18} /></button>
           <div className="who">
             <div className="who-name">{s.name}</div>
             <div className="who-sub">{s.faction || 'Tán tu'}{s.evil ? ' · ma đạo' : ''}{s.heirOf ? ' · hậu duệ Đế' : ''}</div>
           </div>
-          <div className="realm-badge" data-r={s.R}><span>{realmLabel(s)}</span></div>
+          <div className="realm-badge" data-r={s.R}><Ico i={UI_I.realm} size={14} /><span>{realmLabel(s)}</span></div>
         </div>
 
         <div className="meters">
-          <div className="meter">
-            <div className="meter-head"><span>{s.age} tuổi</span><span className="muted">/ {life === Infinity ? 'bất tử' : life}</span></div>
+          <div className="meter" title="Tuổi / thọ nguyên">
+            <Ico i={STAT_I.life} size={16} className="m-ico" /><span className="m-name">Tuổi</span>
             <Bar value={s.age} max={life === Infinity ? s.age : life} tone="var(--life)" thin />
+            <span className="m-val num">{s.age}<small>/{life === Infinity ? '∞' : life}</small></span>
           </div>
           {s.started && (
-            <div className="meter">
-              <div className="meter-head"><span>Đấu khí</span><span className={s.ready || (s.R >= 11 && s.step >= 100) ? 'hot' : 'muted'}>{s.R >= 11 && s.step >= 100 ? 'Viên mãn' : s.ready ? 'Bình cảnh!' : `${Math.floor(s.qi)}%`}</span></div>
-              <Bar value={s.R >= 11 && s.step >= 100 ? 100 : s.qi} tone="var(--qi)" thin />
+            <div className={'meter' + (s.ready ? ' hot' : '')} title="Tiến độ tu luyện">
+              <Ico i={STAT_I.qi} size={16} className="m-ico" /><span className="m-name">Đấu khí</span>
+              <Bar value={topped ? 100 : s.qi} tone="var(--qi)" thin />
+              <span className="m-val num">{topped ? 'Viên mãn' : s.ready ? 'Bình cảnh' : `${Math.floor(s.qi)}%`}</span>
             </div>
           )}
         </div>
 
-        <button className="stats" onClick={() => setPanel('help')} title="Bấm để xem ý nghĩa các chỉ số">
+        <button className="stats" onClick={() => setPanel('help')} title="Bấm để xem ý nghĩa các chỉ số" aria-label="Chỉ số, bấm để xem giải thích">
           {G.STATS.map((st) => (
-            <div key={st.k} className="stat" data-k={st.k}>
-              <div className="stat-head"><span>{st.n}</span><b>{Math.round(s[st.k])}</b></div>
+            <div key={st.k} className="stat" style={{ '--c': `var(--${st.k})` }}>
+              <Ico i={STAT_I[st.k]} size={18} />
+              <span className="s-name">{STAT_NAME[st.k]}</span>
+              <b className="num">{Math.round(s[st.k])}</b>
               <Bar value={s[st.k]} tone={`var(--${st.k})`} />
             </div>
           ))}
-          <span className="stats-q" aria-label="Giải thích chỉ số">?</span>
         </button>
 
-        <div className="chips scroll">
+        <div className="res-row">
+          <button className="res gold" onClick={() => setPanel('bag')} title="Kim tệ"><Ico i={UI_I.gold} size={16} /><span ref={goldRef} className="num" /><span className="r-name">kim tệ</span></button>
+          <div className="res-scroll">
+            {chips.map(([i, v, n, t]) => <span key={n} className="res" title={t}><Ico i={i} size={15} /><span className="r-name">{n}</span><b className="num">{v}</b></span>)}
+          </div>
           {s.R >= 11 && !s.dead && (
-            <button className="chip gold" onClick={() => { if (window.confirm('Quy ẩn sẽ khép lại kiếp này với danh hiệu Đấu Đế. Tiếp tục?')) { retire(s); save(s); bump(); } }}>Đấu Đế · Quy ẩn</button>
+            <button className={'res retire' + (retireArm ? ' armed' : '')} title="Quy ẩn: khép lại kiếp này với danh hiệu Đấu Đế"
+              onClick={() => { if (!retireArm) { setRetireArm(true); setTimeout(() => setRetireArm(false), 3000); return; } retire(s); save(s); bump(); }}>
+              <Ico i={UI_I.retire} size={16} />{retireArm ? 'Chắc chắn?' : 'Quy ẩn'}
+            </button>
           )}
-          <button className="chip gold-chip" onClick={() => setPanel('bag')}><span ref={goldRef} className="num" /> kim tệ</button>
-          {s.started && <span className="chip">Chiến lực {Math.round(cp(s))}</span>}
-          {s.gong > 0 && <span className="chip">Công pháp {G.GRADES[s.gong]}</span>}
-          {s.skill > 0 && <span className="chip">Đấu kỹ {G.GRADES[s.skill]}</span>}
-          {s.alch > 0 && <span className="chip gold">Luyện dược sư {s.alch} phẩm</span>}
-          {s.fires.map((x) => <span key={x} className="chip fire">Dị hỏa · {x}</span>)}
-          {s.salary > 0 && <span className="chip">Khách khanh {s.flags.guest}</span>}
-          {s.sect && <button className="chip gold" onClick={() => setPanel('sect')}>Tông chủ {s.sect.name} · {s.sect.members} đệ tử</button>}
-          {landCount(s) > 0 && <span className="chip">Lãnh địa {landCount(s)}/{G.REGIONS.length}</span>}
-          {troopCount(s) > 0 && <span className="chip">Quân {troopCount(s)}</span>}
-          {smithLv(s) > 0 && <button className="chip" onClick={() => setPanel('forge')}>Lò rèn cấp {smithLv(s)}</button>}
-          {s.dwelling > 0 && <span className="chip">{G.DWELLING[s.dwelling][1]}</span>}
-          {s.master && <span className="chip">Có sư phụ</span>}
-          {s.partner && <span className="chip">Đạo lữ {s.partner.name}</span>}
-          {s.companion && <span className="chip">{s.companion}</span>}
         </div>
       </header>
 
       <div className="feed-bar">
-        <span className="label">Sử ký</span>
-        <button className={'feed-toggle' + (major ? ' on' : '')} onClick={toggleMajor} aria-pressed={major}>{major ? 'Đang xem: đại sự' : 'Chỉ xem đại sự'}</button>
+        <Ico i={KIND_I.key} size={16} /><span className="fb-title">Sử ký</span>
+        <button className={'feed-toggle' + (major ? ' on' : '')} onClick={toggleMajor} aria-pressed={major} title="Chỉ xem đại sự">
+          <Ico i={UI_I.ach} size={14} />{major ? 'Đại sự' : 'Tất cả'}
+        </button>
       </div>
       <main className="feed" ref={feed}>
         {rows.map((r) => r.group ? (
           <button key={'g' + r.group[0]} className="calm-group" onClick={() => setOpen((o) => ({ ...o, [r.group[0]]: true }))}>
-            <span className="yr-age">{s.log[r.group[0]].a}–{s.log[r.group[1]].a}</span>
-            <span>{r.group[1] - r.group[0] + 1} năm bình lặng · bấm để xem</span>
+            <span className="yr-age num">{s.log[r.group[0]].a}–{s.log[r.group[1]].a}</span>
+            <span>⋯ {r.group[1] - r.group[0] + 1} năm bình lặng</span>
           </button>
         ) : (
           <div key={r.i}>
             {r.e.st && <div className="divider"><span>{r.e.st}</span></div>}
             {r.e.items.length > 0 && (
               <div className="yr">
-                <div className="yr-age">{r.e.a}</div>
+                <div className="yr-age num">{r.e.a}</div>
                 <div className="yr-body">
-                  {r.e.items.map((it, j) => <p key={j} className={it.k || ''}>{it.t}</p>)}
+                  {r.e.items.map((it, j) => (
+                    <p key={j} className={'log ' + (it.k || '')}>
+                      {KIND_I[it.k] && <Ico i={KIND_I[it.k]} size={15} className="log-ico" />}
+                      <span>{it.t}</span>
+                    </p>
+                  ))}
                 </div>
               </div>
             )}
@@ -216,33 +236,33 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
       {peek && (
         <div className="peek-bar">
           <span>{result ? 'Đang xem kết quả' : 'Đang chờ ngươi quyết định'}</span>
-          <button className="btn primary" onClick={() => setPeek(false)}>Quay lại {result ? 'kết quả' : 'quyết định'}</button>
+          <button className="btn primary" onClick={() => setPeek(false)}>Quay lại</button>
         </div>
       )}
 
       <footer className="ctrl">
         <div className="ctrl-row">
-          <button className="icon-btn" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Tiếp tục' : 'Tạm dừng'}>
-            {paused ? '▶' : '❚❚'}
+          <button className="icon-btn" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Tiếp tục' : 'Tạm dừng'} title={paused ? 'Tiếp tục (Space)' : 'Tạm dừng (Space)'}>
+            <Ico i={paused ? UI_I.play : UI_I.pause} size={20} />
           </button>
-          <button className="focus-btn" disabled={!s.started || s.dead} onClick={() => setFocusOpen(true)}>
-            {s.started ? (
-              <><Seal ch={FOCUS_G[s.focus] || '?'} size="sm" /><span><small>Đang chuyên tâm</small>{f?.n || 'Chưa chọn'}</span><span className="muted">Đổi</span></>
-            ) : (
-              <><Seal ch="Thơ" size="sm" tone="outline" /><span><small>Thơ ấu</small>Lớn lên trong vòng tay phụ mẫu</span></>
-            )}
+          <button className="focus-btn" disabled={!s.started || s.dead} onClick={() => setFocusOpen(true)} title="Đổi việc đang làm">
+            <span className="f-ico"><Ico i={s.started ? FOCUS_I[s.focus] || UI_I.help : FOCUS_I.tinh} size={22} /></span>
+            <span className="f-name">{s.started ? f?.n || 'Chọn việc' : 'Thơ ấu'}</span>
+            <Ico i={UI_I.speed} size={14} className="f-more" />
           </button>
-          <button className="icon-btn" onClick={() => setSpeed((v) => (v + 1) % SPEEDS.length)} aria-label="Tốc độ">{SPEED_LABEL[speed]}</button>
+          <button className="icon-btn speed" onClick={() => setSpeed((v) => (v + 1) % SPEEDS.length)} aria-label="Tốc độ" title="Tốc độ thời gian">
+            <Ico i={UI_I.speed} size={16} /><small>{SPEED_LABEL[speed]}</small>
+          </button>
         </div>
         <nav className="nav" aria-label="Quản lý">
           {[
-            ['bag', 'Túi', 'Túi đồ', true],
-            ['forge', 'Rèn', 'Lò rèn', s.started && !s.dead],
-            ['market', 'Thị', 'Chợ & sàn', true],
-            ['sect', 'Môn', 'Tông môn', s.started && !s.dead],
-          ].map(([id, g, n, ok]) => (
-            <button key={id} className="nav-btn" disabled={!ok} onClick={() => setPanel(id)}>
-              <Seal ch={g} size="sm" tone={dots[id] ? 'red' : 'outline'} />
+            ['bag', 'Túi', true],
+            ['forge', 'Rèn', s.started && !s.dead],
+            ['market', 'Chợ', true],
+            ['sect', 'Môn', s.started && !s.dead],
+          ].map(([id, n, ok]) => (
+            <button key={id} className={'nav-btn' + (dots[id] ? ' alert' : '')} disabled={!ok} onClick={() => setPanel(id)} aria-label={n}>
+              <Ico i={NAV_I[id]} size={24} />
               <span>{n}</span>
               {dots[id] && <i className="dot" aria-label="có việc mới" />}
             </button>
@@ -257,23 +277,24 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
       {panel === 'help' && <StatHelp onClose={() => setPanel(null)} />}
 
       {showFocus && !result && !peek && (
-        <Sheet mark="Đạo" onClose={s.needFocus ? undefined : () => setFocusOpen(false)} onPeek={s.needFocus ? () => setPeek(true) : undefined}>
+        <Sheet onClose={s.needFocus ? undefined : () => setFocusOpen(false)} onPeek={s.needFocus ? () => setPeek(true) : undefined}>
           <p className="eyebrow">{s.needFocus ? 'Con đường tu luyện bắt đầu' : realmLabel(s)}</p>
-          <h3>Ngươi muốn dành thời gian cho điều gì?</h3>
+          <h3>Dành thời gian cho việc gì?</h3>
           <div className="focus-grid">
             {G.FOCUS.map((x) => {
               const locked = (x.alch && !canAlch(s)) || (x.sect && !s.sect);
               const h = hints({ fx: { ...x.fx, ...(x.money ? { gold: x.money } : {}), qi: x.qi - 0.9 } });
               return (
-                <button key={x.id} className={'focus-card' + (s.focus === x.id ? ' active' : '')} disabled={locked} onClick={() => pickFocus(x.id)}>
-                  <Seal ch={FOCUS_G[x.id]} tone={s.focus === x.id ? 'red' : 'outline'} />
+                <button key={x.id} className={'focus-card' + (s.focus === x.id ? ' active' : '')} disabled={locked} onClick={() => pickFocus(x.id)}
+                  title={locked ? (x.sect ? 'Cần khai tông lập phái trước' : 'Cần hỏa thuộc tính (hoặc dị hỏa, sư phụ) và linh hồn lực mạnh') : x.d}>
+                  <span className="fc-ico"><Ico i={locked ? UI_I.lock : FOCUS_I[x.id]} size={30} /></span>
                   <b>{x.n}</b>
-                  <small>{locked ? (x.sect ? 'Cần khai tông lập phái trước (mục «Tông môn»)' : 'Cần hỏa thuộc tính (hoặc dị hỏa, sư phụ) và linh hồn lực mạnh') : x.d}</small>
-                  {!locked && <Hints h={h} />}
+                  {!locked ? <Hints h={h} /> : <small>{x.sect ? 'Cần tông môn' : 'Cần hỏa thuộc tính'}</small>}
                 </button>
               );
             })}
           </div>
+          {f && <p className="note center">{f.d}</p>}
         </Sheet>
       )}
 

@@ -52,7 +52,7 @@ npm run preview    # xem thử bản đã đóng gói (có service worker / chơ
 npm run sim        # giả lập 300 kiếp để kiểm tra lỗi & cân bằng (xem phần dưới)
 ```
 
-Công nghệ: **React 19** + **Vite** + **anime.js** (vài chuyển động có chủ đích: con dấu đóng xuống, vòng mực khi đột phá, số kim tệ chạy; tự tắt khi máy bật *giảm chuyển động*). Không dùng thư viện UI hay state manager nào khác. Toàn bộ logic game là JavaScript thuần trong `src/game/`.
+Công nghệ: **React 19** + **Vite** + **anime.js** + **react-icons** (bộ [Game Icons](https://game-icons.net), giấy phép CC BY 3.0) (vài chuyển động có chủ đích: con dấu đóng xuống, vòng mực khi đột phá, số kim tệ chạy; tự tắt khi máy bật *giảm chuyển động*). Không dùng thư viện UI hay state manager nào khác. Toàn bộ logic game là JavaScript thuần trong `src/game/`.
 
 Khi chạy `npm run dev`, mở `http://localhost:5173/#demo` để vào thẳng một nhân vật hậu kỳ dựng sẵn (xem giao diện nhanh). Thêm đường dẫn để mở sẵn một bảng: `#demo/forge/craft`, `#demo/market/ex`, `#demo/sect/map`, `#demo/bag/gear`, hoặc một sự kiện: `#demo/event/hon_invasion`. Chế độ này không có trong bản build.
 
@@ -77,16 +77,18 @@ Khi chạy `npm run dev`, mở `http://localhost:5173/#demo` để vào thẳng 
 | ❚❚ / ▶ | Tạm dừng / tiếp tục |
 | *Đang chuyên tâm* | Đổi việc đang làm |
 | 1× / 1.5× / 3× / 6× | Tốc độ thời gian (được ghi nhớ) |
-| **Túi đồ** | Vật phẩm, trang bị đang mặc, kho binh khí |
-| **Lò rèn** | Chế tạo, cường hóa, xưởng binh khí quân dụng và hợp đồng |
-| **Chợ & sàn** | Chợ, Binh Khí Phường, Sàn giao dịch, sản nghiệp, sổ thu chi |
-| **Tông môn** | Công trình, quân đội, bản đồ chinh phạt |
+| **Túi** | Vật phẩm, trang bị đang mặc, kho binh khí |
+| **Rèn** | Chế tạo, cường hóa, xưởng binh khí quân dụng và hợp đồng |
+| **Chợ** | Chợ, Binh Khí Phường, Sàn giao dịch, sản nghiệp, sổ thu chi |
+| **Môn** | Công trình, quân đội, bản đồ chinh phạt |
 
 Chấm đỏ trên nút báo có việc cần xem: hàng ký gửi vừa bán được, hợp đồng giao được, vùng đất dễ chiếm.
 
+Giao diện theo phong cách **sơn mài**: nền đen nâu, viền vàng thếp, son đỏ. Hạn chế chữ: chỉ số, tài nguyên, gợi ý lựa chọn đều là icon (di chuột hoặc nhấn giữ để xem tên; bấm vào bảng chỉ số để xem giải thích đầy đủ). Vật phẩm và trang bị hiện dạng ô lưới, viền màu theo phẩm chất; bấm vào ô để xem chi tiết và thao tác.
+
 Trên máy tính (màn hình rộng từ 960px), game chia hai cột: thông tin nhân vật bên trái, nhật ký bên phải, các bảng hiện giữa màn hình. Trên điện thoại và app đã cài, bố cục dọc như cũ.
 
-Trên mỗi lựa chọn có gợi ý ảnh hưởng: **Thể chất / Linh hồn / Tâm cảnh / Khí vận / Kim tệ / Đấu khí** kèm ↑ ↓ ± (bấm vào bảng chỉ số trên HUD để xem giải thích từng chỉ số), nhãn *may rủi* (có tung xúc xắc) và *nguy hiểm tính mạng*. Nút **Xem thông số** (hoặc phím `Esc`) tạm ẩn bảng sự kiện để bạn xem lại chỉ số trước khi chọn.
+Trên mỗi lựa chọn có gợi ý ảnh hưởng bằng icon chỉ số kèm ▲ ▼ ±, icon xúc xắc (*may rủi*) và đầu lâu (*nguy hiểm tính mạng*). Bấm vào bảng chỉ số trên HUD để xem giải thích từng icon. Nút **Xem thông số** (hoặc phím `Esc`) tạm ẩn bảng sự kiện để bạn xem lại chỉ số trước khi chọn.
 
 ---
 
@@ -350,6 +352,8 @@ Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường 
     │   ├── Backup.jsx       # sao lưu / khôi phục
     │   ├── ui.jsx           # Bar, Sheet, Tabs, LevelBuy, GearRow, Toasts, LifeChart…
     │   ├── motion.js        # chuyển động bằng anime.js
+    │   ├── icons.jsx        # bảng icon dùng chung (Game Icons qua react-icons)
+    │   ├── gearUi.jsx       # ô và chỉ số trang bị dùng chung
     │   └── glyphs.jsx       # chữ trên con dấu son
     └── game/                # logic thuần, không phụ thuộc React
         ├── data.js          # MỌI SỐ LIỆU: cảnh giới, tư chất, vật phẩm, trang bị, sản nghiệp, tông môn, bản đồ

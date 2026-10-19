@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 import G from '../game/data.js';
 import { fmtGold } from '../game/util.js';
-import { regionDef, conquerP, attackBlock, devLv, devPlan, develop, regionInc, zoneOpen } from '../game/sect.js';
+import { regionDef, conquerP, attackBlock, devLv, devPlan, develop, regionInc, zoneOpen, warPower } from '../game/sect.js';
 import { LevelBuy } from './ui.jsx';
+import { Ico, UI_I, ITEM_I } from './icons.jsx';
 
 // Vị trí nhãn: b dưới, a trên, l trái, r phải, bl dưới canh phải (sát mép bản đồ)
 const LB = {
@@ -93,28 +94,29 @@ export function RegionCard({ s, id, onAttack, act }) {
   const def = regionDef(s, r);
   const p = s.sect ? conquerP(s, def) : 0;
   const block = attackBlock(s, r);
-  const item = { core: 'ma hạch', herb: 'dược liệu', ore: 'Huyền thiết' }[r.item];
+  const tone = p >= 0.6 ? 'easy' : p >= 0.3 ? 'mid' : 'hard';
   return (
-    <div className="region-card">
+    <div className={'region-card' + (own ? ' own' : '')}>
       <div className="rc-head">
         <div>
-          <small className="label">{G.ZONES[r.z].n}</small>
+          <small>{G.ZONES[r.z].n} · {own ? s.sect?.name : r.own}</small>
           <b>{r.n}</b>
         </div>
-        {own ? <span className="tag-own">Lãnh địa của ta</span> : s.sect && !block && <span className={'rc-odds ' + (p >= 0.6 ? 'easy' : p >= 0.3 ? 'mid' : 'hard')}>{Math.round(p * 100)}% thắng</span>}
+        {!own && s.sect && !block && <span className={'rc-odds ' + tone} title="Tỷ lệ thắng khi đích thân dẫn quân">{Math.round(p * 100)}%</span>}
       </div>
-      <p className="small">{r.d}</p>
-      <dl className="rc-facts">
-        <div><dt>Trấn thủ</dt><dd>{own ? s.sect?.name : r.own}</dd></div>
-        {!own && <div><dt>Thực lực</dt><dd className="num">{def}</dd></div>}
-        <div><dt>Thu mỗi năm</dt><dd className="num">{fmtGold(own ? regionInc(s, r.id) : r.inc)}{item ? ` + ${item}` : ''}</dd></div>
-        {own && <div><dt>Khai phát</dt><dd className="num">cấp {devLv(s, r.id)}/{G.DEV_MAX} · +{devLv(s, r.id) * 8}% thu nhập</dd></div>}
-      </dl>
+      <p className="d-desc">{r.d}</p>
+      <div className="rc-facts">
+        {!own && <span className="sv" title="Thực lực trấn thủ"><Ico i={UI_I.army} size={15} />{def}</span>}
+        {!own && s.sect && <span className="sv" title="Thế lực của bạn"><Ico i={UI_I.power} size={15} />{Math.round(warPower(s))}</span>}
+        <span className="sv" title="Thu nhập mỗi năm"><Ico i={UI_I.gold} size={15} />{fmtGold(own ? regionInc(s, r.id) : r.inc)}/năm</span>
+        {r.item && <span className="sv" title="Sản vật"><Ico i={ITEM_I[r.item]} size={15} />+</span>}
+        {own && <span className="sv" title="Cấp khai phát, mỗi cấp +8% thu nhập"><Ico i={UI_I.up} size={15} />{devLv(s, r.id)}/{G.DEV_MAX}</span>}
+      </div>
       {own ? (
-        <LevelBuy lv={devLv(s, r.id)} max={G.DEV_MAX} gold={s.gold} label="Khai phát" plan={(w) => devPlan(s, r.id, w)} onBuy={(w) => act(() => develop(s, r.id, w))} />
+        <LevelBuy lv={devLv(s, r.id)} max={G.DEV_MAX} gold={s.gold} plan={(w) => devPlan(s, r.id, w)} onBuy={(w) => act(() => develop(s, r.id, w))} />
       ) : (
         <button className="btn primary" disabled={!!block} onClick={() => onAttack(r.id)}>
-          {block || 'Xuất binh chinh phạt'}
+          {block ? <><Ico i={UI_I.lock} size={18} /> {block}</> : <><Ico i={UI_I.army} size={20} /> Xuất binh</>}
         </button>
       )}
     </div>

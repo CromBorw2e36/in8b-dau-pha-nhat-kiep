@@ -9,7 +9,8 @@ export function demoLife() {
   const s = newLife();
   s.name = 'Lâm Phong';
   // Chạy vài chục lượt để có nhật ký thật
-  for (let i = 0; i < 60 && !s.dead; i++) {
+  for (let i = 0; i < 60; i++) {
+    if (s.dead) s.dead = false; // demo: không để nhân vật chết giữa chừng
     if (s.needFocus) { s.focus = 'lich'; s.needFocus = false; }
     if (s.pending) { const ch = choicesOf(s); choose(s, ch[ch.length - 1]); continue; }
     tick(s);
