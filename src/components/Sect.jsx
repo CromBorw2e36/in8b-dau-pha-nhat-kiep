@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import G from '../game/data.js';
-import { fmtGold, cp, effLv } from '../game/util.js';
+import { fmtGold, cp, effLv, parseKey, itemName } from '../game/util.js';
 import { save } from '../game/engine.js';
 import {
   sectReqs, canFound, foundSect, genSectName, memberCap, sectPower, warPower, sectTier, bLv, buildPlan, upgradeBuild,
@@ -9,8 +9,11 @@ import {
 import {
   armyCap, troopCount, troopOpen, recruitCost, maxRecruit, recruit, dismiss, armyPower, armyUpkeep, armedPct, trainPlan, train,
 } from '../game/army.js';
-import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy } from './ui.jsx';
-import { Ico, NAV_I, UI_I, BUILD_I, TROOP_I } from './icons.jsx';
+import { vaultOf, mineTotal, mineK, raidsPerYear, takeItem, takeGear, sellVaultGear } from '../game/vault.js';
+import { gearSell } from '../game/gear.js';
+import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy, Card } from './ui.jsx';
+import { GearCard, gradeQ } from './gearUi.jsx';
+import { Ico, NAV_I, UI_I, BUILD_I, TROOP_I, ITEM_I } from './icons.jsx';
 import WorldMap, { RegionCard } from './WorldMap.jsx';
 
 // Hiệu quả ngắn gọn của từng công trình ở cấp hiện tại
@@ -20,6 +23,7 @@ const BUILD_EFF = {
   vo: (e) => `+${(e * 2.5).toFixed(0)} thực lực`,
   tran: (e) => `+${Math.round(e * 7)} phòng thủ`,
   hien: (e) => `+${Math.round(e * 40)} đệ tử`,
+  khoang: (e) => `+${Math.round(e * 25)}% sản lượng mỏ`,
   doanh: (e, s) => `${armyCap(s)} quân`,
 };
 
@@ -29,16 +33,18 @@ export default function Sect({ s, bump, onClose, initTab }) {
   const act = (fn) => { const r = fn(); if (r) setMsg(r); save(s); bump(); };
   const S = s.sect;
   const attack = (id) => { if (startConquest(s, id)) { save(s); bump(); onClose(); } };
+  const go = (t) => { setTab(t); setMsg(null); if (t === 'vault' && S) { S.vaultNew = 0; save(s); } };
   const canHit = S && G.REGIONS.some((r) => !attackBlock(s, r) && conquerP(s, regionDef(s, r)) >= 0.6);
 
   return (
     <Sheet onClose={onClose} tall>
       <SheetHead icon={NAV_I.sect} title={S ? S.name : 'Tông môn'} sub={S ? sectTier(s) : 'Chưa khai tông'} value={Math.round(warPower(s))} valueIcon={UI_I.power} valueLabel="Thế lực" />
-      <Tabs tab={tab} onTab={(t) => { setTab(t); setMsg(null); }} tabs={[['sect', 'Tông môn', NAV_I.sect], ['army', 'Quân đội', UI_I.army], ['map', 'Bản đồ', UI_I.map, canHit]]} />
+      <Tabs tab={tab} onTab={go} tabs={[['sect', 'Tông môn', NAV_I.sect], ['vault', 'Kho', UI_I.vault, S?.vaultNew > 0], ['army', 'Quân đội', UI_I.army], ['map', 'Bản đồ', UI_I.map, canHit]]} />
       {msg && <p className="bag-msg">{msg}</p>}
       <SheetBody>
         {tab === 'sect' && !S && <Found s={s} act={act} />}
         {tab === 'sect' && S && <Builds s={s} act={act} />}
+        {tab === 'vault' && <Vault s={s} act={act} />}
         {tab === 'army' && <Army s={s} act={act} />}
         {tab === 'map' && <MapTab s={s} act={act} attack={attack} />}
       </SheetBody>
@@ -89,6 +95,61 @@ function Builds({ s, act }) {
           );
         })}
       </ul>
+    </>
+  );
+}
+
+// Kho tông môn: mỏ lãnh địa và chiến lợi phẩm đệ tử đổ về, lấy ra khi cần
+function Vault({ s, act }) {
+  const [open, setOpen] = useState(null);
+  if (!s.sect) return <p className="empty"><Ico i={NAV_I.sect} size={28} />Cần khai tông lập phái trước.</p>;
+  const v = vaultOf(s);
+  const toggle = (k) => setOpen(open === k ? null : k);
+  const items = Object.entries(v.inv).sort(([a], [b]) => a.localeCompare(b));
+  const mines = Object.entries(mineTotal(s));
+  const oreYr = mines.filter(([k]) => k.startsWith('ore')).reduce((a, [, n]) => a + n, 0);
+  return (
+    <>
+      <div className="stat-tiles">
+        <div title="Huyền thiết từ mỏ lãnh địa mỗi năm"><Ico i={ITEM_I.ore} size={20} /><b className="num">{Math.round(oreYr)}</b><small>quặng/năm</small></div>
+        <div title="Số chuyến đệ tử xuất chinh mỗi năm (40 đệ tử một chuyến)"><Ico i={UI_I.members} size={20} /><b className="num">{raidsPerYear(s).toFixed(1)}</b><small>chuyến/năm</small></div>
+        <div title="Hệ số Linh Khoáng Đường"><Ico i={BUILD_I.khoang} size={20} /><b className="num">×{mineK(s).toFixed(2)}</b><small>sản lượng</small></div>
+      </div>
+      <p className="note">Mỗi vùng chiếm được có mỏ, vùng quặng cho gấp năm. Khai phát vùng và nâng Linh Khoáng Đường để tăng sản lượng. Lò rèn tự lấy nguyên liệu ở đây khi túi thiếu; đồ trong kho không bị tự bán.</p>
+      {mines.length > 0 && (
+        <div className="mats">
+          {mines.map(([k, n]) => { const [t, g] = parseKey(k); return <span key={k} className="mat" title={`${itemName(t, g)} mỗi năm`}><Ico i={ITEM_I[t]} size={16} /><small>{g}</small><b className="num">+{Math.round(n)}</b></span>; })}
+        </div>
+      )}
+      <p className="sub-head">Nguyên liệu</p>
+      {items.length ? (
+        <div className="cards">
+          {items.map(([k, n]) => {
+            const [t, g] = parseKey(k);
+            return (
+              <Card key={k} icon={ITEM_I[t]} q={gradeQ(g)} badge={g} count={n} title={itemName(t, g)} sub={<span className="c-desc">Túi đang có {s.inv[k] || 0}</span>}
+                open={open === k} onToggle={() => toggle(k)}>
+                <div className="c-act">
+                  {[10, 50].filter((x) => x < n).map((x) => <button key={x} className="mini" onClick={() => act(() => takeItem(s, k, x))}>Lấy {x}</button>)}
+                  <button className="mini buy" onClick={() => act(() => takeItem(s, k, n))}><Ico i={NAV_I.bag} />Lấy hết {n}</button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      ) : <p className="empty">Kho còn trống. Chiếm lãnh địa và chiêu mộ đệ tử để có hàng đổ về.</p>}
+      <p className="sub-head">Trang bị <span className="muted num">{v.gear.length}/{G.VAULT_GEAR_MAX}</span></p>
+      {v.gear.length ? (
+        <div className="cards">
+          {v.gear.map((it) => (
+            <GearCard key={it.id} it={it} s={s} compare open={open === it.id} onToggle={() => toggle(it.id)}>
+              <button className="mini buy" onClick={() => { act(() => takeGear(s, it.id)); setOpen(null); }}><Ico i={NAV_I.bag} />Lấy về</button>
+              <button className="mini" onClick={() => { act(() => sellVaultGear(s, it.id)); setOpen(null); }}>Bán · {fmtGold(gearSell(it))}</button>
+            </GearCard>
+          ))}
+        </div>
+      ) : <p className="empty">Chưa có trang bị nào. Đệ tử xuất chinh và chiếm vùng mới sẽ mang về.</p>}
+      <p className="note">Kho đầy trang bị thì món kém nhất tự bán vào ngân khố.</p>
     </>
   );
 }

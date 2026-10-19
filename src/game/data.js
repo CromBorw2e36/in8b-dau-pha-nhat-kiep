@@ -164,9 +164,11 @@ G.BUILDS = [
   { id: 'vo',    n: 'Diễn Võ Trường',  base: 40000, d: 'Thế lực tông môn +2,5 mỗi cấp khi chinh chiến.' },
   { id: 'tran',  n: 'Hộ Sơn Đại Trận', base: 50000, d: 'Phòng thủ lãnh địa khi bị tập kích.' },
   { id: 'hien',  n: 'Chiêu Hiền Điện', base: 25000, d: 'Thu nhận thêm 40 đệ tử mỗi cấp, dễ chiêu mộ trưởng lão.' },
+  { id: 'khoang', n: 'Linh Khoáng Đường', base: 30000, d: 'Quản các mỏ trên lãnh địa. Sản lượng huyền thiết, ma hạch, dược liệu đổ về kho +25% mỗi cấp.' },
   { id: 'doanh', n: 'Doanh Trại',      base: 35000, d: 'Lập quân đội. Mỗi cấp thêm 40 quân số, mở binh chủng mới ở cấp 5, 15 và 30.' },
 ];
 G.BUILD_MAX = 100;
+G.VAULT_GEAR_MAX = 30; // kho tông môn chứa tối đa bao nhiêu món trang bị
 G.SECT_NAME = {
   a: ['Thiên', 'Huyền', 'Tử', 'Thanh', 'Viêm', 'Lôi', 'Băng', 'Vân', 'Thái Hư', 'Cửu U', 'Phần', 'Tinh'],
   b: ['Kiếm', 'Đan', 'Viêm', 'Vân', 'Long', 'Nguyệt', 'Hải', 'Phong', 'Huyết', 'Ngọc'],

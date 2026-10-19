@@ -1,6 +1,7 @@
 import G from './data.js';
 import { R, rand, pick, clamp, unit, earn, spend, give, countOf, tierFor, gearName, fmtGold, itemName, levelPlan, mkIdx } from './util.js';
 import { genGear, obtainGear } from './gear.js';
+import { vaultCount, takeFromVault } from './vault.js';
 
 // ───── Luyện Khí Phòng (lò rèn riêng), cấp 0..100 ─────
 export const smithLv = (s) => s.smithy?.lv || 0;
@@ -31,14 +32,17 @@ export function craftCost(tier) {
     core: [Math.min(9, oreG(tier) + 1), 1],
   };
 }
-// Có đủ nguyên liệu (cho phép dùng nguyên liệu phẩm cao hơn)
-const hasMat = (s, [g, n], t) => countOf(s, t, g) >= n;
+// Có đủ nguyên liệu (cho phép dùng nguyên liệu phẩm cao hơn), tính cả kho tông môn
+export const matHave = (s, t, g) => countOf(s, t, g) + vaultCount(s, t, g);
+const hasMat = (s, [g, n], t) => matHave(s, t, g) >= n;
+// Dùng đồ trong túi trước, thiếu thì lấy từ kho
 function takeMat(s, t, g, n) {
   for (let gg = g; gg <= 9 && n > 0; gg++) {
     const have = s.inv[`${t}:${gg}`] || 0;
     const use = Math.min(have, n);
     if (use) { give(s, t, gg, -use); n -= use; }
   }
+  if (n > 0) takeFromVault(s, t, g, n);
 }
 export const canCraft = (s, tier) => {
   const c = craftCost(tier);

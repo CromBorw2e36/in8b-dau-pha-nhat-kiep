@@ -406,7 +406,7 @@ export function migrate(v) {
   for (const id of Object.keys(v.land)) if (!G.REGIONS.some((r) => r.id === id)) delete v.land[id];
   v.mkt ||= {}; v.cons ||= []; v.bids ||= []; v.exNew ||= 0; v.smithy ||= { lv: 0, prod: true }; v.arms ||= 0; v.orders ||= [];
   v.army ||= { n: {}, armed: 0, train: 0 }; v.stats ||= {};
-  if (v.sect) for (const b of G.BUILDS) v.sect.b[b.id] ??= 0;
+  if (v.sect) { for (const b of G.BUILDS) v.sect.b[b.id] ??= 0; v.sect.vault ||= { inv: {}, gear: [] }; }
   if (v.focus === 'mon') v.focus = 'nv';
   return v;
 }

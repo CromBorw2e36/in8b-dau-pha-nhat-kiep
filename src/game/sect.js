@@ -1,6 +1,7 @@
 import G from './data.js';
 import { R, rand, pick, clamp, cp, unit, earn, spend, lose, give, applyFx, pillNeed, beastGrade, fmtGold, lastEntry, effLv, levelPlan, tierFor } from './util.js';
 import { armyPower, armyLoss, armyYearly } from './army.js';
+import { vaultYearly, conquestLoot } from './vault.js';
 
 // ───── Tông môn ─────
 export const genSectName = () => pick(G.SECT_NAME.a) + ' ' + pick(G.SECT_NAME.b) + ' ' + pick(G.SECT_NAME.c);
@@ -32,7 +33,7 @@ export function foundSect(s, name) {
   name = (name || '').trim().slice(0, 28) || genSectName();
   spend(s, 'Khai tông lập phái', G.SECT_REQ.gold);
   const left = s.faction && s.faction !== name ? s.faction : null;
-  s.sect = { name, at: s.age, members: 8 + s.disciples * 3, elders: 0, b: Object.fromEntries(G.BUILDS.map((b) => [b.id, 0])) };
+  s.sect = { name, at: s.age, members: 8 + s.disciples * 3, elders: 0, b: Object.fromEntries(G.BUILDS.map((b) => [b.id, 0])), vault: { inv: {}, gear: [] } };
   s.faction = name;
   s.fame += 3;
   const msg = `Bạn khai tông lập phái, dựng nên ${name}${left ? `, rời khỏi ${left}` : ''}. Tám phương chấn động!`;
@@ -121,12 +122,7 @@ export function sectYearly(s, e, yrs, f) {
   earn(s, 'Đệ tử cống nạp', S.members * u * 0.003 * yrs * (lead ? 1.6 : 1));
   const inc = landIncome(s);
   if (inc) earn(s, 'Thuế lãnh địa', inc * yrs * rand(0.85, 1.15) * (lead ? 1.2 : 1));
-  for (const id of landIds(s)) {
-    const r = region(id);
-    if (!r?.item || R() >= 0.5) continue;
-    const g = r.item === 'ore' ? G.ORE_FOR_TIER[tierFor(s)] : beastGrade(s);
-    give(s, r.item, g, 1 + Math.floor(R() * 2) + Math.floor(devLv(s, id) / 20));
-  }
+  vaultYearly(s, e, yrs);
 
   // Chi phí: bổng lộc trưởng lão + duy trì công trình
   const builds = Object.values(S.b).reduce((a, v) => a + effLv(v), 0);
@@ -166,6 +162,7 @@ export function takeLand(s, id) {
   s.fame += Math.max(1, Math.round(r.def / 25));
   s.sect.members += 10;
   earn(s, `Chiến lợi phẩm ${r.n}`, r.inc * rand(0.5, 1));
+  conquestLoot(s, r);
   armyLoss(s, rand(0.03, 0.08));
 }
 export function loseLand(s, id) {

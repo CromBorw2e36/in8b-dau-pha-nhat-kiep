@@ -3,7 +3,7 @@ import G from '../game/data.js';
 import { fmtGold, itemName, countOf, gearName } from '../game/util.js';
 import {
   smithLv, smithPlan, upgradeSmith, craftTierCap, nextTierAt, craftCost, canCraft, craft, qualityOdds,
-  enhanceCost, enhanceP, enhance, armCost, armValue, armRate, fulfill, sellArms,
+  enhanceCost, enhanceP, enhance, armCost, armValue, armRate, fulfill, sellArms, matHave,
 } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
 import { placeBid, bidFor, itemFair } from '../game/exchange.js';
@@ -47,13 +47,13 @@ function SmithUpgrade({ s, act }) {
 }
 
 function Mat({ s, t, g, n }) {
-  const have = countOf(s, t, g);
-  return <span className={'mat ' + (have >= n ? 'ok' : 'no')} title={itemName(t, g)}><Ico i={ITEM_I[t]} size={16} /><small>{g}</small><b className="num">{have}/{n}</b></span>;
+  const have = matHave(s, t, g);
+  return <span className={'mat ' + (have >= n ? 'ok' : 'no')} title={`${itemName(t, g)}: túi ${countOf(s, t, g)}, kho tông môn ${have - countOf(s, t, g)}`}><Ico i={ITEM_I[t]} size={16} /><small>{g}</small><b className="num">{have}/{n}</b></span>;
 }
 
 // Thiếu nguyên liệu: đặt mua nhanh trên sàn với giá 115% thị trường
 function QuickBid({ s, act, t, g, n }) {
-  const short = n - countOf(s, t, g);
+  const short = n - matHave(s, t, g);
   if (short <= 0) return null;
   const bid = bidFor(s, `${t}:${g}`);
   if (bid) return <span className="muted small"><Ico i={UI_I.tag} size={13} />Đang đặt mua {bid.n} {itemName(t, g).toLowerCase()} trên sàn</span>;
@@ -136,7 +136,7 @@ function Enhance({ s, act }) {
           const c = enhanceCost(it);
           const p = enhanceP(s, it);
           const max = (it.en || 0) >= G.ENHANCE_MAX;
-          const can = !max && s.gold >= c.gold && countOf(s, 'ore', c.ore[0]) >= c.ore[1];
+          const can = !max && s.gold >= c.gold && matHave(s, 'ore', c.ore[0]) >= c.ore[1];
           const worn = s.gear[it.sl]?.id === it.id;
           return (
             <GearCard key={it.id} it={it} s={s} tag={worn ? 'Đang mặc' : null} open={open === it.id} onToggle={() => setOpen(open === it.id ? null : it.id)}

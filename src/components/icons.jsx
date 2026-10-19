@@ -6,7 +6,7 @@ import {
   GiBroadsword, GiBreastplate, GiGemPendant, GiDiamondRing, GiBoots,
   GiKnapsack, GiAnvil, GiShop, GiPagoda,
   GiMeditation, GiMountainRoad, GiScrollUnfurled, GiCauldron, GiSwordSpin, GiTeapot,
-  GiBookshelf, GiPunchingBag, GiCheckedShield, GiTeacher, GiBarracksTent,
+  GiBookshelf, GiPunchingBag, GiCheckedShield, GiTeacher, GiBarracksTent, GiMining, GiOpenTreasureChest,
   GiSpears, GiArcher, GiCavalry, GiWizardStaff,
   GiSprout, GiStandingPotion, GiGoldMine, GiGavel,
   GiUpgrade, GiSparkles, GiBrokenShield, GiTombstone,
@@ -25,7 +25,7 @@ export const ITEM_I = { core: GiCrystalGrowth, herb: GiHerbsBundle, ore: GiMetal
 export const SLOT_I = { wep: GiBroadsword, arm: GiBreastplate, acc: GiGemPendant, rng: GiDiamondRing, boo: GiBoots };
 export const NAV_I = { bag: GiKnapsack, forge: GiAnvil, market: GiShop, sect: GiPagoda };
 export const FOCUS_I = { tu: GiMeditation, lich: GiMountainRoad, nv: GiScrollUnfurled, duoc: GiCauldron, ky: GiSwordSpin, tinh: GiTeapot, tong: GiPagoda };
-export const BUILD_I = { kinh: GiBookshelf, dan: GiCauldron, vo: GiPunchingBag, tran: GiCheckedShield, hien: GiTeacher, doanh: GiBarracksTent };
+export const BUILD_I = { kinh: GiBookshelf, dan: GiCauldron, vo: GiPunchingBag, tran: GiCheckedShield, hien: GiTeacher, doanh: GiBarracksTent, khoang: GiMining };
 export const TROOP_I = { bo: GiSpears, cung: GiArcher, ky: GiCavalry, phap: GiWizardStaff };
 export const EST_I = { tra: GiTeapot, dien: GiSprout, pho: GiStandingPotion, mo: GiGoldMine, dg: GiGavel };
 export const KIND_I = { key: GiScrollUnfurled, up: GiUpgrade, good: GiSparkles, bad: GiBrokenShield, money: GiTwoCoins, death: GiTombstone };
@@ -35,5 +35,5 @@ export const UI_I = {
   deadly: GiDeathSkull, dice: GiRollingDices, ach: GiTrophyCup, sell: GiReceiveMoney, buy: GiPayMoney, tag: GiPriceTag, retire: GiMountaintop,
   map: GiTreasureMap, army: GiCrossedSwords, elder: GiWizardFace, land: GiTowerFlag, ledger: GiAbacus, home: GiExitDoor, members: GiThreeFriends,
   train: GiTargetDummy, craft: GiHammerDrop, up: GiUpgrade, cp: GiCrossedSwords, fame: GiLaurelCrown, power: GiCastle, fire: GiFire,
-  alch: GiCauldron, gong: GiOpenBook, skill: GiSpellBook, realm: GiYinYang, gold: GiTwoCoins,
+  alch: GiCauldron, gong: GiOpenBook, skill: GiSpellBook, realm: GiYinYang, gold: GiTwoCoins, vault: GiOpenTreasureChest,
 };
