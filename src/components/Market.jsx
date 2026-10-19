@@ -7,6 +7,7 @@ import {
   npcList, buyListing, consignItem, consignGear, cancelConsign, sellChance, itemFair, gearFair, listingName, priceTag, trend,
   placeBid, cancelBid, bidChance,
 } from '../game/exchange.js';
+import { aucOpen, aucWait, aucLeft, lotName, minBid, rivalMood, placeAucBid } from '../game/auction.js';
 import { save } from '../game/engine.js';
 import { Sheet, SheetBody, SheetHead, Tabs, Card, UpRow, LevelBuy, ConfirmBtn } from './ui.jsx';
 import { GearCard, gradeQ } from './gearUi.jsx';
@@ -16,10 +17,10 @@ const MK_SHORT = { core: 'Ma hạch', herb: 'Dược liệu', ore: 'Huyền thi�
 const TAG = { cheap: ['Rẻ', 'good'], dear: ['Đắt', 'bad'], fair: ['Đúng giá', 'fair'] };
 
 export default function Market({ s, bump, onClose, initTab }) {
-  const [tab, setTab] = useState(() => initTab || (s.exNew ? 'ex' : 'shop'));
+  const [tab, setTab] = useState(() => initTab || (s.aucNew && aucOpen(s) ? 'auc' : s.exNew ? 'ex' : 'shop'));
   const [msg, setMsg] = useState(null);
   const act = (fn) => { const r = fn(); if (r) setMsg(r); save(s); bump(); };
-  const go = (t) => { setTab(t); setMsg(null); if (t === 'ex') { s.exNew = 0; save(s); } };
+  const go = (t) => { setTab(t); setMsg(null); if (t === 'ex') { s.exNew = 0; save(s); } if (t === 'auc') { s.aucNew = 0; save(s); } };
 
   return (
     <Sheet onClose={onClose} tall>
@@ -31,11 +32,12 @@ export default function Market({ s, bump, onClose, initTab }) {
           </span>
         ))}
       </div>
-      <Tabs tab={tab} onTab={go} tabs={[['shop', 'Chợ', NAV_I.market], ['ex', 'Sàn', UI_I.tag, s.exNew > 0], ['estate', 'Sản nghiệp', EST_I.mo], ['led', 'Sổ', UI_I.ledger]]} />
+      <Tabs tab={tab} onTab={go} tabs={[['shop', 'Chợ', NAV_I.market], ['ex', 'Sàn', UI_I.tag, s.exNew > 0], ['auc', 'Đấu giá', UI_I.auction, s.aucNew > 0], ['estate', 'Sản nghiệp', EST_I.mo], ['led', 'Sổ', UI_I.ledger]]} />
       {msg && <p className="bag-msg">{msg}</p>}
       <SheetBody>
         {tab === 'shop' && <Shop s={s} act={act} />}
         {tab === 'ex' && <Exchange s={s} act={act} />}
+        {tab === 'auc' && <Auction s={s} act={act} />}
         {tab === 'estate' && <Estates s={s} act={act} />}
         {tab === 'led' && <Ledger s={s} />}
       </SheetBody>
@@ -247,6 +249,54 @@ function Bids({ s, act }) {
           </ConfirmBtn>
         </div>
       )}
+    </>
+  );
+}
+
+// Phòng đấu giá định kỳ: ra giá tranh với các thế lực khác, đối thủ có giá trần ẩn
+function Auction({ s, act }) {
+  const [open, setOpen] = useState(null);
+  if (!aucOpen(s)) {
+    const w = aucWait(s);
+    return (
+      <>
+        <p className="empty"><Ico i={UI_I.auction} size={28} />Phòng đấu giá Mễ Đặc Nhĩ đang đóng cửa.<br />{w > 0 ? `Phiên tới mở sau ${w} lượt.` : 'Phiên tới sắp mở.'}</p>
+        <p className="note">Mỗi {G.AUCTION_EVERY} lượt mở một phiên kéo dài {G.AUCTION_OPEN} lượt, bán trang bị Cực phẩm trở lên, lô huyền thiết lớn, đan dược hiếm, có khi cả công pháp. Mở bảng này thì thời gian tạm dừng.</p>
+      </>
+    );
+  }
+  const lots = s.auc.lots;
+  const priceEl = (p) => <span className="price"><Ico i={UI_I.gold} size={13} />{fmtGold(p)}</span>;
+  return (
+    <>
+      <div className="sub-row">
+        <p className="sub-head">Phiên đấu giá <span className="muted">· còn {aucLeft(s)} lượt</span></p>
+        <span className="muted small">{lots.filter((x) => x.sold === 'me').length}/{lots.length} đã thắng</span>
+      </div>
+      <div className="cards">
+        {lots.map((x) => {
+          const mb = minBid(x);
+          const status = x.sold === 'me' ? 'Đã thắng' : x.lead === 'npc' ? 'Bị vượt giá' : 'Chưa ai ra giá';
+          const body = x.sold ? <span className="sv">Bạn đã mua với giá {fmtGold(x.price)}.</span> : (
+            <>
+              <span className="sv"><Ico i={UI_I.members} size={14} />{x.lead === 'npc' ? `${x.rival} đang giữ giá, ${rivalMood(x)}` : `${x.rival} cũng đang để mắt`} · ước giá trị {fmtGold(x.fair)}</span>
+              <div className="c-act">
+                {[[1, 'Ra giá'], [1.25, 'Nâng mạnh'], [1.6, 'Áp đảo']].map(([k, n]) => {
+                  const b = Math.round(mb * k);
+                  return <ConfirmBtn key={k} cost={b} gold={s.gold} className={k === 1 ? 'mini buy' : 'mini'} disabled={s.gold < b} onClick={() => act(() => placeAucBid(s, x.id, b))}><Ico i={UI_I.auction} />{n} · {fmtGold(b)}</ConfirmBtn>;
+                })}
+              </div>
+            </>
+          );
+          return x.kind === 'gear'
+            ? <GearCard key={x.id} it={x.it} s={s} compare tag={status} right={priceEl(x.price)} open={open === x.id} onToggle={() => setOpen(open === x.id ? null : x.id)}>{body}</GearCard>
+            : <Card key={x.id} icon={x.kind === 'item' ? ITEM_I[x.t] : x.kind === 'gong' ? UI_I.gong : UI_I.skill} q={x.kind === 'item' ? gradeQ(x.g) : 3} badge={x.g} count={x.n > 1 ? x.n : null}
+                title={lotName(s, x)} tag={status} dim={x.sold === 'me'}
+                sub={<span className="c-desc">{x.kind === 'item' ? G.ITEMS[x.t].d : 'Nâng cảnh giới công pháp / đấu kỹ lên một bậc.'}</span>}
+                right={priceEl(x.price)} open={open === x.id} onToggle={() => setOpen(open === x.id ? null : x.id)}>{body}</Card>;
+        })}
+      </div>
+      <p className="note">Mỗi lần ra giá ít nhất cao hơn 10%. Đối thủ có giới hạn riêng không ai biết — nâng mạnh có thể khiến họ bỏ cuộc sớm, nhưng cũng có thể trả hớ. Hết phiên, món nào chưa thắng sẽ về tay người khác.</p>
     </>
   );
 }

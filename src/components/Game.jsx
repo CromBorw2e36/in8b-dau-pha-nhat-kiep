@@ -105,7 +105,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
 
   // Chấm báo trên thanh điều hướng
   const dots = {
-    market: s.exNew > 0,
+    market: s.exNew > 0 || s.aucNew > 0,
     forge: smithLv(s) > 0 && s.orders.some((o) => s.arms >= o.n),
     sect: !!s.sect && G.REGIONS.some((r) => !attackBlock(s, r) && conquerP(s, regionDef(s, r)) >= 0.6),
   };

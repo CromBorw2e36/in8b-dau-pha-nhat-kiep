@@ -10,6 +10,7 @@ import { estatesYearly, estateValue, gearSell, artifactYearly } from './gear.js'
 import { sectYearly, bLv, landCount, sectTier } from './sect.js';
 import { smithYearly, smithLv, armCost } from './forge.js';
 import { marketTick, consignTick, bidTick } from './exchange.js';
+import { auctionTick } from './auction.js';
 import { troopCount } from './army.js';
 
 export const EV = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
@@ -160,6 +161,7 @@ function yearly(s, e, yrs) {
   economy(s, e, yrs, f);
   consignTick(s, e);
   bidTick(s, e);
+  auctionTick(s, e);
 
   if (s.started) {
     const before = realmLabel(s);

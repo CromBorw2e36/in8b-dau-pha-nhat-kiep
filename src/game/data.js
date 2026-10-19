@@ -258,6 +258,8 @@ G.MARKETS = { core: 'Ma hạch', herb: 'Dược liệu', ore: 'Huyền thiết',
 G.CONSIGN_MAX = 8;
 G.CONSIGN_FEE = 0.05;
 G.BID_MAX = 6; // số đơn đặt mua treo cùng lúc
+G.AUCTION_EVERY = 6; // phòng đấu giá mở phiên mỗi 6 lượt
+G.AUCTION_OPEN = 3; // mỗi phiên kéo dài 3 lượt
 // Phẩm đan dược phù hợp với từng cảnh giới
 G.PILL_NEED = [1, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 9];
 // Sinh hoạt phí mỗi năm theo cảnh giới (ăn ở, y phục, đi lại)

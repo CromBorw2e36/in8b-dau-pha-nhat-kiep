@@ -35,5 +35,5 @@ export const UI_I = {
   deadly: GiDeathSkull, dice: GiRollingDices, ach: GiTrophyCup, sell: GiReceiveMoney, buy: GiPayMoney, tag: GiPriceTag, retire: GiMountaintop,
   map: GiTreasureMap, army: GiCrossedSwords, elder: GiWizardFace, land: GiTowerFlag, ledger: GiAbacus, home: GiExitDoor, members: GiThreeFriends,
   train: GiTargetDummy, craft: GiHammerDrop, up: GiUpgrade, cp: GiCrossedSwords, fame: GiLaurelCrown, power: GiCastle, fire: GiFire,
-  alch: GiCauldron, gong: GiOpenBook, skill: GiSpellBook, realm: GiYinYang, gold: GiTwoCoins, vault: GiOpenTreasureChest,
+  alch: GiCauldron, gong: GiOpenBook, skill: GiSpellBook, realm: GiYinYang, gold: GiTwoCoins, vault: GiOpenTreasureChest, auction: GiGavel,
 };
