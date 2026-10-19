@@ -6,6 +6,8 @@ import { smithLv } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
 import { attackBlock, conquerP, regionDef, landCount } from '../game/sect.js';
 import { checkAch } from '../game/ach.js';
+import { canAscend } from '../game/emperor.js';
+import { dechienIn } from '../game/upper.js';
 import { Bar, Hints, Deltas, Sheet, StatHelp, Toasts, STAT_NAME } from './ui.jsx';
 import { Seal, EV_G, NUM_G } from './glyphs.jsx';
 import { Ico, EMP_I, STAT_I, NAV_I, FOCUS_I, KIND_I, UI_I } from './icons.jsx';
@@ -108,6 +110,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
     market: s.exNew > 0 || s.aucNew > 0,
     forge: smithLv(s) > 0 && s.orders.some((o) => s.arms >= o.n),
     sect: !!s.sect && G.REGIONS.some((r) => !attackBlock(s, r) && conquerP(s, regionDef(s, r)) >= 0.6),
+    emperor: s.R >= 11 && ((!s.up && canAscend(s)) || (!!s.up && dechienIn(s) <= 5)),
   };
 
   // Nhật ký: gộp các năm bình lặng liên tiếp (giữ nguyên 3 năm gần nhất), hoặc chỉ hiện đại sự
@@ -272,9 +275,11 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
             ['forge', 'Rèn', s.started && !s.dead],
             ['market', 'Chợ', true],
             ['sect', 'Môn', s.started && !s.dead],
-          ].map(([id, n, ok]) => (
-            <button key={id} className={'nav-btn' + (dots[id] ? ' alert' : '')} disabled={!ok} onClick={() => setPanel(id)} aria-label={n}>
-              <Ico i={NAV_I[id]} size={24} />
+            // Đế lộ: chỉ hiện khi đã thành Đấu Đế
+            s.R >= 11 && ['emperor', 'Đế lộ', !s.dead],
+          ].filter(Boolean).map(([id, n, ok]) => (
+            <button key={id} className={'nav-btn' + (dots[id] ? ' alert' : '') + (id === 'emperor' ? ' de' : '')} disabled={!ok} onClick={() => setPanel(id)} aria-label={n}>
+              <Ico i={id === 'emperor' ? EMP_I.de : NAV_I[id]} size={24} />
               <span>{n}</span>
               {dots[id] && <i className="dot" aria-label="có việc mới" />}
             </button>

@@ -141,7 +141,7 @@ function Legacy({ s, bump, onClose, onAscended }) {
       return s.fires.map((f) => <button key={f} className={'mini' + (cur === f ? ' buy' : '')} onClick={() => toggle('fire', f)}><Ico i={LEG_I.fire} />{f}</button>);
     }
     if (id === 'gold') return <span className="sv"><Ico i={UI_I.gold} size={14} />{fmtGold(legacyGold(s))} kim tệ</span>;
-    if (id === 'sect') return <span className="sv"><Ico i={LEG_I.sect} size={14} />{s.sect.name}</span>;
+    if (id === 'sect') return s.sect && <span className="sv"><Ico i={LEG_I.sect} size={14} />{s.sect.name}</span>;
     return null;
   };
   return (
