@@ -20,6 +20,8 @@ export const lifeOf = (s) => G.REALMS[s.R].life + (s.lifeBonus || 0);
 export const beastGrade = (s) => clamp(s.R, 1, 9); // cấp ma thú tương xứng với cảnh giới
 export const pillNeed = (s) => G.PILL_NEED[s.R];
 export const priceOf = (t, g) => Math.round(G.ITEMS[t].base * Math.pow(3, g - 1));
+// Chỉ số giá thị trường của một nhóm hàng (mặc định 1)
+export const mkIdx = (s, mk) => s?.mkt?.[mk] ?? 1;
 export const unit = (s) => priceOf('core', beastGrade(s)); // giá một khỏa ma hạch cùng cấp
 export const itemName = (t, g) => G.ITEMS[t].n(g);
 export const parseKey = (k) => { const [t, g] = k.split(':'); return [t, +g]; };
@@ -92,15 +94,40 @@ export function cp(s) {
 }
 
 // ───── Trang bị ─────
+// en: cấp cường hóa 0..100, mỗi cấp +4% chỉ số chính
 export function gearStat(it) {
   const D = G.GEAR[it.sl];
-  return { cp: D.cp[it.tier] * it.q, def: (D.def?.[it.tier] || 0) * Math.min(it.q, 1.3), qi: (D.qi?.[it.tier] || 0) * it.q };
+  const en = it.en || 0;
+  const m = 1 + 0.04 * en;
+  return {
+    cp: D.cp[it.tier] * it.q * m,
+    def: Math.min(0.7, (D.def?.[it.tier] || 0) * Math.min(it.q, 1.3) * (1 + 0.01 * en)),
+    qi: (D.qi?.[it.tier] || 0) * it.q * m,
+    bt: (D.bt?.[it.tier] || 0) * it.q * (1 + 0.02 * en),
+    dodge: Math.min(0.6, (D.dodge?.[it.tier] || 0) * Math.min(it.q, 1.6) * (1 + 0.01 * en)),
+  };
 }
 export const gearSum = (s, k) => Object.values(s.gear || {}).reduce((a, it) => a + (it ? gearStat(it)[k] : 0), 0);
-export const gearScore = (it) => (it ? G.GEAR_PRICE[it.tier] * it.q : 0);
-export const gearName = (it) => `${it.n}${it.q > 1 ? ` · ${G.QUALITY.find((x) => x[0] === it.q)?.[1] || ''}` : ''}`;
+export const gearScore = (it) => (it ? G.GEAR_PRICE[it.tier] * it.q * (1 + 0.06 * (it.en || 0)) : 0);
+export const qualityIdx = (it) => Math.max(0, G.QUALITY.findIndex((x) => x[0] === it.q));
+export const gearName = (it) => `${it.n}${it.en ? ` +${it.en}` : ''}${it.q > 1 ? ` · ${G.QUALITY[qualityIdx(it)][1]}` : ''}`;
+// Giảm xác suất tử vong nhờ chiến ngoa
+export const dodgeMult = (s) => 1 - gearSum(s, 'dodge');
+// Cấp hiệu dụng của công trình: 10 cấp đầu tính đủ, sau đó mỗi cấp 35%
+export const effLv = (lv) => (lv <= 10 ? lv : 10 + (lv - 10) * 0.35);
+// Mua nhiều cấp liền: trả về số cấp mua được và tổng giá (want = Infinity để mua tối đa)
+export function levelPlan(cost, lv, max, gold, want) {
+  let n = 0, tot = 0;
+  while (lv + n < max && n < want) {
+    const c = cost(lv + n);
+    if (tot + c > gold) break;
+    tot += c;
+    n++;
+  }
+  return { n, tot, next: lv < max ? cost(lv) : 0 };
+}
 // Bậc trang bị tương xứng với cảnh giới
-export const tierFor = (s) => (s.R <= 1 ? 1 : s.R <= 3 ? 2 : s.R <= 5 ? 3 : s.R <= 7 ? 4 : 5);
+export const tierFor = (s) => (s.R <= 1 ? 1 : s.R <= 3 ? 2 : s.R <= 5 ? 3 : s.R <= 7 ? 4 : s.R <= 9 ? 5 : 6);
 export const peer = (s, d = 0) => s.R * 10 + 5 + d;
 export const winP = (s, enemy) => clamp(1 / (1 + Math.exp(-(cp(s) - enemy) / 3)), 0.03, 0.97);
 
@@ -113,15 +140,22 @@ export function die(s, cause, win = false) {
   lastEntry(s).items.push({ t: win ? cause : `${cause}.`, k: win ? 'key' : 'death' });
 }
 
+// Đấu Đế tự quy ẩn: kết thúc kiếp này với danh hiệu Đấu Đế
+export function retire(s) {
+  if (s.R < 11 || s.dead) return;
+  const yrs = s.age - (s.emperorAt ?? s.age);
+  die(s, yrs > 0 ? `Ngự trị đại lục ${yrs} năm, Đấu Đế quy ẩn ngoài thiên ngoại — vạn cổ nhất nhân` : 'Thành tựu Đấu Đế rồi quy ẩn ngoài thiên ngoại — vạn cổ nhất nhân', true);
+}
+
 // Cộng/trừ đấu khí, tự lên bậc. Trả về số bậc thay đổi.
 export function addQi(s, v) {
-  if (!s.started || s.R >= 11) return 0;
+  if (!s.started) return 0;
   const before = s.step;
   s.qi += v;
   const st = realm(s).st;
   while (s.qi >= 100) {
     if (s.step < st) { s.step++; s.qi -= 100; }
-    else { s.qi = 100; s.ready = true; break; }
+    else { s.qi = 100; s.ready = s.R < 11; break; } // Đấu Đế 100 trọng là tận cùng
   }
   while (s.qi < 0) {
     if (s.step > 1) { s.step--; s.qi += 100; }
@@ -132,10 +166,11 @@ export function addQi(s, v) {
 }
 
 export function btChance(s, bonus = 0) {
-  let extra = bonus + (s.tam - 50) / 200 + (s.soul - 50) / 300 + (s.luck - 50) / 400 + (s.wait || 0) * 0.05;
+  const ring = gearSum(s, 'bt');
+  let extra = bonus + ring + (s.tam - 50) / 200 + (s.soul - 50) / 300 + (s.luck - 50) / 400 + (s.wait || 0) * 0.05;
   if (hasTrait(s, 'firm')) extra += 0.03;
   // Đấu Thánh → Đấu Đế gần như bất khả: chỉ dị hỏa và công pháp Thiên giai mới giúp được chút ít
-  if (s.R >= 10) return 0.001 + Math.min(0.012, s.fires.length * 0.008 + (s.gong === 4 ? 0.006 : 0) + bonus * 0.05);
+  if (s.R >= 10) return 0.001 + Math.min(0.016, s.fires.length * 0.008 + (s.gong === 4 ? 0.006 : 0) + bonus * 0.05 + ring * 0.05);
   return clamp(realm(s).bt + extra, 0.01, 0.95);
 }
 
@@ -146,7 +181,15 @@ export function advance(s) {
   s.ready = false;
   s.wait = 0;
   s.fame += s.R >= 5 ? s.R - 3 : 0;
-  if (s.R >= 11) { die(s, 'Phá vỡ giới hạn thiên địa, thành tựu Đấu Đế — vạn cổ nhất nhân', true); return; }
+  // Thành Đế không kết thúc kiếp này: thọ nguyên vô tận, tiếp tục xây tông môn, chinh phạt đến khi tự quy ẩn
+  if (s.R >= 11) {
+    s.emperorAt = s.age;
+    s.fame += 20;
+    s.post = s.post || [];
+    s.post.push({ t: 'Phá vỡ giới hạn thiên địa, thành tựu Đấu Đế — vạn cổ nhất nhân! Thọ nguyên của bạn từ nay vô tận.', k: 'key' });
+    s.post.push({ t: 'Con đường vẫn còn đó: mở rộng tông môn, chinh phạt đại lục… Khi đã mãn nguyện, hãy bấm «Quy ẩn» để khép lại kiếp này.', k: 'good' });
+    return;
+  }
   // Quà mừng đột phá — hiện sau dòng thông báo đột phá (xem s.post trong choose)
   s.post = s.post || [];
   if (s.wealth >= 1 && s.parents.alive && s.R <= 6) {

@@ -3,11 +3,14 @@ import { EVENTS, MOMENTS, FILLERS } from './events.js';
 import {
   R, rand, pick, wpick, clamp, realm, lifeOf, unit, hasAttr, hasTrait, trait, lastEntry, focusObj,
   canAlch, realmLabel, level, die, addQi, applyFx, snapshot, diff, genName, upgradeSkill,
-  give, earn, pillNeed, priceOf, parseKey, fmtGold, gearSum, gearName,
+  give, earn, pillNeed, priceOf, parseKey, fmtGold, gearSum, gearName, dodgeMult,
 } from './util.js';
 import { economy, cultivationPill, moneyLine, sellPrice } from './economy.js';
 import { estatesYearly, estateValue, gearSell } from './gear.js';
 import { sectYearly, bLv, landCount, sectTier } from './sect.js';
+import { smithYearly, smithLv, armCost } from './forge.js';
+import { marketTick, consignTick } from './exchange.js';
+import { troopCount } from './army.js';
 
 export const EV = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
 const NUM = ['', 'nhất', 'nhị', 'tam', 'tứ', 'ngũ', 'lục', 'thất', 'bát', 'cửu', 'thập'];
@@ -40,7 +43,8 @@ export function newLife() {
     root, special, attrs, traits,
     age: 0, t: 0, started: false, R: 0, step: 0, qi: 0, ready: false, wait: 0, lifeBonus: 0,
     body: clamp(50 + rand(-8, 8)), soul: clamp(40 + rand(-10, 10)), tam: clamp(50 + rand(-8, 8)), luck: clamp(45 + rand(-15, 15)),
-    gold: origin.gold, inv: {}, led: [], gear: { wep: null, arm: null, acc: null }, armory: [], estates: {}, sect: null, land: {}, war: {}, auto: { sell: true, buy: true }, salary: 0, dwelling: 0, post: [], gong: origin.wealth >= 2 ? 1 : 0, skill: 0, mastery: 0, fires: [], alch: 0, alchXp: 0,
+    gold: origin.gold, inv: {}, led: [], gear: Object.fromEntries(G.GEAR_SLOTS.map((k) => [k, null])), armory: [], estates: {}, sect: null, land: {}, war: {}, auto: { sell: true, buy: true }, salary: 0, dwelling: 0, post: [], gong: origin.wealth >= 2 ? 1 : 0, skill: 0, mastery: 0, fires: [], alch: 0, alchXp: 0,
+    mkt: {}, cons: [], ex: null, exNew: 0, smithy: { lv: 0, prod: true }, arms: 0, orders: [], army: { n: {}, armed: 0, train: 0 }, stats: {},
     faction: null, master: null, partner: null, lostPartner: null, companion: null, evil: false, fame: 0, disciples: 0, cured: false,
     parents: { alive: origin.id !== 'orphan', age: Math.round(rand(20, 34)) },
     focus: null, needFocus: false, pending: null, tmp: null,
@@ -51,12 +55,20 @@ export function newLife() {
   if (special === 'Bất Diệt Kim Thân') s.body = clamp(s.body + 20);
   if (special === 'Linh Hồn Thiên Sinh') s.soul = clamp(s.soul + 25);
   if (special === 'Thiên Độc Thể') { s.soul = clamp(s.soul + 8); s.luck = clamp(s.luck - 10); }
+  // Truyền thừa: kiếp trước thành Đế và lập người kế thừa thì kiếp này được hưởng phúc ấm
+  const prev = readBook()[0];
+  if (prev?.heir) {
+    s.luck = clamp(s.luck + 8);
+    s.gold += 2000 * (1 + origin.wealth);
+    s.heirOf = prev.name;
+  }
   s.baseLuck = s.luck;
 
   const intro = origin.id === 'orphan'
     ? `Bạn là một đứa trẻ bị bỏ rơi ở Hắc Giác Vực, được một bà lão nhặt về nuôi và đặt tên là ${s.name}.`
     : `Bạn chào đời — ${origin.n.charAt(0).toLowerCase() + origin.n.slice(1)}. Phụ mẫu đặt tên bạn là ${s.name}.`;
   s.log.push({ a: 0, st: 'Thơ ấu', items: [{ t: intro, k: 'key' }] });
+  if (s.heirOf) s.log[0].items.push({ t: `Trong huyết mạch bạn còn vương chút đế uy của Đấu Đế ${s.heirOf}. Phúc ấm kiếp trước theo bạn vào đời.`, k: 'good' });
   return s;
 }
 
@@ -139,9 +151,12 @@ function yearly(s, e, yrs) {
   if (s.age / lifeOf(s) > 0.85) s.body = clamp(s.body - 1.5);
   else s.body = clamp(s.body + Math.max(0, 50 - s.body) * 0.08);
 
+  marketTick(s, yrs);
   estatesYearly(s, e, yrs);
   sectYearly(s, e, yrs, f);
+  smithYearly(s, e, yrs);
   economy(s, e, yrs, f);
+  consignTick(s, e);
 
   if (s.started) {
     const before = realmLabel(s);
@@ -181,7 +196,7 @@ function family(s, e, yrs) {
 
 function okEv(s, ev) {
   if (ev.a && (s.age < ev.a[0] || s.age > ev.a[1])) return false;
-  if (ev.r && (!s.started || s.R < ev.r[0] || s.R > ev.r[1])) return false;
+  if (ev.r && (!s.started || s.R < ev.r[0] || Math.min(s.R, 10) > ev.r[1])) return false;
   if (ev.once && s.seen[ev.id]) return false;
   if (s.last[ev.id] != null && s.t - s.last[ev.id] < (ev.cd ?? 6)) return false;
   if (ev.if && !ev.if(s)) return false;
@@ -221,6 +236,8 @@ export function tick(s) {
   let hz = (s.R >= 6 ? 0.0004 : 0.0008 * Math.min(yrs, 2)) + (s.body < 10 ? 0.03 : 0);
   if (frac > 0.85) hz += 0.04 * (frac - 0.85) / 0.15;
   if (s.age < 5) hz += 0.006;
+  hz *= dodgeMult(s);
+  if (s.R >= 11) hz = 0; // Đấu Đế không còn chết vì bệnh tật, tai nạn
   if (R() < hz) { die(s, deathCause(s)); s.hist.push([s.age, level(s)]); return; }
 
   if (!s.started && s.age >= 6) startCult(s, e);
@@ -240,7 +257,7 @@ export function tick(s) {
   if (R() < 0.38) {
     const list = MOMENTS.filter((m, i) => {
       if (m.a && (s.age < m.a[0] || s.age > m.a[1])) return false;
-      if (m.r && (!s.started || s.R < m.r[0] || s.R > m.r[1])) return false;
+      if (m.r && (!s.started || s.R < m.r[0] || Math.min(s.R, 10) > m.r[1])) return false;
       if (m.once && s.seen['m' + i]) return false;
       if (s.last['m' + i] != null && s.t - s.last['m' + i] < 5) return false;
       return !m.if || m.if(s);
@@ -308,8 +325,8 @@ export function choose(s, ch) {
   const text = typeof res.log === 'function' ? res.log(s) : res.log;
   if (text) e.items.push({ t: text, k: res.k || (ok === false ? 'bad' : ok ? 'good' : '') });
   if (s.post?.length) { e.items.push(...s.post); s.post = []; }
-  if (res.die && !s.dead) {
-    const p = res.dieP == null ? 1 : typeof res.dieP === 'function' ? res.dieP(s) : res.dieP;
+  if (res.die && !s.dead && s.R < 11) {
+    const p = (res.dieP == null ? 1 : typeof res.dieP === 'function' ? res.dieP(s) : res.dieP) * (res.dieP == null ? 1 : dodgeMult(s));
     if (R() < p) die(s, res.die);
   }
   s.hist[s.hist.length - 1] = [s.age, level(s)];
@@ -320,7 +337,8 @@ export function summary(s) {
   const r = realm(s);
   let title;
   const lands = landCount(s);
-  if (s.win) title = ['Đấu Đế', 'Vạn cổ nhất nhân. Tên bạn sẽ được khắc vào lịch sử Đấu Khí Đại Lục.'];
+  if (s.win && (s.land?.daxa || lands >= 24)) title = ['Đế chủ đại lục', `Đấu Đế ngự trị ${lands} vùng đất, từ Ô Thản Thành đến tận Hồn Giới. Vạn cổ không ai sánh bằng.`];
+  else if (s.win) title = ['Đấu Đế', 'Vạn cổ nhất nhân. Tên bạn sẽ được khắc vào lịch sử Đấu Khí Đại Lục.'];
   else if (lands >= 10) title = ['Bá chủ đại lục', `${s.sect.name} thống trị ${lands} vùng đất. Nửa đại lục nghe lệnh bạn.`];
   else if (s.sect && lands >= 5) title = ['Khai sơn tổ sư', `${s.sect.name} truyền thừa muôn đời, hậu bối mãi khắc ghi tên bạn.`];
   else if (s.R >= 10) title = ['Thánh giả một phương', 'Một ánh mắt có thể khiến cả đế quốc run rẩy.'];
@@ -347,6 +365,8 @@ export function summary(s) {
       ['Thế lực', s.faction || 'Tán tu'],
       ['Tông môn', s.sect ? `${s.sect.name} · ${sectTier(s)} · ${s.sect.members} đệ tử` : 'Không'],
       ['Lãnh địa', lands ? `${lands} vùng` : 'Không'],
+      ['Quân đội', troopCount(s) ? `${troopCount(s)} binh sĩ · huấn luyện ${s.army.train}` : 'Không'],
+      ['Lò rèn', smithLv(s) ? `Cấp ${smithLv(s)} · chế tạo ${s.stats?.crafted || 0} món` : 'Không'],
       ['Trang bị', Object.values(s.gear || {}).filter(Boolean).map(gearName).join(', ') || 'Không'],
       ['Đạo lữ', s.partner?.name || s.lostPartner || 'Không'],
       ['Đệ tử', s.disciples || 'Không'],
@@ -359,7 +379,8 @@ export function summary(s) {
 
 export const netWorth = (s) =>
   s.gold + Object.entries(s.inv).reduce((a, [k, n]) => a + sellPrice(...parseKey(k)) * n, 0) + (G.DWELLING[s.dwelling || 0][0] || 0) * 0.7
-    + estateValue(s) + [...Object.values(s.gear || {}), ...(s.armory || [])].reduce((a, it) => a + (it ? gearSell(it) : 0), 0);
+    + estateValue(s) + [...Object.values(s.gear || {}), ...(s.armory || [])].reduce((a, it) => a + (it ? gearSell(it) : 0), 0)
+    + (s.arms || 0) * armCost(s);
 
 // ───── Lưu trữ ─────
 const SAVE = 'dpnk_save';
@@ -369,7 +390,13 @@ export function save(s) { try { localStorage.setItem(SAVE, JSON.stringify(s)); }
 export function migrate(v) {
   if (!v.inv) { v.inv = v.pills ? { [`pha:${G.PILL_NEED[v.R]}`]: v.pills } : {}; delete v.pills; }
   v.led ||= []; v.auto ||= { sell: true, buy: true }; v.salary ||= 0; v.dwelling ||= 0; v.post ||= [];
-  v.gear ||= { wep: null, arm: null, acc: null }; v.armory ||= []; v.estates ||= {}; v.sect ||= null; v.land ||= {}; v.war ||= {};
+  v.gear ||= {}; for (const k of G.GEAR_SLOTS) v.gear[k] ??= null;
+  v.armory ||= []; v.estates ||= {}; v.sect ||= null; v.land ||= {}; v.war ||= {};
+  if (v.land.thanhthanh) { delete v.land.thanhthanh; v.land.thanhdan ||= { at: v.age, dev: 0 }; } // vùng cũ đã đổi tên
+  for (const id of Object.keys(v.land)) if (!G.REGIONS.some((r) => r.id === id)) delete v.land[id];
+  v.mkt ||= {}; v.cons ||= []; v.exNew ||= 0; v.smithy ||= { lv: 0, prod: true }; v.arms ||= 0; v.orders ||= [];
+  v.army ||= { n: {}, armed: 0, train: 0 }; v.stats ||= {};
+  if (v.sect) for (const b of G.BUILDS) v.sect.b[b.id] ??= 0;
   if (v.focus === 'mon') v.focus = 'nv';
   return v;
 }
@@ -386,6 +413,6 @@ export function addToBook(s) {
   const sm = summary(s);
   const book = readBook();
   if (book.some((b) => b.id === s.id)) return;
-  book.unshift({ id: s.id, name: s.name, realm: sm.realm, R: s.R, age: s.age, title: sm.title[0], cause: s.cause, win: s.win, hist: s.hist });
+  book.unshift({ id: s.id, name: s.name, realm: sm.realm, R: s.R, age: s.age, title: sm.title[0], cause: s.cause, win: s.win, heir: !!(s.win && s.flags.heir), hist: s.hist });
   try { localStorage.setItem(BOOK, JSON.stringify(book.slice(0, 50))); } catch {}
 }

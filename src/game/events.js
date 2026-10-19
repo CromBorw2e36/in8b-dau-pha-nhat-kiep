@@ -7,9 +7,14 @@ import {
 import { genMissions, missionChoice, pillPower } from './economy.js';
 import { genGear, obtainGear, gearDesc, estateIncome } from './gear.js';
 import {
-  region, regionDef, landIds, landCount, conquerP, warPower, defendP, arrayP, takeLand, loseLand, canFound, foundSect, genSectName, bLv,
+  region, regionDef, landIds, landCount, conquerP, warPower, defendP, arrayP, takeLand, loseLand, canFound, foundSect, genSectName, bLv, sectPower,
 } from './sect.js';
+import { smithLv, armValue } from './forge.js';
+import { troopCount, armyPower, armyLoss } from './army.js';
+import { shock, itemFair } from './exchange.js';
 
+// Vây thành bằng quân đội: chỉ tính quân và tông môn, bạn không ra trận nên không có rủi ro tính mạng
+const armySiegeP = (s) => clamp(1 / (1 + Math.exp(-(armyPower(s) + sectPower(s) + 10 - regionDef(s, region(s.tmp))) / 8)), 0.04, 0.92);
 const phaBonus = (s) => { const g = peekBest(s, 'pha'); return g ? 0.2 * pillPower(s, g) : 0; };
 
 const advLog = (s) => `Một tiếng nổ trầm đục vang lên trong đan điền. Bạn đã bước vào ${realm(s).n}! Thọ nguyên tăng lên ${lifeOf(s)} năm.`;
@@ -575,9 +580,12 @@ export const EVENTS = [
     ch: [
       { t: (s) => `Đích thân dẫn quân công phạt (~${Math.round(conquerP(s, regionDef(s, region(s.tmp))) * 100)}%)`, roll: (s) => conquerP(s, regionDef(s, region(s.tmp))),
         ok: { do: (s) => takeLand(s, s.tmp), fx: { tam: 6 }, log: (s) => `Cờ ${s.sect.name} cắm trên ${region(s.tmp).n}. ${region(s.tmp).own} quỳ xuống xin hàng!`, k: 'key' },
-        fail: { fx: { body: -18, tam: -6 }, do: (s) => { s.sect.members = Math.round(s.sect.members * 0.85); },
+        fail: { fx: { body: -18, tam: -6 }, do: (s) => { s.sect.members = Math.round(s.sect.members * 0.85); armyLoss(s, 0.2); },
                 log: (s) => `${region(s.tmp).own} phản công dữ dội. Bạn trọng thương, đệ tử tử thương vô số.`, k: 'bad',
                 dieP: (s) => (regionDef(s, region(s.tmp)) > warPower(s) + 10 ? 0.12 : 0.03), die: 'Tử trận khi chinh phạt lãnh địa' } },
+      { t: (s) => `Đại quân ${troopCount(s)} binh sĩ vây thành, bạn ngồi trong trướng (~${Math.round(armySiegeP(s) * 100)}%)`, if: (s) => troopCount(s) >= 50, roll: armySiegeP,
+        ok: { do: (s) => { takeLand(s, s.tmp); armyLoss(s, 0.08); }, log: (s) => `Sau ba tháng vây hãm, ${region(s.tmp).n} mở cổng thành. Cờ ${s.sect.name} tung bay trên thành lâu.`, k: 'key' },
+        fail: { do: (s) => { armyLoss(s, 0.3); }, fx: { tam: -4 }, log: (s) => `Quân ta tổn thất nặng dưới chân thành ${region(s.tmp).n}, phải lui binh.`, k: 'bad' } },
       { t: (s) => `Phái ${s.sect.elders} trưởng lão xuất chinh, bạn không ra mặt (~${Math.round(conquerP(s, regionDef(s, region(s.tmp)), -0.18) * 100)}%)`, if: (s) => s.sect.elders > 0, roll: (s) => conquerP(s, regionDef(s, region(s.tmp)), -0.18),
         ok: { do: (s) => takeLand(s, s.tmp), log: (s) => `Các trưởng lão khải hoàn trở về, dâng lên bản đồ ${region(s.tmp).n}.`, k: 'key' },
         fail: { do: (s) => { s.sect.elders--; s.sect.members = Math.round(s.sect.members * 0.9); }, fx: { tam: -4 }, log: 'Quân ta đại bại. Một vị trưởng lão tử trận.', k: 'bad' } },
@@ -600,7 +608,7 @@ export const EVENTS = [
     ch: [
       { t: 'Đích thân ra trận', roll: (s) => defendP(s, s.tmp.atk),
         ok: { fx: { fame: 2, tam: 4, gold: 2, why: 'Thu chiến lợi phẩm' }, log: (s) => `Bạn đánh tan ${s.tmp.foe}. Lãnh địa vững như bàn thạch.`, k: 'good' },
-        fail: { fx: { body: -18 }, do: (s) => loseLand(s, s.tmp.id), log: (s) => `Bạn thất bại. ${region(s.tmp.id).n} rơi vào tay ${s.tmp.foe}.`, k: 'bad', dieP: 0.04, die: 'Tử trận khi bảo vệ lãnh địa' } },
+        fail: { fx: { body: -18 }, do: (s) => { loseLand(s, s.tmp.id); armyLoss(s, 0.15); }, log: (s) => `Bạn thất bại. ${region(s.tmp.id).n} rơi vào tay ${s.tmp.foe}.`, k: 'bad', dieP: 0.04, die: 'Tử trận khi bảo vệ lãnh địa' } },
       { t: (s) => `Dựa vào Hộ Sơn Đại Trận cố thủ (cấp ${bLv(s, 'tran')})`, if: (s) => bLv(s, 'tran') > 0, roll: (s) => arrayP(s, s.tmp.atk),
         ok: { fx: { fame: 1 }, log: 'Đại trận bừng sáng, kẻ địch đâm đầu vào như thiêu thân rồi tháo chạy.', k: 'good' },
         fail: { do: (s) => loseLand(s, s.tmp.id), fx: { tam: -5 }, log: (s) => `Đại trận vỡ nát. ${region(s.tmp.id).n} thất thủ.`, k: 'bad' } },
@@ -640,7 +648,7 @@ export const EVENTS = [
       { t: 'Toàn tông nghênh chiến', roll: (s) => defendP(s, s.tmp.atk),
         ok: { fx: { fame: 5, tam: 6, gold: 5, why: 'Thu ngân khố địch' }, do: (s) => { s.sect.members += 20; },
               log: (s) => `${s.tmp.foe} đại bại. Đệ tử của chúng kéo nhau sang bái nhập ${s.sect.name}!`, k: 'key' },
-        fail: { fx: { body: -20, tam: -8, fame: -3 }, do: (s) => { s.sect.members = Math.round(s.sect.members * 0.7); const ids = landIds(s); if (ids.length) loseLand(s, pick(ids)); },
+        fail: { fx: { body: -20, tam: -8, fame: -3 }, do: (s) => { s.sect.members = Math.round(s.sect.members * 0.7); armyLoss(s, 0.3); const ids = landIds(s); if (ids.length) loseLand(s, pick(ids)); },
                 log: 'Bạn thua trận. Tông môn tổn thất nặng nề, một vùng lãnh địa bị cắt nhượng.', k: 'bad', dieP: 0.05, die: 'Tử trận trong cuộc chiến giữa các tông môn' } },
       { t: 'Cầu hòa, nộp cống phẩm', do: (s) => { lose(s, 'Cống phẩm cầu hòa', s.gold * 0.3); }, fx: { tam: -6, fame: -2 }, log: (s) => `Bạn nhẫn nhục nộp cống. ${s.tmp.foe} rút quân.` },
     ],
@@ -662,6 +670,171 @@ export const EVENTS = [
     ch: [
       { t: 'Chấp nhận', fx: { goldAbs: (s) => s.tmp.amt, why: 'Lễ vật phụ thuộc', fame: 1 }, do: (s) => { s.sect.members += 8; }, log: (s) => `${s.tmp.n} trở thành phụ thuộc của ${s.sect.name}.`, k: 'good' },
       { t: 'Từ chối, không muốn ràng buộc', fx: { tam: 1 }, log: 'Bạn khéo léo từ chối.' },
+    ],
+  },
+
+  // ───────── Lò rèn, quân đội, sàn giao dịch ─────────
+  {
+    id: 'arms_boom', r: [2, 11], w: 0.7, cd: 10, icon: '⚔️',
+    if: (s) => smithLv(s) > 0 && s.arms >= 20,
+    prep: (s) => { s.tmp = { a: pick(['Gia Mã Đế Quốc', 'Xuất Vân Đế Quốc', 'Hắc Ấn Thành', 'Thiên Bắc Tống gia']), b: pick(['Liên quân Xà Nhân', 'Độc Tông', 'Hắc Giác Vực', 'Phong Lôi Các']), n: s.arms, v: armValue(s) }; },
+    text: (s) => `Chiến sự bùng nổ giữa ${s.tmp.a} và ${s.tmp.b}. Cả hai phe đều phái người đến lò rèn của bạn hỏi mua binh khí. Trong kho đang có ${s.tmp.n} bộ.`,
+    ch: [
+      { t: (s) => `Bán cho cả hai phe (~${fmtGold(s.tmp.n * s.tmp.v * 1.8)})`, fx: { goldAbs: (s) => s.tmp.n * s.tmp.v * 1.8, why: 'Bán binh khí thời chiến', fame: -2, tam: -3 },
+        do: (s) => { s.arms = Math.max(0, s.arms - s.tmp.n); shock(s, 'arms', 1.25); }, log: 'Tiền vào như nước, nhưng giang hồ bắt đầu gọi bạn là kẻ buôn chiến tranh.', k: 'good' },
+      { t: (s) => `Chỉ bán cho ${s.tmp.a} (~${fmtGold(s.tmp.n * s.tmp.v * 1.3)})`, fx: { goldAbs: (s) => s.tmp.n * s.tmp.v * 1.3, why: 'Bán binh khí thời chiến', fame: 2 },
+        do: (s) => { s.arms = Math.max(0, s.arms - s.tmp.n); }, log: (s) => `${s.tmp.a} cảm kích, khắc tên lò rèn của bạn lên bia công thần.`, k: 'good' },
+      { t: 'Giữ hàng, chờ giá lên cao hơn', do: (s) => { shock(s, 'arms', 1.5); }, log: 'Bạn đóng cửa lò rèn. Giá binh khí trên thị trường lập tức tăng vọt.' },
+    ],
+  },
+  {
+    id: 'smith_master', r: [2, 11], w: 0.5, cd: 20, icon: '🔨',
+    if: (s) => smithLv(s) >= 5 && smithLv(s) < 100,
+    prep: (s) => { s.tmp = Math.round(unit(s) * 3); },
+    text: (s) => `Một luyện khí đại sư tóc bạc ghé qua lò rèn của bạn, chê lửa còn non. Lão bảo chỉ cần ${fmtGold(s.tmp)} kim tệ tiền rượu, lão sẽ truyền cho vài bí quyết.`,
+    ch: [
+      { t: (s) => `Mời lão ở lại (${fmtGold(s.tmp)})`, if: (s) => s.gold >= s.tmp,
+        do: (s) => { spend(s, 'Mời luyện khí đại sư', s.tmp); s.smithy.lv = Math.min(100, s.smithy.lv + 3); }, fx: { soul: 2 },
+        log: (s) => `Ba tháng sau, lão đi. Lò rèn của bạn đã lên cấp ${s.smithy.lv}.`, k: 'good' },
+      { t: 'Nhờ lão rèn giúp một món', roll: () => 0.6,
+        ok: { do: (s) => { s.tmp = obtainGear(s, genGear(s, { tier: tierFor(s), boost: 4 })); }, log: (s) => `Lão gõ búa đúng tám mươi mốt nhát. Thành phẩm: ${s.tmp}.`, k: 'good' },
+        fail: { fx: { tam: -2 }, log: 'Lão say khướt, ngủ ba ngày rồi biến mất cùng một bình rượu quý của bạn.' } },
+      { t: 'Không cần', log: 'Bạn tin vào tay nghề của mình.' },
+    ],
+  },
+  {
+    id: 'ore_vein', a: [12, 9999], r: [1, 11], wild: true, w: 0.5, cd: 8, icon: '⛏️',
+    text: () => 'Sau một trận lở núi, vách đá lộ ra một mạch Huyền thiết lấp lánh. Nhưng hang sâu còn đang rung chuyển.',
+    ch: [
+      { t: 'Liều mình khai thác', roll: (s) => clamp(0.55 + (s.body - 50) / 150 + s.luck / 400),
+        ok: { fx: { item: (s) => [['ore', G.ORE_FOR_TIER[tierFor(s)], 8 + Math.floor(R() * 10)]] }, log: 'Bạn đào được cả một sọt Huyền thiết trước khi hang sập.', k: 'good' },
+        fail: { fx: { body: -12 }, log: 'Đá lở đè trúng chân bạn. Chỉ kịp nhặt vài mảnh.', dieP: 0.02, die: 'Bị vùi trong mỏ Huyền thiết' } },
+      { t: 'Bán tin cho thương hội', fx: { gold: 1, why: 'Bán tin mỏ quặng' }, log: 'Thương hội trả bạn một khoản tiền nhỏ để mua tọa độ.' },
+    ],
+  },
+  {
+    id: 'mutiny', w: 0.5, cd: 15, icon: '🚩',
+    if: (s) => troopCount(s) >= 100,
+    prep: (s) => { s.tmp = Math.round(unit(s) * 0.006 * troopCount(s)); },
+    text: (s) => `Quân sĩ tụ tập trước trướng, đòi tăng quân lương. Họ nói cần thêm ${fmtGold(s.tmp)} kim tệ, không thì sẽ giải giáp về quê.`,
+    ch: [
+      { t: (s) => `Chi thêm ${fmtGold(s.tmp)}`, if: (s) => s.gold >= s.tmp, do: (s) => { spend(s, 'Thưởng quân sĩ', s.tmp); s.army.train = Math.min(100, s.army.train + 1); },
+        log: 'Binh sĩ reo hò, sĩ khí lên cao.', k: 'good' },
+      { t: 'Chém kẻ cầm đầu, lập lại quân kỷ', roll: (s) => clamp(0.4 + (s.tam - 50) / 150 + s.fame / 200),
+        ok: { fx: { tam: 2 }, log: 'Quân lệnh như núi. Không ai dám hé răng nữa.' },
+        fail: { do: (s) => { s.tmp = armyLoss(s, 0.25); }, fx: { tam: -4 }, log: (s) => `Binh biến nổ ra, ${s.tmp} binh sĩ bỏ trốn.`, k: 'bad' } },
+    ],
+  },
+  {
+    id: 'drill', w: 0.5, cd: 12, icon: '🥁',
+    if: (s) => troopCount(s) >= 50 && s.army.train < 100,
+    prep: (s) => { s.tmp = pick(['Vân Lam Tông', 'Hoa Tông', 'Phong Lôi Các', 'Thiên Xà Phủ']); },
+    text: (s) => `${s.tmp} mời quân đội của ${s.sect.name} cùng đại diễn tập ở biên giới.`,
+    ch: [
+      { t: 'Nhận lời, đấu một trận ra trò', roll: (s) => clamp(0.35 + armyPower(s) / 300),
+        ok: { do: (s) => { s.army.train = Math.min(100, s.army.train + 3); }, fx: { fame: 1 }, log: 'Quân ta thắng áp đảo. Huấn luyện +3.', k: 'good' },
+        fail: { do: (s) => { s.army.train = Math.min(100, s.army.train + 1); armyLoss(s, 0.04); }, log: 'Quân ta thua, nhưng học được nhiều điều. Huấn luyện +1.' } },
+      { t: 'Từ chối', log: 'Bạn không muốn để lộ thực lực quân đội.' },
+    ],
+  },
+  {
+    id: 'ex_vip', r: [2, 11], w: 0.5, once: true, icon: '🏮',
+    if: (s) => (s.stats.exSold || 0) >= 5,
+    prep: (s) => { s.tmp = Math.round(unit(s) * 4); },
+    text: (s) => `Lão bản Sàn Vạn Bảo để ý bạn giao dịch thường xuyên, mời bạn làm khách quý: phí ký gửi giảm từ 5% xuống 2%. Lệ phí ${fmtGold(s.tmp)} kim tệ.`,
+    ch: [
+      { t: (s) => `Nhận lời (${fmtGold(s.tmp)})`, if: (s) => s.gold >= s.tmp, do: (s) => { spend(s, 'Phí khách quý Sàn Vạn Bảo', s.tmp); s.flags.vip = true; }, log: 'Bạn nhận ngọc bài khách quý của Sàn Vạn Bảo.', k: 'good' },
+      { t: 'Thôi khỏi', log: 'Bạn thấy chưa cần.' },
+    ],
+  },
+  {
+    id: 'market_swing', a: [14, 9999], r: [1, 11], w: 0.5, cd: 10, icon: '📉',
+    prep: (s) => {
+      const t = pick(['core', 'herb', 'ore']);
+      const g = t === 'ore' ? G.ORE_FOR_TIER[tierFor(s)] : t === 'core' ? beastGrade(s) : pillNeed(s);
+      s.tmp = { t, g, n: 10, p: Math.round(itemFair(s, t, g) * 0.6) };
+    },
+    text: (s) => `Một thương hội phá sản, phải bán tháo ${s.tmp.n} ${itemName(s.tmp.t, s.tmp.g).toLowerCase()} với giá ${fmtGold(s.tmp.p)} mỗi món, rẻ hơn thị trường gần một nửa.`,
+    ch: [
+      { t: (s) => `Gom hết (${fmtGold(s.tmp.p * s.tmp.n)})`, if: (s) => s.gold >= s.tmp.p * s.tmp.n,
+        do: (s) => { spend(s, 'Gom hàng bán tháo', s.tmp.p * s.tmp.n); give(s, s.tmp.t, s.tmp.g, s.tmp.n); shock(s, G.ITEMS[s.tmp.t].mk, 0.85); },
+        log: 'Bạn gom sạch số hàng. Đem lên sàn ký gửi đúng giá là có lời.', k: 'good' },
+      { t: 'Đứng ngoài', log: 'Bạn không muốn dính vào chuyện làm ăn.' },
+    ],
+  },
+
+  // ───────── Hậu kỳ: Đấu Thánh, Đấu Đế ─────────
+  {
+    id: 'hon_invasion', r: [10, 11], w: 0.9, cd: 10, icon: '👁️',
+    if: (s) => !!s.sect,
+    prep: (s) => { s.tmp = { atk: Math.round(250 + (s.R - 10) * 120 + landCount(s) * 6 + rand(-20, 40)) }; },
+    text: (s) => `Không gian nứt toác. Đại quân Hồn tộc tràn vào đại lục, mũi nhọn chĩa thẳng vào ${s.sect.name} (thực lực ~${s.tmp.atk}, ta ${Math.round(warPower(s))}).`,
+    ch: [
+      { t: 'Toàn tông nghênh chiến', roll: (s) => defendP(s, s.tmp.atk),
+        ok: { fx: { fame: 10, tam: 8, gold: 40, why: 'Chiến lợi phẩm Hồn tộc', item: [['tho', 9, 1], ['hon', 9, 3]] }, do: (s) => { armyLoss(s, 0.06); s.stats.honWins = (s.stats.honWins || 0) + 1; },
+              log: 'Hồn tộc đại bại, xác chất thành núi. Cả đại lục quỳ lạy ơn cứu thế của bạn.', k: 'key' },
+        fail: { fx: { body: -30, tam: -10, fame: -4 }, do: (s) => { armyLoss(s, 0.3); const ids = landIds(s); for (let i = 0; i < 2 && ids.length; i++) loseLand(s, ids.splice(Math.floor(R() * ids.length), 1)[0]); },
+                log: 'Phòng tuyến vỡ nát. Hồn tộc chiếm mất lãnh địa, bạn phải rút về sơn môn.', k: 'bad', dieP: 0.1, die: 'Vẫn lạc trong cuộc chiến với Hồn tộc' } },
+      { t: 'Liên kết bát tộc cùng chống giặc', roll: (s) => clamp(defendP(s, s.tmp.atk) + 0.15), fx: { gold: -10, why: 'Lễ vật liên minh' },
+        ok: { fx: { fame: 5, tam: 4 }, log: 'Liên quân đánh lui Hồn tộc. Công lao chia đều, nhưng bạn giữ được tất cả.', k: 'good' },
+        fail: { fx: { tam: -6 }, do: (s) => { armyLoss(s, 0.15); }, log: 'Liên quân tan rã vì nghi kỵ lẫn nhau. Hồn tộc cướp bóc rồi rút đi.', k: 'bad' } },
+    ],
+  },
+  {
+    id: 'thienmo', r: [10, 11], w: 0.7, cd: 8, icon: '🪦',
+    text: () => 'Thiên Mộ mở cửa. Bên trong là năng lượng linh hồn của vô số cường giả viễn cổ, cũng là nơi chôn thân của kẻ tham lam.',
+    ch: [
+      { t: 'Tiến sâu vào tầng thứ ba', roll: (s) => clamp(0.4 + (s.soul - 50) / 150 + (s.tam - 50) / 200),
+        ok: { fx: { qi: 400, soul: 6 }, log: 'Bạn luyện hóa một đạo tàn hồn viễn cổ. Đấu khí tăng vọt.', k: 'key' },
+        fail: { fx: { body: -30, soul: -6 }, log: 'Tàn hồn phản phệ, bạn bị đánh văng ra ngoài.', dieP: 0.12, die: 'Linh hồn bị nuốt chửng trong Thiên Mộ' } },
+      { t: 'Chỉ dạo tầng một', fx: { qi: 120, soul: 2 }, log: 'Bạn thu được chút ít năng lượng rồi lui ra.' },
+    ],
+  },
+  {
+    id: 'ancient_ally', r: [9, 11], once: true, w: 0.8, icon: '🏛️',
+    text: () => 'Sứ giả Cổ tộc đến tận động phủ, mang theo lời mời kết minh. Họ muốn bạn đứng về phía bát tộc trong cuộc chiến sắp tới với Hồn tộc.',
+    ch: [
+      { t: 'Kết minh với Cổ tộc', fx: { fame: 6, tam: 3 }, do: (s) => { s.flags.ally = true; if (s.gong < 4) s.gong = 4; },
+        log: 'Cổ tộc tặng bạn một bộ công pháp Thiên giai làm lễ kết minh.', k: 'key' },
+      { t: 'Giữ thế trung lập', fx: { tam: 2 }, log: 'Bạn không muốn bị cuốn vào ân oán của các đại tộc.' },
+    ],
+  },
+  {
+    id: 'emperor_pill', r: [10, 11], w: 0.7, cd: 12, icon: '⚗️',
+    if: (s) => s.alch >= 8,
+    text: () => 'Bạn gom đủ dược liệu cho một lò Đế phẩm đan. Thành đan sẽ dẫn tới đan lôi, chỉ cần sơ sẩy là lò nổ người vong.',
+    ch: [
+      { t: 'Khai lò', roll: (s) => clamp(0.25 + (s.soul - 50) / 200 + s.fires.length * 0.1 + (s.master ? 0.1 : 0)),
+        ok: { fx: { body: 10, soul: 10, fame: 6, item: [['tho', 9, 3]] }, log: 'Đan lôi giáng xuống chín lần. Một viên Đế phẩm đan tỏa hương khắp trăm dặm!', k: 'key' },
+        fail: { fx: { body: -25, tam: -8 }, log: 'Lò đan nổ tung, dược liệu ngàn năm hóa thành tro.', dieP: 0.05, die: 'Bị đan lôi đánh trúng khi luyện Đế phẩm đan' } },
+      { t: 'Chưa nắm chắc, để sau', log: 'Bạn cất dược liệu vào hộp ngọc.' },
+    ],
+  },
+  {
+    id: 'beast_emperor', r: [9, 11], wild: true, w: 0.6, cd: 10, icon: '🐉',
+    text: () => 'Sâu trong Thú Vực, một thần thú viễn cổ thức giấc. Kẻ nào hạ được nó sẽ có vảy và xương để rèn Thánh khí.',
+    ch: [
+      { t: 'Khiêu chiến thần thú', roll: (s) => winP(s, peer(s, 6)),
+        ok: { do: (s) => { s.tmp = obtainGear(s, genGear(s, { tier: 6, q: pick([1.6, 2, 2, 2.6]) })); }, fx: { fame: 4 }, log: (s) => `Thần thú gục ngã. Bạn rèn từ xương nó ra ${s.tmp}.`, k: 'key' },
+        fail: { fx: { body: -35 }, log: 'Một tiếng gầm, bạn văng xa trăm trượng.', dieP: 0.15, die: 'Vẫn lạc dưới móng vuốt thần thú viễn cổ' } },
+      { t: 'Không kinh động nó', fx: { tam: 1 }, log: 'Bạn lặng lẽ rời Thú Vực.' },
+    ],
+  },
+  {
+    id: 'heir', r: [11, 11], once: true, w: 3, icon: '📜',
+    text: () => 'Đã thành Đế, bạn bắt đầu nghĩ tới hậu thế. Một đạo đế ấn để lại có thể che chở cho kiếp sau của chính bạn trên con đường luân hồi.',
+    ch: [
+      { t: 'Khắc đế ấn vào ngọc giản truyền thừa', fx: { tam: 6 }, do: (s) => { s.flags.heir = true; },
+        log: 'Bạn khắc đế ấn vào ngọc giản. Kiếp sau, phúc ấm này sẽ theo bạn vào đời (thêm khí vận và gia sản).', k: 'key' },
+      { t: 'Đế giả không cần hậu thế', fx: { tam: 2 }, log: 'Bạn cười nhạt. Con đường của kiếp sau, để kiếp sau tự đi.' },
+    ],
+  },
+  {
+    id: 'court', r: [11, 11], w: 0.8, cd: 6, icon: '👑',
+    text: () => 'Cường giả khắp đại lục kéo đến bái kiến Đấu Đế, mang theo lễ vật chất cao như núi.',
+    ch: [
+      { t: 'Nhận lễ, ban lời chỉ điểm', fx: { gold: 30, why: 'Lễ vật bái kiến', fame: 3 }, log: 'Mỗi lời của bạn đều được ghi chép lại như kinh điển.', k: 'good' },
+      { t: 'Đóng cửa bế quan', fx: { qi: 150, tam: 2 }, log: 'Bạn bế quan, mặc cho thiên hạ đứng chờ ngoài núi.' },
     ],
   },
 ];
@@ -701,6 +874,12 @@ export const MOMENTS = [
   { if: (s) => !!s.sect, t: (s) => `Sáng sớm, tiếng hô luyện công của ${s.sect.members} đệ tử ${s.sect.name} vang vọng khắp núi.`, fx: { tam: 2 } },
   { if: (s) => landCount(s) >= 3, t: 'Dân chúng trong lãnh địa dựng bia ghi công cho bạn.', fx: { fame: 1, tam: 2 } },
   { if: (s) => !!s.gear?.wep, t: (s) => `${s.gear.wep.n} trong tay khẽ ngân lên, như đang khát máu.`, fx: { tam: 1 } },
+  { if: (s) => s.smithy?.lv > 0, t: 'Tiếng búa trong lò rèn vang suốt đêm, tia lửa bắn sáng cả sân.', fx: { body: 1 } },
+  { if: (s) => s.arms >= 100, t: (s) => `Kho binh khí đã chất ${s.arms} bộ, xếp thành hàng dài như rừng giáo.`, fx: { tam: 1 } },
+  { if: (s) => (s.army?.train || 0) >= 20, t: 'Quân đội diễn trận trên bãi tập, tiếng hô chấn động sơn cốc.', fx: { tam: 1 } },
+  { if: (s) => s.cons?.length > 0, t: 'Bạn ghé qua Sàn Vạn Bảo, xem hàng ký gửi của mình có ai hỏi mua chưa.', fx: { tam: 1 } },
+  { r: [11, 11], t: 'Bạn đứng trên tầng mây cao nhất, nhìn xuống cả Đấu Khí Đại Lục.', fx: { tam: 3 } },
+  { r: [11, 11], t: 'Thiên địa quy tắc thì thầm bên tai. Bạn cảm nhận rõ sự vận hành của vạn vật.', fx: { qi: 40 } },
 ];
 
 export const FILLERS = {

@@ -1,14 +1,15 @@
 import G from './data.js';
 import {
   R, rand, clamp, pick, priceOf, unit, beastGrade, pillNeed, give, takeBest, peekBest, countOf, earn, spend,
-  parseKey, itemName, fmtGold, fmtItems, applyFx, addQi, canAlch, winP, peer, lastEntry,
+  parseKey, itemName, fmtGold, fmtItems, applyFx, addQi, canAlch, winP, peer, lastEntry, mkIdx, tierFor,
 } from './util.js';
 import { genGear, obtainGear } from './gear.js';
 
 export const SELL_RATE = 0.7;
 export const BUY_RATE = 1.15;
-export const sellPrice = (t, g) => Math.round(priceOf(t, g) * SELL_RATE);
-export const buyPrice = (t, g) => Math.round(priceOf(t, g) * BUY_RATE);
+// s (tùy chọn): áp chỉ số giá thị trường hiện tại
+export const sellPrice = (t, g, s) => Math.round(priceOf(t, g) * SELL_RATE * mkIdx(s, G.ITEMS[t].mk));
+export const buyPrice = (t, g, s) => Math.round(priceOf(t, g) * BUY_RATE * mkIdx(s, G.ITEMS[t].mk));
 
 // ───── Chợ ─────
 export function sell(s, key, n = 1) {
@@ -16,13 +17,13 @@ export function sell(s, key, n = 1) {
   n = Math.min(n, s.inv[key] || 0);
   if (n <= 0) return 0;
   give(s, t, g, -n);
-  const amt = sellPrice(t, g) * n;
+  const amt = sellPrice(t, g, s) * n;
   earn(s, `Bán ${G.ITEMS[t].n(g).toLowerCase()}`, amt);
   return amt;
 }
 
 export function buy(s, t, g, n = 1) {
-  if (!spend(s, `Mua ${G.ITEMS[t].n(g).toLowerCase()}`, buyPrice(t, g) * n)) return false;
+  if (!spend(s, `Mua ${G.ITEMS[t].n(g).toLowerCase()}`, buyPrice(t, g, s) * n)) return false;
   give(s, t, g, n);
   return true;
 }
@@ -43,6 +44,23 @@ export function useItem(s, key) {
     applyFx(s, { body: 25 * pillPower(s, g) + 5 });
     return `Bạn uống ${itemName(t, g)}, vết thương lành dần.`;
   }
+  if (t === 'hon') {
+    give(s, t, g, -1);
+    applyFx(s, { soul: 6 * pillPower(s, g) });
+    return `Bạn uống ${itemName(t, g)}, linh hồn lực ngưng thực thêm một phần.`;
+  }
+  if (t === 'calm') {
+    give(s, t, g, -1);
+    applyFx(s, { tam: 10 * pillPower(s, g) });
+    return `Bạn uống ${itemName(t, g)}, đạo tâm tĩnh lặng như mặt hồ.`;
+  }
+  if (t === 'tho') {
+    give(s, t, g, -1);
+    const yrs = Math.max(1, Math.round(g * 6 * Math.pow(0.8, s.thoUsed || 0)));
+    s.thoUsed = (s.thoUsed || 0) + 1;
+    applyFx(s, { life: yrs });
+    return `Bạn uống ${itemName(t, g)}, thọ nguyên tăng thêm ${yrs} năm.`;
+  }
   return null;
 }
 
@@ -50,8 +68,9 @@ export function marketList(s) {
   const need = pillNeed(s);
   const grades = [...new Set([Math.max(1, need - 1), need])];
   const list = [];
-  for (const t of ['tuk', 'lieu', 'pha']) for (const g of grades) list.push([t, g]);
+  for (const t of ['tuk', 'lieu', 'pha', 'hon', 'calm']) for (const g of grades) list.push([t, g]);
   if (s.alch > 0) list.push(['herb', s.alch]);
+  list.push(['ore', G.ORE_FOR_TIER[tierFor(s)]]);
   return list;
 }
 
@@ -62,8 +81,15 @@ export function autoSell(s) {
   for (const key of Object.keys(s.inv)) {
     const [t, g] = parseKey(key);
     const n = s.inv[key];
-    if (t === 'core') sell(s, key, n);
-    else if (t === 'herb') {
+    if (t === 'tho') continue; // Diên Thọ Đan không bao giờ tự bán
+    if (t === 'core') {
+      // Giữ ma hạch cho lò rèn và kỵ binh
+      const keep = (s.smithy?.lv ? 6 : 0) + ((s.sect?.b?.doanh || 0) >= 15 ? 20 : 0);
+      if (n > keep) sell(s, key, n - keep);
+    } else if (t === 'ore') {
+      const keep = s.smithy?.lv ? 80 : 0;
+      if (n > keep) sell(s, key, n - keep);
+    } else if (t === 'herb') {
       const keep = s.alch > 0 && g === s.alch ? 12 : 0;
       if (n > keep) sell(s, key, n - keep);
     } else {
@@ -77,7 +103,7 @@ export function autoSell(s) {
 export function cultivationPill(s) {
   const need = pillNeed(s);
   let g = peekBest(s, 'tuk');
-  if ((!g || g < need - 1) && s.auto.buy && s.gold >= buyPrice('tuk', need) * 3) buy(s, 'tuk', need);
+  if ((!g || g < need - 1) && s.auto.buy && s.gold >= buyPrice('tuk', need, s) * 3) buy(s, 'tuk', need);
   g = takeBest(s, 'tuk');
   return g ? { g, power: pillPower(s, g) } : null;
 }
@@ -117,7 +143,7 @@ export function economy(s, e, yrs, f) {
 
   // Trọng thương: tự uống Liệu Thương Đan
   if (s.body < 30) {
-    if (!peekBest(s, 'lieu') && s.auto.buy && s.gold >= buyPrice('lieu', pillNeed(s)) * 2) buy(s, 'lieu', pillNeed(s));
+    if (!peekBest(s, 'lieu') && s.auto.buy && s.gold >= buyPrice('lieu', pillNeed(s), s) * 2) buy(s, 'lieu', pillNeed(s));
     const g = takeBest(s, 'lieu');
     if (g) { applyFx(s, { body: 25 * pillPower(s, g) + 5 }); e.items.push({ t: `Bạn uống ${itemName('lieu', g)} để chữa thương.`, k: 'dim' }); }
   }
@@ -150,6 +176,7 @@ function hunt(s, e, yrs) {
   for (let i = 0; i < n; i++) { const g = clamp(bg - (R() < 0.5 ? 1 : 0), 1, 9); cores[g] = (cores[g] || 0) + 1; }
   for (const [g, c] of Object.entries(cores)) { give(s, 'core', +g, c); got.push(['core', +g, c]); }
   if (R() < 0.45) { const c = 1 + Math.floor(R() * 2); give(s, 'herb', bg, c); got.push(['herb', bg, c]); }
+  if (R() < 0.3) { const og = G.ORE_FOR_TIER[tierFor(s)], c = 1 + Math.floor(R() * 3); give(s, 'ore', og, c); got.push(['ore', og, c]); }
   if (got.length) e.items.push({ t: `Thu hoạch: ${fmtItems(got)}.`, k: 'dim' });
   if (R() < 0.07 * Math.sqrt(yrs) * (0.7 + s.luck / 100)) e.items.push({ t: `Bạn nhặt được ${obtainGear(s, genGear(s))}.`, k: 'good' });
 }
@@ -165,7 +192,7 @@ function alchemyBatches(s, e, yrs) {
   let ok = 0, fail = 0, made = {};
   for (let i = 0; i < batches; i++) {
     if (countOf(s, 'herb', g) < 2 && s.auto.buy) {
-      if (!spend(s, `Mua dược liệu ${g} phẩm`, buyPrice('herb', g) * 2)) break;
+      if (!spend(s, `Mua dược liệu ${g} phẩm`, buyPrice('herb', g, s) * 2)) break;
       give(s, 'herb', g, 2);
     }
     if (countOf(s, 'herb', g) < 2) break;
@@ -179,7 +206,7 @@ function alchemyBatches(s, e, yrs) {
     const p = clamp(0.45 + s.soul / 250 + s.fires.length * 0.08 + (s.master ? 0.1 : 0), 0.1, 0.95);
     if (R() < p) {
       ok++;
-      const t = pick(['tuk', 'tuk', 'lieu', 'pha']);
+      const t = pick(['tuk', 'tuk', 'lieu', 'pha', 'hon', 'calm', ...(s.alch >= 5 && R() < 0.3 ? ['tho'] : [])]);
       const c = 1 + Math.floor(R() * 3);
       give(s, t, g, c);
       made[t] = (made[t] || 0) + c;

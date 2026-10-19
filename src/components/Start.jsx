@@ -3,6 +3,8 @@ import G from '../game/data.js';
 import { load, readBook } from '../game/engine.js';
 import Backup from './Backup.jsx';
 import { useInstall } from '../pwa.js';
+import { ACH, readAch } from '../game/ach.js';
+import { Seal } from './glyphs.jsx';
 
 export default function Start({ onNew, onResume }) {
   const [saved, setSaved] = useState(() => load());
@@ -12,6 +14,9 @@ export default function Start({ onNew, onResume }) {
   const [t0] = useState(() => Date.now());
   const [now, setNow] = useState(Date.now());
   const [showRealms, setShowRealms] = useState(false);
+  const [showAch, setShowAch] = useState(false);
+  const ach = readAch();
+  const achN = ACH.filter((a) => ach[a.id]).length;
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 250);
@@ -68,6 +73,22 @@ export default function Start({ onNew, onResume }) {
         )}
       </section>
 
+      <section className="panel frame">
+        <button className="panel-head" onClick={() => setShowAch((v) => !v)}>
+          <span>Thành tựu</span><span className="muted num">{achN}/{ACH.length} <span className="toggle">{showAch ? '−' : '+'}</span></span>
+        </button>
+        {showAch && (
+          <ul className="ach">
+            {ACH.map((a) => (
+              <li key={a.id} className={ach[a.id] ? 'got' : ''}>
+                <Seal ch={a.g} size="sm" tone={ach[a.id] ? 'gold' : 'outline'} />
+                <div><b>{a.n}</b><small>{a.d}{ach[a.id] ? ` · ${ach[a.id].name}` : ''}</small></div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {book.length > 0 && (
         <section className="panel frame">
           <div className="panel-head static"><span>Sổ luân hồi</span><span className="muted">{book.length} kiếp</span></div>
@@ -78,7 +99,7 @@ export default function Start({ onNew, onResume }) {
                   <b>{b.name}</b>
                   <small>{b.title} · hưởng thọ {b.age}</small>
                 </div>
-                <span className="tag">{b.realm.replace(/ \d+ (tinh|đoạn)/, '')}</span>
+                <span className="tag">{b.realm.replace(/ \d+ (tinh|đoạn|trọng)/, '')}</span>
               </li>
             ))}
           </ul>

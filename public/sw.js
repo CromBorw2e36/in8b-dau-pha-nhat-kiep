@@ -2,7 +2,7 @@
 // - Trang HTML: ưu tiên mạng (để nhận bản mới), mất mạng thì dùng bản đã lưu.
 // - JS/CSS/ảnh (tên file có mã hash): lấy từ cache, chưa có thì tải rồi lưu.
 // - Font Google: dùng bản lưu, đồng thời cập nhật ngầm.
-const CACHE = 'dpnk-v1';
+const CACHE = 'dpnk-v3';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

@@ -22,10 +22,12 @@ Một game mô phỏng cuộc đời (life-sim) dạng chữ, chơi trên trình
    - [Chỉ số](#chỉ-số)
    - [Chuyên tâm](#chuyên-tâm)
    - [Đột phá](#đột-phá)
-   - [Kinh tế: kim tệ, chợ, đan dược](#kinh-tế-kim-tệ-chợ-đan-dược)
+   - [Kinh tế: kim tệ, chợ, sàn giao dịch](#kinh-tế-kim-tệ-chợ-sàn-giao-dịch)
    - [Trang bị](#trang-bị)
+   - [Lò rèn (Luyện Khí Phòng)](#lò-rèn-luyện-khí-phòng)
    - [Sản nghiệp](#sản-nghiệp)
    - [Tông môn](#tông-môn)
+   - [Quân đội](#quân-đội)
    - [Bản đồ & chinh phạt lãnh địa](#bản-đồ--chinh-phạt-lãnh-địa)
    - [Sự kiện & khoảnh khắc](#sự-kiện--khoảnh-khắc)
    - [Kết thúc một kiếp](#kết-thúc-một-kiếp)
@@ -50,7 +52,9 @@ npm run preview    # xem thử bản đã đóng gói (có service worker / chơ
 npm run sim        # giả lập 300 kiếp để kiểm tra lỗi & cân bằng (xem phần dưới)
 ```
 
-Công nghệ: **React 19** + **Vite**, không dùng thư viện UI hay state manager nào khác. Toàn bộ logic game là JavaScript thuần trong `src/game/`.
+Công nghệ: **React 19** + **Vite** + **anime.js** (vài chuyển động có chủ đích: con dấu đóng xuống, vòng mực khi đột phá, số kim tệ chạy; tự tắt khi máy bật *giảm chuyển động*). Không dùng thư viện UI hay state manager nào khác. Toàn bộ logic game là JavaScript thuần trong `src/game/`.
+
+Khi chạy `npm run dev`, mở `http://localhost:5173/#demo` để vào thẳng một nhân vật hậu kỳ dựng sẵn (xem giao diện nhanh). Thêm đường dẫn để mở sẵn một bảng: `#demo/forge/craft`, `#demo/market/ex`, `#demo/sect/map`, `#demo/bag/gear`, hoặc một sự kiện: `#demo/event/hon_invasion`. Chế độ này không có trong bản build.
 
 ---
 
@@ -64,7 +68,7 @@ Công nghệ: **React 19** + **Vite**, không dùng thư viện UI hay state man
    - **khoảnh khắc** (ghi lại trong nhật ký, không cần chọn);
    - **sự kiện** (game dừng lại chờ bạn chọn, có thể may rủi hoặc nguy hiểm tính mạng).
 5. Khi đấu khí đầy và đạt bậc cuối, bạn gặp **bình cảnh** và phải quyết định có xung kích cảnh giới mới hay không.
-6. Hết thọ nguyên, tử nạn, hoặc thành Đấu Đế thì kiếp này khép lại. Bạn xem bia ký, biểu đồ cảnh giới theo tuổi, rồi **luân hồi** sang kiếp mới.
+6. Hết thọ nguyên hoặc tử nạn thì kiếp này khép lại (thành Đấu Đế thì bất tử, tự chọn lúc quy ẩn). Bạn xem bia ký, biểu đồ cảnh giới theo tuổi, rồi **luân hồi** sang kiếp mới.
 
 **Thanh điều khiển dưới cùng:**
 
@@ -72,11 +76,17 @@ Công nghệ: **React 19** + **Vite**, không dùng thư viện UI hay state man
 |---|---|
 | ❚❚ / ▶ | Tạm dừng / tiếp tục |
 | *Đang chuyên tâm* | Đổi việc đang làm |
-| **Túi** | Túi đồ, trang bị, chợ, sản nghiệp, sổ thu chi |
-| **Môn** | Tông môn & bản đồ lãnh địa |
 | 1× / 1.5× / 3× / 6× | Tốc độ thời gian (được ghi nhớ) |
+| **Túi đồ** | Vật phẩm, trang bị đang mặc, kho binh khí |
+| **Lò rèn** | Chế tạo, cường hóa, xưởng binh khí quân dụng và hợp đồng |
+| **Chợ & sàn** | Chợ, Binh Khí Phường, Sàn giao dịch, sản nghiệp, sổ thu chi |
+| **Tông môn** | Công trình, quân đội, bản đồ chinh phạt |
 
-Trên mỗi lựa chọn có gợi ý ảnh hưởng: **Thể / Hồn / Tâm / Vận / Kim / Khí** kèm ↑ ↓ ±, nhãn *may rủi* (có tung xúc xắc) và *nguy hiểm tính mạng*. Nút **Xem thông số** (hoặc phím `Esc`) tạm ẩn bảng sự kiện để bạn xem lại chỉ số trước khi chọn.
+Chấm đỏ trên nút báo có việc cần xem: hàng ký gửi vừa bán được, hợp đồng giao được, vùng đất dễ chiếm.
+
+Trên máy tính (màn hình rộng từ 960px), game chia hai cột: thông tin nhân vật bên trái, nhật ký bên phải, các bảng hiện giữa màn hình. Trên điện thoại và app đã cài, bố cục dọc như cũ.
+
+Trên mỗi lựa chọn có gợi ý ảnh hưởng: **Thể chất / Linh hồn / Tâm cảnh / Khí vận / Kim tệ / Đấu khí** kèm ↑ ↓ ± (bấm vào bảng chỉ số trên HUD để xem giải thích từng chỉ số), nhãn *may rủi* (có tung xúc xắc) và *nguy hiểm tính mạng*. Nút **Xem thông số** (hoặc phím `Esc`) tạm ẩn bảng sự kiện để bạn xem lại chỉ số trước khi chọn.
 
 ---
 
@@ -99,7 +109,7 @@ Toàn bộ số liệu nằm trong [`src/game/data.js`](src/game/data.js).
 | 9 | Đấu Tôn | 9 tinh | 700 | 4 | 15% |
 | 10 | Bán Thánh | — | 1000 | 5 | 8% |
 | 11 | Đấu Thánh | 9 tinh | 1600 | 5 | gần như bất khả |
-| 12 | Đấu Đế | — | bất tử | — | — |
+| 12 | Đấu Đế | 100 trọng | bất tử | 5 | không còn cảnh giới nào cao hơn |
 
 **Tốc độ thời gian.** Một lượt ở tốc độ 1× kéo dài 3,2 giây (1.5× = 2s, 3× = 1,1s, 6× = 0,5s). Lúc thơ ấu, lượt nhanh hơn 40%. Ở cảnh giới cao, mỗi lượt trôi nhiều năm hơn để kiếp người không kéo dài hàng giờ.
 
@@ -156,53 +166,70 @@ Khi tu vi đầy bậc cuối, sự kiện **Bình cảnh** buộc bạn chọn:
 
 Thất bại thì tu vi bị phản phệ. Từ Đấu Tông trở lên có thể chết. Từ Bán Thánh trở lên mất sạch tích lũy. Đột phá thành công thì tăng thọ nguyên, danh vọng, và có thể được gia tộc hay tông môn ban thưởng.
 
-### Kinh tế: kim tệ, chợ, đan dược
+### Kinh tế: kim tệ, chợ, sàn giao dịch
 
-- **Thu nhập**: gia đình chu cấp (đến 20 tuổi), nguyệt lệ tông môn, bổng lộc khách khanh, bán ma hạch hoặc dược liệu, thù lao nhiệm vụ, bán đan, thừa kế, sản nghiệp, thuế lãnh địa, cống nạp đệ tử…
-- **Chi tiêu**: sinh hoạt phí từ 16 tuổi (tăng theo cảnh giới), đan dược, dược liệu, đấu giá, trang bị, sản nghiệp, công trình và bổng lộc trưởng lão. Hết tiền thì sống kham khổ, thể chất và tâm cảnh giảm.
-- **Đơn vị giá**: giá ma hạch cùng cấp với cảnh giới. Mỗi cấp hoặc phẩm đắt gấp 3. Chợ thu mua 70% giá và bán ra 115% giá.
-- **Vật phẩm**: Ma hạch, Dược liệu, Tụ Khí Đan (tăng tu vi), Liệu Thương Đan (hồi thể chất, tự uống khi trọng thương), Phá Chướng Đan (tăng tỷ lệ đột phá). Đan thấp phẩm hơn cảnh giới thì gần như vô dụng.
-- Trong **Túi → Thu chi** có sổ thu chi của lượt vừa rồi. Có 2 công tắc: *tự bán chiến lợi phẩm dư* và *tự mua đan dược / dược liệu khi dư dả*.
+- **Thu nhập**: gia đình chu cấp (đến 20 tuổi), nguyệt lệ tông môn, bổng lộc khách khanh, bán ma hạch hoặc dược liệu, thù lao nhiệm vụ, bán đan, thừa kế, sản nghiệp, thuế lãnh địa, cống nạp đệ tử, hợp đồng binh khí, hàng ký gửi trên sàn…
+- **Chi tiêu**: sinh hoạt phí từ 16 tuổi (tăng theo cảnh giới), đan dược, dược liệu, đấu giá, trang bị, sản nghiệp, công trình, bổng lộc trưởng lão, quân lương, lò rèn. Hết tiền thì sống kham khổ, thể chất và tâm cảnh giảm.
+- **Đơn vị giá**: giá ma hạch cùng cấp với cảnh giới. Mỗi cấp hoặc phẩm đắt gấp 3. Chợ thu mua 70% giá và bán ra 115% giá, nhân với **chỉ số thị trường**.
+- **Giá thị trường**: 6 nhóm hàng (ma hạch, dược liệu, Huyền thiết, đan dược, trang bị, binh khí quân dụng) dao động mỗi lượt quanh mức 100, hiện ở đầu bảng **Thị**. Sự kiện như chiến tranh hay thương hội phá sản đẩy giá lên xuống.
+- **Vật phẩm**: Ma hạch, Dược liệu, Huyền thiết (nguyên liệu rèn), Tụ Khí Đan (tăng tu vi), Liệu Thương Đan (hồi thể chất), Phá Chướng Đan (tăng tỷ lệ đột phá), Dưỡng Hồn Đan (+linh hồn), Thanh Tâm Đan (+tâm cảnh), Diên Thọ Đan (+thọ nguyên, uống càng nhiều càng kém). Đan thấp phẩm hơn cảnh giới thì gần như vô dụng.
+- **Sàn Vạn Bảo** (Thị → Sàn): ký gửi tối đa 8 món với giá tự đặt. Giá càng sát thị trường càng dễ bán (đúng giá khoảng 60% mỗi lượt, đắt hơn 50% gần như không ai mua). Phí sàn 5% khi bán được (khách quý 2%). Thương nhân khác cũng rao hàng trên sàn, đổi mới mỗi 3 lượt, có món rẻ và món đắt hơn thị trường.
+- **Thị → Thu chi** là sổ thu chi của lượt vừa rồi. Trong **Túi** có 2 công tắc: *tự bán chiến lợi phẩm dư* (giữ lại Huyền thiết và ma hạch nếu có lò rèn hay kỵ binh) và *tự mua đan dược / dược liệu khi dư dả*.
 
 ### Trang bị
 
-Có 3 ô trang bị, xem ở **Túi → Trang bị**:
+Có 5 ô trang bị, xem ở **Túi → Trang bị**:
 
 | Ô | Tác dụng |
 |---|---|
-| **Vũ khí** | Chiến lực +1,5 → +12 theo bậc |
-| **Hộ giáp** | Chiến lực nhỏ + **giảm 8% → 35% thương tổn thể chất** |
-| **Bảo vật** | Chiến lực nhỏ + **tốc độ tu luyện +4% → +30%** |
+| **Vũ khí** | Chiến lực +1,5 → +18 theo bậc |
+| **Hộ giáp** | Chiến lực nhỏ + **giảm 8% → 45% thương tổn thể chất** |
+| **Bảo vật** | Chiến lực nhỏ + **tốc độ tu luyện +4% → +45%** |
+| **Giới chỉ** | Chiến lực nhỏ + **tỷ lệ đột phá +1% → +8%** |
+| **Chiến ngoa** | Chiến lực nhỏ + **thoát hiểm 6% → 33%** (giảm xác suất tử vong) |
 
-- **5 bậc**: Phàm khí, Hoàng giai, Huyền giai, Địa giai, Thiên giai. Bậc thường gặp tăng theo cảnh giới.
-- **3 phẩm chất**: Thường ×1, Tinh phẩm ×1,25, Cực phẩm ×1,6. Khí vận cao thì dễ ra đồ tốt.
-- **Nguồn**: lịch luyện (rơi ngẫu nhiên), thưởng nhiệm vụ, nạp giới nhặt được, sự kiện *binh khí trong vách đá*, thuê *luyện khí sư* rèn, và **Binh Khí Phường** (đổi hàng mỗi 3 lượt).
-- Món mới tốt hơn sẽ **tự trang bị**, đồ cũ vào **kho** (tối đa 10 món, kho đầy thì tự bán món kém nhất). Có thể mặc, tháo, bán thủ công.
+- **6 bậc**: Phàm khí, Hoàng giai, Huyền giai, Địa giai, Thiên giai, Thánh khí (từ Đấu Thánh). Bậc thường gặp tăng theo cảnh giới.
+- **5 phẩm chất** (mỗi phẩm một màu): Thường ×1, Tinh phẩm ×1,25, Cực phẩm ×1,6, Huyền bảo ×2, Thần phẩm ×2,6. Khí vận cao thì dễ ra đồ tốt.
+- **Cường hóa +0 → +100** ở lò rèn: mỗi cấp +4% chỉ số chính.
+- **Nguồn**: lịch luyện, thưởng nhiệm vụ, nạp giới, sự kiện, **tự rèn ở lò rèn**, **Binh Khí Phường** (Thị → Chợ) và **Sàn giao dịch**.
+- Món mới tốt hơn sẽ **tự trang bị**, đồ cũ vào **kho** (tối đa 40 món, kho đầy thì tự bán món kém nhất). Kho có lọc theo ô, mỗi món hiện chênh lệch chiến lực so với đồ đang mặc, và nút **Bán đồ kém hơn**.
+
+### Lò rèn (Luyện Khí Phòng)
+
+Mở bằng nút **Lò rèn**. Dựng lò rồi nâng cấp tới **cấp 100**.
+
+- **Chế tạo**: chọn ô và bậc, tốn kim tệ, Huyền thiết và một khỏa ma hạch. Lò cấp 15 mở Hoàng giai, 30 Huyền giai, 45 Địa giai, 60 Thiên giai, 75 Thánh khí (không vượt quá bậc hợp cảnh giới +1). Cấp lò, dị hỏa và linh hồn càng cao thì càng dễ ra Huyền bảo, Thần phẩm. Bảng hiện sẵn tỷ lệ từng phẩm chất.
+- **Cường hóa**: dưới +10 chắc chắn thành công, sau đó tỷ lệ giảm dần (thấp nhất 20%), lò cấp cao bù lại. Thất bại chỉ mất nguyên liệu, không tụt cấp.
+- **Xưởng quân dụng**: mỗi năm sản xuất 4 bộ binh khí × cấp lò (dùng tối đa 1/4 số kim tệ đang có). Binh khí dùng để:
+  - giao **hợp đồng quân đội** (Dong Binh Công Hội, cấm quân Gia Mã, Liên quân Trung Châu, Chiến đoàn Cổ tộc…), giá 1,6–2,5 lần giá vốn;
+  - bán cho thương nhân bất cứ lúc nào;
+  - tự động phát cho binh sĩ của bạn (quân có binh khí mạnh hơn 60%).
+- Huyền thiết có từ lịch luyện, Chợ, Sàn, Ma tinh khoáng mạch, vùng có mỏ (Tháp Qua Nhĩ, Thạch tộc) và sự kiện *mạch Huyền thiết*.
 
 ### Sản nghiệp
 
-**Túi → Sản nghiệp.** Mỗi loại có 5 cấp, giá cấp sau gấp 1,7 lần. Thu nhập tính theo năm, kể cả khi đang bế quan.
+**Thị → Sản nghiệp.** Mỗi loại tối đa **100 cấp**, giá cấp sau gấp 1,1 lần. Cứ đủ 25 cấp thì thu nhập của sản nghiệp đó **nhân đôi**. Thu nhập tính theo năm, kể cả khi đang bế quan. Có nút mua +1, +10 hoặc tối đa; khoản chi lớn hơn 40% số tiền đang có phải bấm hai lần để xác nhận.
 
 | Sản nghiệp | Giá cấp 1 | Thu / năm mỗi cấp | Ghi chú |
 |---|---|---|---|
 | Trà lâu | 1.500 | 110 | |
 | Dược điền | 8.000 | 600 | Thỉnh thoảng cho dược liệu |
 | Đan dược phô | 40.000 | 3.200 | |
-| Ma tinh khoáng mạch | 300.000 | 25.000 | Cần Đấu Linh |
+| Ma tinh khoáng mạch | 300.000 | 25.000 | Cần Đấu Linh. Mỗi năm đào thêm Huyền thiết |
 | Phòng đấu giá | 3.000.000 | 260.000 | Cần Đấu Hoàng |
 
 Có sản nghiệp thì có thể gặp sự kiện *địa đầu xà đòi tiền bảo kê*.
 
 ### Tông môn
 
-Mở bằng nút **Môn**. **Điều kiện khai tông:** cảnh giới Đấu Vương, danh vọng ≥ 8, 60.000 kim tệ, không theo Hồn Điện. Bạn tự đặt tên tông môn (hoặc bấm *Đổi* để lấy tên ngẫu nhiên). Khi đủ điều kiện, game cũng sẽ gợi ý bằng một sự kiện.
+Mở bằng nút **Tông môn**. **Điều kiện khai tông:** cảnh giới Đấu Vương, danh vọng ≥ 8, 60.000 kim tệ, không theo Hồn Điện. Bạn tự đặt tên tông môn (hoặc bấm *Đổi* để lấy tên ngẫu nhiên). Khi đủ điều kiện, game cũng sẽ gợi ý bằng một sự kiện.
 
 - **Đệ tử** tự tìm đến theo danh vọng, tới giới hạn = 30 + 40 × cấp Chiêu Hiền Điện + 10 × số lãnh địa + danh vọng. Đệ tử cống nạp kim tệ mỗi năm.
 - **Trưởng lão** tìm đến qua sự kiện (phí nhập môn + bổng lộc hằng năm). Trưởng lão tăng thực lực, có thể đi chinh phạt thay bạn, nhưng cũng có thể **phản bội** cuỗm ngân khố.
 - **Chi phí**: duy trì công trình, bổng lộc trưởng lão, sinh hoạt đệ tử. Ngân khố cạn thì 15% đệ tử bỏ đi.
-- **Hạng tông môn** (theo đệ tử, lãnh địa, công trình, trưởng lão): Tiểu môn phái → Tông môn tam lưu → nhị lưu → nhất lưu → Bá chủ một phương → Siêu cấp thế lực.
+- **Hạng tông môn**: Tiểu môn phái → Tông môn tam lưu → nhị lưu → nhất lưu → Bá chủ một phương → Siêu cấp thế lực → Đế tông vạn cổ.
 
-**Công trình** (5 cấp mỗi loại, giá cấp sau gấp 3):
+**Công trình** tối đa **100 cấp** (giá gấp 2,2 mỗi cấp tới cấp 6, sau đó chỉ gấp 1,08). Mười cấp đầu hiệu quả trọn vẹn, từ cấp 11 mỗi cấp tính 35%:
 
 | Công trình | Giá cấp 1 | Tác dụng |
 |---|---|---|
@@ -211,59 +238,77 @@ Mở bằng nút **Môn**. **Điều kiện khai tông:** cảnh giới Đấu V
 | Diễn Võ Trường | 40.000 | Thực lực tông môn +2,5 / cấp |
 | Hộ Sơn Đại Trận | 50.000 | Phòng thủ lãnh địa, mở lựa chọn *cố thủ bằng đại trận* |
 | Chiêu Hiền Điện | 25.000 | +40 giới hạn đệ tử / cấp, thêm chỗ cho trưởng lão |
+| Doanh Trại | 35.000 | Lập quân đội: +40 quân số / cấp, mở binh chủng ở cấp 5, 15, 30 |
 
-**Thực lực tông môn** = √(đệ tử) × 0,8 (×1 nếu Tàng Kinh Các ≥ 3) + 2 × trưởng lão + 2,5 × cấp Diễn Võ Trường + 0,4 × số lãnh địa + số đệ tử thân truyền (tối đa 5).
-**Thế lực** khi chinh chiến = chiến lực bản thân + thực lực tông môn.
+**Thực lực tông môn** = √(đệ tử) × 0,8 (×1 nếu Tàng Kinh Các ≥ 3) + 2 × trưởng lão + 2,5 × cấp hiệu dụng Diễn Võ Trường + 0,4 × số lãnh địa + số đệ tử thân truyền (tối đa 5).
+**Thế lực** khi chinh chiến = chiến lực bản thân + thực lực tông môn + sức chiến quân đội.
 
 **Sự kiện tông môn**: trưởng lão xin gia nhập, trưởng lão phản bội, thiên tài xin bái sư, gia tộc xin làm phụ thuộc, tông môn khác tuyên chiến.
 
+### Quân đội
+
+**Tông môn → Quân đội**, cần Doanh Trại. Bốn binh chủng (giá tính theo giá ma hạch cùng cấp, nên càng về sau càng đắt):
+
+| Binh chủng | Sức chiến | Mở ở Doanh Trại | Ghi chú |
+|---|---|---|---|
+| Bộ binh | 1 | cấp 1 | Rẻ, đông |
+| Cung thủ | 1,5 | cấp 5 | |
+| Ma thú kỵ binh | 4 | cấp 15 | Cứ 5 kỵ cần 1 ma hạch |
+| Trận pháp sư | 3 | cấp 30 | Sức chiến ×2 khi thủ thành |
+
+- **Sức chiến quân đội** = 1,6 × √(tổng sức chiến × (1 + 60% tỷ lệ có binh khí) × (1 + 2% × cấp huấn luyện)). Dùng căn bậc hai để quân đông mạnh nhưng không áp đảo hoàn toàn.
+- **Huấn luyện** 0 → 100. **Quân lương** trả mỗi năm; thiếu thì 20% binh sĩ bỏ trốn.
+- Có quân từ 50 người thì trận chinh phạt có thêm lựa chọn **Đại quân vây thành**: bạn không ra trận nên không có rủi ro tính mạng, nhưng thua thì mất 30% quân.
+- Thắng trận mất 3–8% quân, thua mất 15–30%. Sự kiện riêng: binh biến đòi lương, đại diễn tập.
+
 ### Bản đồ & chinh phạt lãnh địa
 
-**Môn → Bản đồ** có 12 vùng đất, chia 3 khu vực:
+**Tông môn → Bản đồ** là bản đồ đại lục vẽ tay với **28 vùng đất, 6 khu vực**. Bấm vào một vùng để xem chi tiết và xuất binh. Viền màu cho biết độ khó (xanh dễ, vàng cân sức, đỏ khó, nét đứt là chưa tới được), vùng đã chiếm tô đỏ, đường giữa hai lãnh địa của bạn được nối liền. Trên điện thoại, bản đồ cuộn ngang được.
 
-| Khu vực | Vùng (thực lực trấn thủ · thu nhập/năm) |
-|---|---|
-| Gia Mã Đế Quốc | Ô Thản Thành (50 · 4k) · Thanh Sơn Trấn (56 · 5,5k) · Ma Thú Sơn Mạch (66 · 9k + ma hạch) · Gia Mã Thánh Thành (78 · 26k) |
-| Tây Bắc | Sa mạc Tháp Qua Nhĩ (84 · 22k) · Hắc Giác Vực (96 · 60k) · Xuất Vân Đế Quốc (104 · 90k + dược liệu) |
-| Trung Châu | Thiên Bắc Thành (125 · 260k) · Đan Vực (142 · 700k + dược liệu) · Phong Lôi Bắc Các (160 · 1,5tr) · Phân điện Hồn Điện (178 · 3tr) · Thánh Thành Trung Châu (200 · 8tr) |
+| Khu vực | Mở từ | Vùng (thực lực trấn thủ) |
+|---|---|---|
+| Gia Mã Đế Quốc | khởi đầu | Ô Thản Thành (50) · Thanh Sơn Trấn (56) · Ma Thú Sơn Mạch (66, ma hạch) · Vân Lam Sơn (74) · Gia Mã Thánh Thành (82) |
+| Tây Bắc | khởi đầu | Sa mạc Tháp Qua Nhĩ (86, Huyền thiết) · Hắc Giác Vực (98) · Xuất Vân Đế Quốc (106, dược liệu) · Già Nam Học Viện (116) |
+| Trung Châu | | Thiên Bắc Thành (130) · Đan Vực (146, dược liệu) · Hoa Tông (158) · Phong Lôi Bắc Các (170) · Thánh Đan Thành (188, dược liệu) · Phân điện Hồn Điện (204) |
+| Thú Vực | Đấu Tôn | Vạn Thú Lĩnh (226, ma hạch) · Thái Hư Cổ Long tộc (248) · Thiên Yêu Hoàng tộc (270) · Cửu U Địa Minh Mãng (292, ma hạch) |
+| Cổ Giới | Bán Thánh | Viêm tộc (310) · Dược tộc (330, dược liệu) · Lôi tộc (350) · Thạch tộc (368, Huyền thiết) · Cổ tộc (395) |
+| Hồn Giới | Đấu Thánh | Hư Vô Không Gian (430) · Thiên Hồn Thành (480) · Hồn tộc Chủ Điện (540) · Đà Xá Cổ Đế Động Phủ (620) |
 
-Bấm **Công** để mở trận chinh phạt, với 4 lựa chọn:
-
-1. **Đích thân dẫn quân**: tỷ lệ thắng theo *thế lực so với thực lực trấn thủ*. Thua thì trọng thương, mất đệ tử, có thể tử trận.
-2. **Phái trưởng lão**: bạn không gặp nguy hiểm, nhưng tỷ lệ thấp hơn 18%. Thua thì mất một trưởng lão.
-3. **Gửi chiến thư ép quy hàng**: cần danh vọng ≥ 30% thực lực vùng. Không đổ máu, tỷ lệ phụ thuộc danh vọng.
-4. **Thu quân**.
-
-Chiếm được thì nhận chiến lợi phẩm, danh vọng, thêm đệ tử và thuế hằng năm.
-
-**Chống bành trướng:** mỗi vùng bạn chiếm khiến *mọi vùng còn lại mạnh thêm 4%*. Đánh hỏng một vùng phải chờ 2 lượt mới đánh lại được.
-
-**Bị tập kích:** lãnh địa càng nhiều càng hay bị đánh. Bạn có thể đích thân ra trận, cố thủ bằng Hộ Sơn Đại Trận, hoặc nhường đất. Thua là mất vùng đó.
-
-Theo giả lập: người khai tông ở Đấu Vương thường giữ 1–6 vùng, Đấu Tông khoảng 6, Đấu Thánh mới gần thống nhất đại lục.
+- **Chỉ đánh được vùng giáp lãnh địa của mình** (theo đường nối trên bản đồ). Chưa có đất thì bắt đầu ở Gia Mã hoặc Tây Bắc.
+- Trận chinh phạt có các lựa chọn: **đích thân dẫn quân**, **đại quân vây thành**, **phái trưởng lão**, **gửi chiến thư ép quy hàng**, hoặc thu quân.
+- **Khai phát** lãnh địa của mình tới cấp 100: mỗi cấp +8% thu nhập vùng đó, vùng có tài nguyên cho thêm sản vật.
+- **Chống bành trướng:** mỗi vùng bạn chiếm khiến mọi vùng còn lại mạnh thêm 3%. Đánh hỏng một vùng phải chờ 2 lượt.
+- **Bị tập kích:** lãnh địa càng nhiều càng hay bị đánh. Bạn có thể đích thân ra trận (quân đội và trận pháp sư cùng thủ), cố thủ bằng Hộ Sơn Đại Trận, hoặc nhường đất.
 
 ### Sự kiện & khoảnh khắc
 
-Hơn 50 loại sự kiện có lựa chọn, ví dụ:
+Hơn 60 loại sự kiện có lựa chọn, ví dụ:
 
 - **Thơ ấu và thiếu niên**: bị chế giễu là phế vật, thoái hôn, chiếc nhẫn đen, Già Nam Học Viện, bái nhập tông môn.
-- **Kỳ ngộ**: ma thú canh linh dược, động phủ viễn cổ, dị hỏa xuất thế, nạp giới, bí tịch ven đường, đấu giá, đốn ngộ, di tích Đấu Đế.
+- **Kỳ ngộ**: ma thú canh linh dược, động phủ viễn cổ, dị hỏa xuất thế, nạp giới, bí tịch ven đường, đấu giá, đốn ngộ, di tích Đấu Đế, mạch Huyền thiết.
 - **Tranh đấu**: đối thủ khiêu chiến, đại hội tỷ võ, hẹn ước ba năm, Hồn Điện chiêu dụ hoặc truy sát, tâm ma.
-- **Tiền bạc**: bảng nhiệm vụ, cướp đường, cứu thương đội, bạn cũ hỏi vay, động phủ rao bán, khách khanh.
+- **Tiền bạc**: bảng nhiệm vụ, cướp đường, cứu thương đội, bạn cũ hỏi vay, động phủ rao bán, khách khanh, thương hội bán tháo, khách quý Sàn Vạn Bảo.
+- **Lò rèn và quân đội**: chiến tranh làm giá binh khí tăng vọt, luyện khí đại sư ghé thăm, binh biến, đại diễn tập.
+- **Hậu kỳ (Đấu Thánh, Đấu Đế)**: Hồn tộc xâm lấn, Thiên Mộ thí luyện, Cổ tộc kết minh, luyện Đế phẩm đan, thần thú Thú Vực, triều kiến Đấu Đế, khắc đế ấn truyền thừa.
 - **Tình duyên**: kết đạo lữ (phàm nhân hay tu sĩ), đạo lữ bị bắt cóc.
-- **Trang bị, sản nghiệp, tông môn, lãnh địa**: như các phần trên.
 
-Ngoài ra có hàng chục **khoảnh khắc** nhỏ không cần chọn, giúp nhật ký đời người sinh động hơn.
+Ngoài ra có hàng chục **khoảnh khắc** nhỏ không cần chọn. Nhật ký tự **gộp các năm bình lặng** (bấm để mở) và có nút **Chỉ xem đại sự**. Đột phá, đại sự và thành tựu mới hiện thông báo nổi ở đầu màn hình.
 
 ### Kết thúc một kiếp
 
-Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường giả trấn quốc, Tông chủ một phương, Khai sơn tổ sư, Bá chủ đại lục, Đấu Đế…), nguyên nhân qua đời, biểu đồ cảnh giới theo tuổi, 10 khoảnh khắc đáng nhớ và *hành trang một đời* (tư chất, công pháp, dị hỏa, tông môn, lãnh địa, trang bị, tài sản…). Kiếp đó được ghi vào **Sổ luân hồi** ở trang chủ (giữ 50 kiếp gần nhất).
+Thành tựu **Đấu Đế** không kết thúc game: thọ nguyên vô tận, không còn chết vì bệnh tật hay hiểm nguy, và bạn tiếp tục tu luyện tới **Đấu Đế 100 trọng**, mở rộng tông môn, chinh phạt tới tận Hồn Giới. Khi đã mãn nguyện, bấm thẻ **Đấu Đế · Quy ẩn** trên HUD để khép lại kiếp này.
+
+**Truyền thừa:** sự kiện *khắc đế ấn* cho phép kiếp sau được hưởng phúc ấm (thêm khí vận và gia sản lúc sinh ra).
+
+Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường giả trấn quốc, Tông chủ một phương, Khai sơn tổ sư, Bá chủ đại lục, Đấu Đế, Đế chủ đại lục…), nguyên nhân qua đời, biểu đồ cảnh giới theo tuổi, 10 khoảnh khắc đáng nhớ và *hành trang một đời* (tư chất, công pháp, dị hỏa, tông môn, lãnh địa, quân đội, lò rèn, trang bị, tài sản…). Kiếp đó được ghi vào **Sổ luân hồi** ở trang chủ (giữ 50 kiếp gần nhất).
+
+**Thành tựu:** 27 thành tựu giữ qua mọi kiếp (Phế vật nghịch thiên, Tam hỏa đồng thể, Nhất thống đại lục, Cường hóa +100…), xem ở trang chủ.
 
 ---
 
 ## Lưu trữ & sao lưu
 
-- Game tự lưu sau mỗi lượt vào `localStorage` của trình duyệt. Khóa `dpnk_save` là kiếp đang chơi, `dpnk_book` là Sổ luân hồi, `dpnk_speed` là tốc độ.
+- Game tự lưu sau mỗi lượt vào `localStorage` của trình duyệt. Khóa `dpnk_save` là kiếp đang chơi, `dpnk_book` là Sổ luân hồi, `dpnk_ach` là thành tựu, `dpnk_speed` là tốc độ, `dpnk_feed` là chế độ xem nhật ký.
 - Bản lưu cũ được nâng cấp tự động khi có tính năng mới (hàm `migrate` trong [`engine.js`](src/game/engine.js)).
 - **Sao lưu / chuyển máy**: ở trang chủ có mục sao lưu, xuất ra một mã dạng `DPNK1.z…` (JSON nén gzip, mã hóa base64). Bạn có thể copy mã, tải về file `.txt`, rồi dán vào máy khác để khôi phục. Sổ luân hồi được gộp, không trùng lặp.
 
@@ -293,14 +338,18 @@ Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường 
     ├── pwa.js               # đăng ký service worker, nút "cài ứng dụng"
     ├── styles.css           # toàn bộ giao diện (biến màu sáng/tối ở :root)
     ├── components/
-    │   ├── Start.jsx        # trang chủ, Sổ luân hồi, bảng cảnh giới
+    │   ├── Start.jsx        # trang chủ, Sổ luân hồi, thành tựu, bảng cảnh giới
     │   ├── Birth.jsx        # màn sinh ra, đầu thai lại
-    │   ├── Game.jsx         # màn chính: HUD, nhật ký, điều khiển, bảng sự kiện
-    │   ├── Bag.jsx          # túi đồ, trang bị, chợ, sản nghiệp, thu chi
-    │   ├── Sect.jsx         # tông môn, công trình, bản đồ chinh phạt
+    │   ├── Game.jsx         # màn chính: HUD, nhật ký, điều khiển, bảng sự kiện, thông báo nổi
+    │   ├── Bag.jsx          # túi đồ, trang bị, kho binh khí
+    │   ├── Forge.jsx        # lò rèn: chế tạo, cường hóa, xưởng quân dụng
+    │   ├── Market.jsx       # chợ, sàn giao dịch, sản nghiệp, thu chi
+    │   ├── Sect.jsx         # tông môn, công trình, quân đội, bản đồ
+    │   ├── WorldMap.jsx     # bản đồ đại lục (SVG) và thẻ vùng đất
     │   ├── End.jsx          # bia ký cuối đời
     │   ├── Backup.jsx       # sao lưu / khôi phục
-    │   ├── ui.jsx           # Bar, Sheet, Hints, Deltas, LifeChart
+    │   ├── ui.jsx           # Bar, Sheet, Tabs, LevelBuy, GearRow, Toasts, LifeChart…
+    │   ├── motion.js        # chuyển động bằng anime.js
     │   └── glyphs.jsx       # chữ trên con dấu son
     └── game/                # logic thuần, không phụ thuộc React
         ├── data.js          # MỌI SỐ LIỆU: cảnh giới, tư chất, vật phẩm, trang bị, sản nghiệp, tông môn, bản đồ
@@ -308,7 +357,12 @@ Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường 
         ├── events.js        # sự kiện có lựa chọn, khoảnh khắc, câu độn
         ├── economy.js       # chợ, đan dược, săn bắn, luyện đan, bảng nhiệm vụ, thu chi
         ├── gear.js          # trang bị, binh khí phường, sản nghiệp
-        ├── sect.js          # tông môn, công trình, thực lực, chinh phạt, phòng thủ
+        ├── forge.js         # lò rèn, chế tạo, cường hóa, binh khí quân dụng, hợp đồng
+        ├── army.js          # quân đội: chiêu mộ, huấn luyện, quân lương, tổn thất
+        ├── exchange.js      # giá thị trường, ký gửi, hàng trên sàn
+        ├── sect.js          # tông môn, công trình, lãnh địa, chinh phạt, phòng thủ
+        ├── ach.js           # thành tựu
+        ├── demo.js          # nhân vật dựng sẵn cho #demo (chỉ khi phát triển)
         ├── backup.js        # mã sao lưu
         └── util.js          # random, chiến lực, đột phá, áp hiệu ứng, định dạng tiền
 ```
@@ -330,9 +384,12 @@ Hầu hết mọi thứ chỉnh trong [`src/game/data.js`](src/game/data.js):
 | Đột phá khó / dễ hơn | `bt` trong `G.REALMS`, hàm `btChance` trong [`util.js`](src/game/util.js) |
 | Giàu / nghèo hơn | `G.LIVING`, `G.ALLOWANCE`, `G.ITEMS[].base`, `G.MISSIONS` |
 | Trang bị mạnh / yếu hơn | `G.GEAR`, `G.GEAR_PRICE`, `G.QUALITY` |
-| Sản nghiệp | `G.ESTATES` |
-| Tông môn | `G.SECT_REQ`, `G.BUILDS`; công thức `memberCap`, `sectPower`, `sectYearly` trong [`sect.js`](src/game/sect.js) |
-| Chinh phạt khó / dễ hơn | `def` trong `G.REGIONS`, hệ số 0,04 trong `regionDef`, công thức `conquerP` |
+| Sản nghiệp | `G.ESTATES`, `G.ESTATE_MAX`, `G.ESTATE_GROW` |
+| Tông môn | `G.SECT_REQ`, `G.BUILDS`, `G.BUILD_MAX`; công thức `buildCost`, `memberCap`, `sectPower`, `sectYearly` trong [`sect.js`](src/game/sect.js), `effLv` trong [`util.js`](src/game/util.js) |
+| Lò rèn | `G.SMITHY`, `G.ORE_FOR_TIER`, `G.BUYERS`; công thức trong [`forge.js`](src/game/forge.js) |
+| Quân đội | `G.TROOPS`, `G.TRAIN_MAX`; công thức `armyPower` trong [`army.js`](src/game/army.js) |
+| Sàn giao dịch | `G.MARKETS`, `G.CONSIGN_MAX`, `G.CONSIGN_FEE`; `sellChance`, `marketTick` trong [`exchange.js`](src/game/exchange.js) |
+| Bản đồ, chinh phạt | `G.ZONES`, `G.REGIONS`, `G.ROADS`; hệ số 0,03 trong `regionDef`, công thức `conquerP` |
 
 Sau khi chỉnh, chạy giả lập để xem ảnh hưởng:
 
