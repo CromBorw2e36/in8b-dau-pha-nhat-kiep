@@ -260,6 +260,7 @@ G.CONSIGN_FEE = 0.05;
 G.BID_MAX = 6; // số đơn đặt mua treo cùng lúc
 G.AUCTION_EVERY = 6; // phòng đấu giá mở phiên mỗi 6 lượt
 G.AUCTION_OPEN = 3; // mỗi phiên kéo dài 3 lượt
+G.STACK_MAX = 9999; // mỗi chồng vật phẩm cộng dồn tối đa 9999 (túi và kho tông môn)
 // Phẩm đan dược phù hợp với từng cảnh giới
 G.PILL_NEED = [1, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 9];
 // Sinh hoạt phí mỗi năm theo cảnh giới (ăn ở, y phục, đi lại)

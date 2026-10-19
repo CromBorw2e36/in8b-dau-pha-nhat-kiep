@@ -14,7 +14,7 @@ export function stock(s, t, g, n) {
   const v = vaultOf(s);
   g = clamp(Math.round(g), 1, 9);
   const k = `${t}:${g}`;
-  v.inv[k] = (v.inv[k] || 0) + n;
+  v.inv[k] = Math.min((v.inv[k] || 0) + n, G.STACK_MAX);
   if (v.inv[k] <= 0) delete v.inv[k];
 }
 // Kho đầy trang bị: bán món kém nhất cho ngân khố
@@ -102,9 +102,10 @@ export function conquestLoot(s, r) {
 // ───── Lấy đồ ra ─────
 export function takeItem(s, key, n) {
   const v = vaultOf(s);
-  n = Math.min(n, v?.inv[key] || 0);
-  if (n <= 0) return null;
   const [t, g] = parseKey(key);
+  // Túi cũng có giới hạn mỗi chồng 9999
+  n = Math.min(n, v?.inv[key] || 0, G.STACK_MAX - (s.inv[key] || 0));
+  if (n <= 0) return v?.inv[key] ? `Túi đã đầy ${itemName(t, g).toLowerCase()} (tối đa ${G.STACK_MAX}).` : null;
   stock(s, t, g, -n);
   give(s, t, g, n);
   return `Lấy ${n} ${itemName(t, g).toLowerCase()} từ kho về túi.`;

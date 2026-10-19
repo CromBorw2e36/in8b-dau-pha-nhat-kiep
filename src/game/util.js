@@ -26,10 +26,13 @@ export const unit = (s) => priceOf('core', beastGrade(s)); // giá một khỏa 
 export const itemName = (t, g) => G.ITEMS[t].n(g);
 export const parseKey = (k) => { const [t, g] = k.split(':'); return [t, +g]; };
 
+// Còn chứa thêm được bao nhiêu trong chồng này (tối đa G.STACK_MAX)
+export const roomOf = (s, key) => Math.max(0, G.STACK_MAX - (s.inv[key] || 0));
+
 export function give(s, t, g, n = 1) {
   g = clamp(Math.round(g), 1, 9);
   const k = `${t}:${g}`;
-  s.inv[k] = (s.inv[k] || 0) + n;
+  s.inv[k] = Math.min((s.inv[k] || 0) + n, G.STACK_MAX);
   if (s.inv[k] <= 0) delete s.inv[k];
 }
 export const countOf = (s, t, minG = 1) =>

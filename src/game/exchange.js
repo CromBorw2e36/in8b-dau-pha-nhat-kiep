@@ -1,5 +1,5 @@
 import G from './data.js';
-import { R, rand, pick, clamp, priceOf, pillNeed, beastGrade, tierFor, give, earn, spend, gearScore, gearName, itemName, fmtGold, parseKey, mkIdx, genName } from './util.js';
+import { R, rand, pick, clamp, roomOf, priceOf, pillNeed, beastGrade, tierFor, give, earn, spend, gearScore, gearName, itemName, fmtGold, parseKey, mkIdx, genName } from './util.js';
 import { genGear, obtainGear } from './gear.js';
 
 // ───── Giá thị trường: mỗi nhóm hàng dao động quanh 1, kéo dần về 1 ─────
@@ -105,7 +105,8 @@ export function buyListing(s, id, n = 1) {
   const list = npcList(s);
   const x = list.find((y) => y.id === id);
   if (!x) return null;
-  n = Math.min(n, x.n);
+  n = Math.min(n, x.n, x.kind === 'item' ? roomOf(s, x.key) : 1);
+  if (n <= 0) return `Túi đã đủ ${G.STACK_MAX}, không chứa thêm được.`;
   if (!spend(s, 'Mua trên sàn giao dịch', x.price * n)) return 'Không đủ tiền.';
   x.n -= n;
   if (x.n <= 0) s.ex.list = list.filter((y) => y !== x);
@@ -127,9 +128,12 @@ export const bidFor = (s, key) => s.bids.find((x) => x.key === key);
 
 export function placeBid(s, key, n, price) {
   price = Math.round(price);
-  if (n <= 0 || price <= 0) return null;
-  const [t, g] = parseKey(key);
   const old = bidFor(s, key);
+  // Không đặt quá chỗ trống trong túi
+  n = Math.min(n, roomOf(s, key) - (old?.n || 0));
+  if (n <= 0) return price > 0 ? `Túi đã đủ ${G.STACK_MAX}, không cần đặt thêm.` : null;
+  if (price <= 0) return null;
+  const [t, g] = parseKey(key);
   if (!old && s.bids.length >= G.BID_MAX) return 'Đã đủ số đơn đặt mua.';
   // Đặt lại cùng món: hoàn cọc đơn cũ rồi gộp số lượng theo giá mới
   const refund = old ? old.n * old.price : 0;
@@ -158,7 +162,10 @@ export function bidTick(s, e) {
     const p = bidChance(s, x);
     if (R() >= p) continue;
     const [t, g] = parseKey(x.key);
-    const n = Math.min(x.n, Math.max(1, Math.ceil(x.n * p * rand(0.3, 1))));
+    // Túi đã chạm giới hạn chồng 9999 thì tạm ngưng gom
+    const room = G.STACK_MAX - (s.inv[x.key] || 0);
+    const n = Math.min(x.n, room, Math.max(1, Math.ceil(x.n * p * rand(0.3, 1))));
+    if (n <= 0) continue;
     give(s, t, g, n);
     x.n -= n;
     x.got += n;

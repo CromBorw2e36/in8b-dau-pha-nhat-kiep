@@ -409,6 +409,8 @@ export function migrate(v) {
   v.mkt ||= {}; v.cons ||= []; v.bids ||= []; v.exNew ||= 0; v.smithy ||= { lv: 0, prod: true }; v.arms ||= 0; v.orders ||= [];
   v.army ||= { n: {}, armed: 0, train: 0 }; v.stats ||= {};
   if (v.sect) { for (const b of G.BUILDS) v.sect.b[b.id] ??= 0; v.sect.vault ||= { inv: {}, gear: [] }; }
+  // Bản lưu cũ có chồng vượt giới hạn thì cắt về 9999
+  for (const inv of [v.inv, v.sect?.vault?.inv]) if (inv) for (const k of Object.keys(inv)) inv[k] = Math.min(inv[k], G.STACK_MAX);
   if (v.focus === 'mon') v.focus = 'nv';
   return v;
 }

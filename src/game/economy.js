@@ -1,7 +1,7 @@
 import G from './data.js';
 import {
   R, rand, clamp, pick, priceOf, unit, beastGrade, pillNeed, give, takeBest, peekBest, countOf, earn, spend,
-  parseKey, itemName, fmtGold, fmtItems, applyFx, addQi, canAlch, winP, peer, lastEntry, mkIdx, tierFor, fxSum,
+  parseKey, itemName, fmtGold, fmtItems, roomOf, applyFx, addQi, canAlch, winP, peer, lastEntry, mkIdx, tierFor, fxSum,
 } from './util.js';
 import { genGear, obtainGear } from './gear.js';
 
@@ -23,6 +23,7 @@ export function sell(s, key, n = 1) {
 }
 
 export function buy(s, t, g, n = 1) {
+  if (roomOf(s, `${t}:${g}`) < n) return false;
   if (!spend(s, `Mua ${G.ITEMS[t].n(g).toLowerCase()}`, buyPrice(t, g, s) * n)) return false;
   give(s, t, g, n);
   return true;
