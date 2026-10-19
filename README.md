@@ -194,6 +194,21 @@ Có 5 ô trang bị, xem ở **Túi → Trang bị**:
 - **5 phẩm chất** (mỗi phẩm một màu): Thường ×1, Tinh phẩm ×1,25, Cực phẩm ×1,6, Huyền bảo ×2, Thần phẩm ×2,6. Khí vận cao thì dễ ra đồ tốt.
 - **Cường hóa +0 → +100** ở lò rèn: mỗi cấp +4% chỉ số chính.
 - **Nguồn**: lịch luyện, thưởng nhiệm vụ, nạp giới, sự kiện, **tự rèn ở lò rèn**, **Binh Khí Phường** (Thị → Chợ) và **Sàn giao dịch**.
+- **Hiệu ứng pháp khí**: trang bị phẩm chất cao mang hiệu ứng đặc biệt (Thường hiếm khi có, Tinh phẩm 0–1, Cực phẩm 1, Huyền bảo 1–2, Thần phẩm 2–3). Giá trị theo bậc và phẩm chất, cường hóa tăng thêm 1% mỗi cấp. Món có hiệu ứng phát hào quang; Huyền bảo, Thần phẩm có thêm vệt sáng quét qua.
+
+| Hiệu ứng | Tác dụng khi mặc |
+|---|---|
+| Tụ Linh | Tu luyện nhanh hơn |
+| Hồi Xuân / Dưỡng Hồn / Tĩnh Tâm | Thể chất / linh hồn / tâm cảnh tăng mỗi năm |
+| Phúc Vận | Khí vận cao hơn |
+| Phá Giáp | Cộng thẳng chiến lực |
+| Thông Thiên | Tăng tỷ lệ đột phá |
+| Diên Thọ | Thêm thọ nguyên |
+| Tầm Bảo | Lịch luyện dễ nhặt được bảo vật |
+| Kim Quang | Tự sinh kim tệ mỗi năm |
+| Hộ Mệnh | Có tỷ lệ (tối đa 60%) đỡ một lần tử vong, rồi hiệu ứng vỡ mất. Không cứu được khi hết thọ nguyên. |
+
+- Vật phẩm và trang bị hiện dạng **thẻ**: icon, tên theo màu phẩm chất, chỉ số chính, tên hiệu ứng và giá có sẵn trên thẻ. Bấm vào thẻ để mở rộng tại chỗ, xem đầy đủ và thao tác.
 - Món mới tốt hơn sẽ **tự trang bị**, đồ cũ vào **kho** (tối đa 40 món, kho đầy thì tự bán món kém nhất). Kho có lọc theo ô, mỗi món hiện chênh lệch chiến lực so với đồ đang mặc, và nút **Bán đồ kém hơn**.
 
 ### Lò rèn (Luyện Khí Phòng)
@@ -354,7 +369,7 @@ Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường 
     │   ├── ui.jsx           # Bar, Sheet, Tabs, LevelBuy, GearRow, Toasts, LifeChart…
     │   ├── motion.js        # chuyển động bằng anime.js
     │   ├── icons.jsx        # bảng icon dùng chung (Game Icons qua react-icons)
-    │   ├── gearUi.jsx       # ô và chỉ số trang bị dùng chung
+    │   ├── gearUi.jsx       # thẻ trang bị, chỉ số, hiệu ứng pháp khí dùng chung
     │   └── glyphs.jsx       # chữ trên con dấu son
     └── game/                # logic thuần, không phụ thuộc React
         ├── data.js          # MỌI SỐ LIỆU: cảnh giới, tư chất, vật phẩm, trang bị, sản nghiệp, tông môn, bản đồ

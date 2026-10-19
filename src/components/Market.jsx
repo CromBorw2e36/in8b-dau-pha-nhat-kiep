@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import G from '../game/data.js';
-import { parseKey, itemName, fmtGold, unit, gearName, qualityIdx } from '../game/util.js';
+import { parseKey, itemName, fmtGold, unit } from '../game/util.js';
 import { forgeStock, buyGear, gearBuy, estateLv, estateOpen, estatePlan, buyEstate, estateIncome, estateInc } from '../game/gear.js';
 import { buy, marketList, buyPrice, ledgerSummary } from '../game/economy.js';
 import {
   npcList, buyListing, consignItem, consignGear, cancelConsign, sellChance, itemFair, gearFair, listingName, priceTag, trend,
 } from '../game/exchange.js';
 import { save } from '../game/engine.js';
-import { Sheet, SheetBody, SheetHead, Tabs, Tile, Detail, UpRow, LevelBuy, ConfirmBtn } from './ui.jsx';
-import { GearTile, GearStats, gradeQ } from './gearUi.jsx';
-import { Ico, ITEM_I, SLOT_I, NAV_I, UI_I, EST_I, MK_I } from './icons.jsx';
+import { Sheet, SheetBody, SheetHead, Tabs, Card, UpRow, LevelBuy, ConfirmBtn } from './ui.jsx';
+import { GearCard, gradeQ } from './gearUi.jsx';
+import { Ico, ITEM_I, NAV_I, UI_I, EST_I, MK_I } from './icons.jsx';
 
 const MK_SHORT = { core: 'Ma hạch', herb: 'Dược liệu', ore: 'Huyền thiết', pill: 'Đan', gear: 'Trang bị', arms: 'Binh khí' };
 const TAG = { cheap: ['Rẻ', 'good'], dear: ['Đắt', 'bad'], fair: ['Đúng giá', 'fair'] };
@@ -45,37 +45,35 @@ export default function Market({ s, bump, onClose, initTab }) {
 function Shop({ s, act }) {
   const goods = marketList(s);
   const gear = forgeStock(s);
-  const [sel, setSel] = useState(null); // 'i:t:g' hoặc 'g:id'
-  const selItem = sel?.startsWith('i:') ? sel.slice(2).split(':') : null;
-  const selGear = sel?.startsWith('g:') ? gear.find((x) => x.id === sel.slice(2)) : null;
-  const [t, gs] = selItem || goods[0];
-  const g = +gs;
+  const [open, setOpen] = useState(null);
+  const toggle = (k) => setOpen(open === k ? null : k);
   return (
     <>
-      {selGear ? (
-        <Detail icon={SLOT_I[selGear.sl]} q={qualityIdx(selGear)} title={gearName(selGear)}
-          actions={<ConfirmBtn cost={gearBuy(selGear)} gold={s.gold} disabled={s.gold < gearBuy(selGear)} onClick={() => { act(() => buyGear(s, selGear.id)); setSel(null); }}><Ico i={UI_I.buy} />{fmtGold(gearBuy(selGear))}</ConfirmBtn>}>
-          <GearStats it={selGear} s={s} compare />
-        </Detail>
-      ) : (
-        <Detail icon={ITEM_I[t]} q={gradeQ(g)} title={itemName(t, g)}
-          actions={<>
-            <button className="mini buy" disabled={s.gold < buyPrice(t, g, s)} onClick={() => act(() => (buy(s, t, g) ? `Đã mua ${itemName(t, g)}.` : 'Không đủ tiền.'))}><Ico i={UI_I.buy} />{fmtGold(buyPrice(t, g, s))}</button>
-            <button className="mini ghost" disabled={s.gold < buyPrice(t, g, s) * 10} onClick={() => act(() => (buy(s, t, g, 10) ? `Đã mua 10 ${itemName(t, g).toLowerCase()}.` : 'Không đủ tiền.'))}>×10</button>
-          </>}>
-          <p className="d-desc">{G.ITEMS[t].d}</p>
-        </Detail>
-      )}
-      <p className="sub-head">Hàng chợ</p>
-      <div className="grid">
-        {goods.map(([tt, gg]) => (
-          <Tile key={tt + gg} icon={ITEM_I[tt]} q={gradeQ(gg)} badge={gg} foot={fmtGold(buyPrice(tt, gg, s))}
-            sel={!selGear && tt === t && gg === g} onClick={() => setSel(`i:${tt}:${gg}`)} title={itemName(tt, gg)} />
-        ))}
+      <p className="note">Chợ luôn có hàng, giá cao hơn thị trường 15%. Muốn mua rẻ hoặc bán được giá, hãy lên Sàn.</p>
+      <div className="cards">
+        {goods.map(([t, g]) => {
+          const k = t + g;
+          const p = buyPrice(t, g, s);
+          return (
+            <Card key={k} icon={ITEM_I[t]} q={gradeQ(g)} badge={g} title={itemName(t, g)} sub={<span className="c-desc">{G.ITEMS[t].d}</span>}
+              right={<span className="price"><Ico i={UI_I.gold} size={13} />{fmtGold(p)}</span>} open={open === k} onToggle={() => toggle(k)}>
+              <p className="d-desc">{G.ITEMS[t].d}</p>
+              <div className="c-act">
+                <button className="mini buy" disabled={s.gold < p} onClick={() => act(() => (buy(s, t, g) ? `Đã mua ${itemName(t, g)}.` : 'Không đủ tiền.'))}><Ico i={UI_I.buy} />Mua 1 · {fmtGold(p)}</button>
+                <button className="mini" disabled={s.gold < p * 10} onClick={() => act(() => (buy(s, t, g, 10) ? `Đã mua 10 ${itemName(t, g).toLowerCase()}.` : 'Không đủ tiền.'))}>Mua 10 · {fmtGold(p * 10)}</button>
+              </div>
+            </Card>
+          );
+        })}
       </div>
       <p className="sub-head">Binh Khí Phường <span className="muted">· đổi hàng mỗi 3 lượt</span></p>
-      <div className="grid">
-        {gear.map((it) => <GearTile key={it.id} it={it} sel={selGear?.id === it.id} onClick={() => setSel(`g:${it.id}`)} foot={fmtGold(gearBuy(it))} />)}
+      <div className="cards">
+        {gear.map((it) => (
+          <GearCard key={it.id} it={it} s={s} compare open={open === it.id} onToggle={() => toggle(it.id)}
+            right={<span className="price"><Ico i={UI_I.gold} size={13} />{fmtGold(gearBuy(it))}</span>}>
+            <ConfirmBtn cost={gearBuy(it)} gold={s.gold} disabled={s.gold < gearBuy(it)} onClick={() => act(() => buyGear(s, it.id))}><Ico i={UI_I.buy} />Mua · {fmtGold(gearBuy(it))}</ConfirmBtn>
+          </GearCard>
+        ))}
       </div>
     </>
   );
@@ -83,93 +81,104 @@ function Shop({ s, act }) {
 
 function Exchange({ s, act }) {
   const list = npcList(s);
-  const [sel, setSel] = useState(() => (list[0] ? { k: 'npc', id: list[0].id } : null));
+  const [open, setOpen] = useState(null);
+  const [picking, setPicking] = useState(false);
   const [mult, setMult] = useState(1.1);
   const [qty, setQty] = useState(1);
+  const toggle = (k) => setOpen(open === k ? null : k);
   const fee = s.flags.vip ? 2 : Math.round(G.CONSIGN_FEE * 100);
 
   const sellables = [
     ...Object.entries(s.inv).map(([k, n]) => ({ kind: 'item', key: k, n, fair: itemFair(s, ...parseKey(k)) })),
     ...s.armory.map((it) => ({ kind: 'gear', id: it.id, it, n: 1, fair: gearFair(s, it) })),
   ];
-  const npc = sel?.k === 'npc' ? list.find((x) => x.id === sel.id) : null;
-  const mine = sel?.k === 'mine' ? s.cons.find((x) => x.id === sel.id) : null;
-  const src = sel?.k === 'src' ? sellables.find((x) => (x.key || x.id) === sel.id) : null;
-  const price = src ? Math.max(1, Math.round(src.fair * mult)) : 0;
-  const chance = src ? sellChance(s, src.kind === 'gear' ? { kind: 'gear', it: src.it, price } : { kind: 'item', key: src.key, price }) : 0;
+  const tagEl = (x) => { const [t, c] = TAG[priceTag(s, x)]; return <span className={'ptag ' + c}>{t}</span>; };
+  const priceEl = (p) => <span className="price"><Ico i={UI_I.gold} size={13} />{fmtGold(p)}</span>;
 
-  const lIcon = (x) => (x.kind === 'gear' ? SLOT_I[x.it.sl] : ITEM_I[parseKey(x.key)[0]]);
-  const lQ = (x) => (x.kind === 'gear' ? qualityIdx(x.it) : gradeQ(parseKey(x.key)[1]));
+  // Phần đặt giá khi mở một món định ký gửi
+  const consignForm = (x) => {
+    const price = Math.max(1, Math.round(x.fair * mult));
+    const chance = sellChance(s, x.kind === 'gear' ? { kind: 'gear', it: x.it, price } : { kind: 'item', key: x.key, price });
+    return (
+      <div className="consign">
+        {x.kind === 'item' && x.n > 1 && (
+          <label className="field"><span className="sv">Số lượng <b className="num">{Math.min(qty, x.n)}</b> / {x.n}</span>
+            <input type="range" min="1" max={x.n} value={Math.min(qty, x.n)} onChange={(e) => setQty(+e.target.value)} /></label>
+        )}
+        <label className="field">
+          <span className="sv">Giá <b className="num">{fmtGold(price)}</b> · {Math.round(mult * 100)}% thị trường · <Ico i={UI_I.dice} size={14} />bán được ~{Math.round(chance * 100)}% mỗi lượt</span>
+          <input type="range" min="0.6" max="1.6" step="0.05" value={mult} onChange={(e) => setMult(+e.target.value)} />
+        </label>
+        <div className="c-act">
+          <button className="mini buy" onClick={() => { act(() => (x.kind === 'item' ? consignItem(s, x.key, Math.min(qty, x.n), price) : consignGear(s, x.id, price))); setOpen(null); setPicking(false); }}><Ico i={UI_I.tag} />Đưa lên sàn</button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
-      {npc && (
-        <Detail icon={lIcon(npc)} q={lQ(npc)} title={`${listingName(npc)}${npc.n > 1 ? ` ×${npc.n}` : ''}`}
-          actions={<>
-            <ConfirmBtn cost={npc.price} gold={s.gold} disabled={s.gold < npc.price} onClick={() => act(() => buyListing(s, npc.id))}><Ico i={UI_I.buy} />{fmtGold(npc.price)}</ConfirmBtn>
-            {npc.n > 1 && <button className="mini ghost" disabled={s.gold < npc.price * npc.n} onClick={() => act(() => buyListing(s, npc.id, npc.n))}>Mua hết</button>}
-          </>}>
-          {npc.kind === 'gear' && <GearStats it={npc.it} s={s} compare />}
-          <span className="sv">{npc.seller} <span className={'ptag ' + TAG[priceTag(s, npc)][1]}>{TAG[priceTag(s, npc)][0]}</span></span>
-        </Detail>
-      )}
-      {mine && (
-        <Detail icon={lIcon(mine)} q={lQ(mine)} title={`${listingName(mine)}${mine.kind === 'item' ? ` ×${mine.n}` : ''}`}
-          actions={<button className="mini ghost" onClick={() => { act(() => cancelConsign(s, mine.id)); setSel(null); }}>Rút về</button>}>
-          <span className="sv"><Ico i={UI_I.tag} size={14} />{fmtGold(mine.price)} mỗi món</span>
-          <span className="sv"><Ico i={UI_I.dice} size={14} />{Math.round(sellChance(s, mine) * 100)}% bán được mỗi lượt</span>
-        </Detail>
-      )}
-      {sel?.k === 'pick' && (
-        <div className="detail">
-          <p className="d-desc">Chọn món muốn đem bán:</p>
-          <div className="grid small">
-            {sellables.map((x) => x.kind === 'gear'
-              ? <GearTile key={x.id} it={x.it} onClick={() => { setSel({ k: 'src', id: x.id }); setQty(1); }} />
-              : <Tile key={x.key} icon={ITEM_I[parseKey(x.key)[0]]} q={gradeQ(parseKey(x.key)[1])} badge={parseKey(x.key)[1]} count={x.n} title={itemName(...parseKey(x.key))}
-                  onClick={() => { setSel({ k: 'src', id: x.key }); setQty(x.n); }} />)}
-          </div>
-          {!sellables.length && <p className="empty">Không có gì để bán.</p>}
-        </div>
-      )}
-      {src && (
-        <Detail icon={src.kind === 'gear' ? SLOT_I[src.it.sl] : ITEM_I[parseKey(src.key)[0]]} q={src.kind === 'gear' ? qualityIdx(src.it) : gradeQ(parseKey(src.key)[1])}
-          title={src.kind === 'gear' ? gearName(src.it) : itemName(...parseKey(src.key))}
-          actions={<button className="mini buy" onClick={() => { act(() => (src.kind === 'item' ? consignItem(s, src.key, qty, price) : consignGear(s, src.id, price))); setSel(null); }}><Ico i={UI_I.tag} />Đưa lên sàn</button>}>
-          {src.kind === 'item' && src.n > 1 && (
-            <label className="field"><span className="sv">Số lượng <b className="num">{qty}</b></span>
-              <input type="range" min="1" max={src.n} value={qty} onChange={(e) => setQty(+e.target.value)} /></label>
-          )}
-          <label className="field">
-            <span className="sv"><Ico i={UI_I.tag} size={14} /><b className="num">{fmtGold(price)}</b> · {Math.round(mult * 100)}% thị trường · <Ico i={UI_I.dice} size={14} />{Math.round(chance * 100)}%/lượt</span>
-            <input type="range" min="0.6" max="1.6" step="0.05" value={mult} onChange={(e) => setMult(+e.target.value)} />
-          </label>
-        </Detail>
-      )}
-
-      <div className="sub-row"><p className="sub-head">Quầy của bạn <span className="muted num">{s.cons.length}/{G.CONSIGN_MAX}</span></p><span className="muted small">phí {fee}%</span></div>
-      <div className="grid">
-        {s.cons.map((x) => x.kind === 'gear'
-          ? <GearTile key={x.id} it={x.it} foot={fmtGold(x.price)} sel={mine?.id === x.id} onClick={() => setSel({ k: 'mine', id: x.id })} />
-          : <Tile key={x.id} icon={lIcon(x)} q={lQ(x)} badge={parseKey(x.key)[1]} count={x.n} foot={fmtGold(x.price)} sel={mine?.id === x.id} onClick={() => setSel({ k: 'mine', id: x.id })} title={listingName(x)} />)}
+      <div className="sub-row">
+        <p className="sub-head">Quầy của bạn <span className="muted num">{s.cons.length}/{G.CONSIGN_MAX}</span></p>
+        <span className="muted small">phí sàn {fee}%</span>
+      </div>
+      <div className="cards">
+        {s.cons.map((x) => {
+          const body = (
+            <>
+              <span className="sv"><Ico i={UI_I.dice} size={14} />Bán được ~{Math.round(sellChance(s, x) * 100)}% mỗi lượt</span>
+              <div className="c-act"><button className="mini ghost" onClick={() => { act(() => cancelConsign(s, x.id)); setOpen(null); }}>Rút về</button></div>
+            </>
+          );
+          return x.kind === 'gear'
+            ? <GearCard key={x.id} it={x.it} s={s} right={priceEl(x.price)} tag="Đang bán" open={open === x.id} onToggle={() => toggle(x.id)}>{body}</GearCard>
+            : <Card key={x.id} icon={ITEM_I[parseKey(x.key)[0]]} q={gradeQ(parseKey(x.key)[1])} badge={parseKey(x.key)[1]} count={x.n} title={listingName(x)} tag="Đang bán"
+                sub={<span className="c-desc">Giá {fmtGold(x.price)} mỗi món</span>} right={priceEl(x.price)} open={open === x.id} onToggle={() => toggle(x.id)}>{body}</Card>;
+        })}
         {s.cons.length < G.CONSIGN_MAX && (
-          <button className={'tile add' + (sel?.k === 'pick' || src ? ' sel' : '')} onClick={() => setSel({ k: 'pick' })} title="Ký gửi thêm" aria-label="Ký gửi thêm">
-            <span className="plus">+</span><span className="t-foot">Ký gửi</span>
+          <button className={'card add' + (picking ? ' on' : '')} onClick={() => setPicking((v) => !v)}>
+            <span className="plus">+</span><span>{picking ? 'Chọn món bên dưới để đặt giá' : 'Ký gửi thêm'}</span>
           </button>
         )}
       </div>
 
+      {picking && (
+        <>
+          <p className="sub-head">Chọn món đem bán</p>
+          {sellables.length ? (
+            <div className="cards">
+              {sellables.map((x) => {
+                const k = 'src' + (x.key || x.id);
+                return x.kind === 'gear'
+                  ? <GearCard key={k} it={x.it} s={s} right={<span className="muted small">thị trường {fmtGold(x.fair)}</span>} open={open === k} onToggle={() => { toggle(k); setQty(1); }}>{consignForm(x)}</GearCard>
+                  : <Card key={k} icon={ITEM_I[parseKey(x.key)[0]]} q={gradeQ(parseKey(x.key)[1])} badge={parseKey(x.key)[1]} count={x.n} title={itemName(...parseKey(x.key))}
+                      sub={<span className="c-desc">Thị trường {fmtGold(x.fair)} mỗi món</span>} open={open === k} onToggle={() => { toggle(k); setQty(x.n); }}>{consignForm(x)}</Card>;
+              })}
+            </div>
+          ) : <p className="empty">Không có gì để bán.</p>}
+        </>
+      )}
+
       <p className="sub-head">Hàng trên sàn <span className="muted">· đổi mới mỗi 3 lượt</span></p>
-      <div className="grid">
+      <div className="cards">
         {list.map((x) => {
-          const tag = priceTag(s, x);
+          const buyBtns = (
+            <div className="c-act">
+              <ConfirmBtn cost={x.price} gold={s.gold} disabled={s.gold < x.price} onClick={() => act(() => buyListing(s, x.id))}><Ico i={UI_I.buy} />Mua · {fmtGold(x.price)}</ConfirmBtn>
+              {x.n > 1 && <button className="mini" disabled={s.gold < x.price * x.n} onClick={() => act(() => buyListing(s, x.id, x.n))}>Mua hết {x.n} · {fmtGold(x.price * x.n)}</button>}
+            </div>
+          );
           return x.kind === 'gear'
-            ? <GearTile key={x.id} it={x.it} foot={fmtGold(x.price)} mark={tag} sel={npc?.id === x.id} onClick={() => setSel({ k: 'npc', id: x.id })} />
-            : <Tile key={x.id} icon={lIcon(x)} q={lQ(x)} badge={parseKey(x.key)[1]} count={x.n} foot={fmtGold(x.price)} mark={tag} sel={npc?.id === x.id}
-                onClick={() => setSel({ k: 'npc', id: x.id })} title={listingName(x)} />;
+            ? <GearCard key={x.id} it={x.it} s={s} compare right={<>{priceEl(x.price)}{tagEl(x)}</>} open={open === x.id} onToggle={() => toggle(x.id)}>
+                <span className="sv muted">Người bán: {x.seller}</span>{buyBtns}
+              </GearCard>
+            : <Card key={x.id} icon={ITEM_I[parseKey(x.key)[0]]} q={gradeQ(parseKey(x.key)[1])} badge={parseKey(x.key)[1]} count={x.n} title={listingName(x)}
+                sub={<span className="c-desc">{x.seller}</span>} right={<>{priceEl(x.price)}{tagEl(x)}</>} open={open === x.id} onToggle={() => toggle(x.id)}>
+                <p className="d-desc">{G.ITEMS[parseKey(x.key)[0]].d}</p>{buyBtns}
+              </Card>;
         })}
       </div>
-      <p className="note"><span className="t-mark-demo cheap" /> rẻ hơn thị trường · <span className="t-mark-demo dear" /> đắt hơn. Giá ký gửi càng sát thị trường càng bán nhanh.</p>
+      <p className="note">Giá ký gửi càng sát thị trường càng bán nhanh. Nhãn Rẻ / Đắt so với giá thị trường hôm nay.</p>
     </>
   );
 }

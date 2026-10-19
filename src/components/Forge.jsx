@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import G from '../game/data.js';
-import { fmtGold, itemName, countOf, gearName, qualityIdx } from '../game/util.js';
+import { fmtGold, itemName, countOf, gearName } from '../game/util.js';
 import {
   smithLv, smithPlan, upgradeSmith, craftTierCap, nextTierAt, craftCost, canCraft, craft, qualityOdds,
   enhanceCost, enhanceP, enhance, armCost, armValue, armRate, fulfill, sellArms,
 } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
 import { save } from '../game/engine.js';
-import { Sheet, SheetBody, SheetHead, Tabs, Detail, UpRow, LevelBuy } from './ui.jsx';
-import { GearTile, GearStats, ROMAN } from './gearUi.jsx';
+import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy } from './ui.jsx';
+import { GearCard, ROMAN } from './gearUi.jsx';
 import { Ico, ITEM_I, SLOT_I, NAV_I, UI_I, TROOP_I } from './icons.jsx';
 
 export default function Forge({ s, bump, onClose, initTab }) {
@@ -89,7 +89,7 @@ function Craft({ s, act }) {
             </div>
           </div>
           <button className="btn primary" disabled={!canCraft(s, t)} onClick={() => act(() => craft(s, sl, t))}><Ico i={UI_I.craft} size={20} /> Khai lò</button>
-          <p className="note">Nguyên liệu phẩm cao hơn cũng dùng được. Cấp lò, dị hỏa và linh hồn càng cao, đồ càng dễ ra phẩm chất tốt.</p>
+          <p className="note">Nguyên liệu phẩm cao hơn cũng dùng được. Cấp lò, dị hỏa và linh hồn càng cao, đồ càng dễ ra phẩm chất tốt. Từ Tinh phẩm trở lên, đồ rèn ra có thể mang hiệu ứng pháp khí (Thần phẩm tới 3 hiệu ứng).</p>
         </>
       )}
     </>
@@ -98,16 +98,11 @@ function Craft({ s, act }) {
 
 function Enhance({ s, act }) {
   const lv = smithLv(s);
+  const [open, setOpen] = useState(null);
   const list = [...G.GEAR_SLOTS.map((k) => s.gear[k]).filter(Boolean), ...s.armory];
-  const [selId, setSel] = useState(null);
   if (!lv) return <p className="empty"><Ico i={NAV_I.forge} size={28} />Cần dựng lò rèn trước.</p>;
   if (!list.length) return <p className="empty">Chưa có trang bị nào.</p>;
-  const it = list.find((x) => x.id === selId) || list[0];
-  const c = enhanceCost(it);
-  const p = enhanceP(s, it);
-  const max = (it.en || 0) >= G.ENHANCE_MAX;
-  const can = !max && s.gold >= c.gold && countOf(s, 'ore', c.ore[0]) >= c.ore[1];
-  const tryN = (n) => {
+  const tryN = (it, n) => {
     let ok = 0, last = null;
     for (let i = 0; i < n; i++) {
       const r = enhance(s, it.id);
@@ -118,25 +113,31 @@ function Enhance({ s, act }) {
   };
   return (
     <>
-      <Detail icon={SLOT_I[it.sl]} q={qualityIdx(it)} title={gearName(it)}
-        actions={max ? <span className="lvl-max">+100</span> : <>
-          <button className="mini buy" disabled={!can} onClick={() => act(() => tryN(1))}><Ico i={UI_I.up} />+{(it.en || 0) + 1}</button>
-          <button className="mini ghost" disabled={!can} onClick={() => act(() => tryN(5))}>×5</button>
-        </>}>
-        <GearStats it={it} s={s} />
-        {!max && (
-          <div className="mats">
-            <span className={'mat ' + (s.gold >= c.gold ? 'ok' : 'no')}><Ico i={UI_I.gold} size={16} /><b className="num">{fmtGold(c.gold)}</b></span>
-            <Mat s={s} t="ore" g={c.ore[0]} n={c.ore[1]} />
-            <span className="mat" title="Tỷ lệ thành công"><Ico i={UI_I.dice} size={16} /><b className="num">{Math.round(p * 100)}%</b></span>
-          </div>
-        )}
-        <div className="lv-track"><i style={{ width: `${it.en || 0}%` }} /></div>
-      </Detail>
-      <div className="grid">
-        {list.map((x) => <GearTile key={x.id} it={x} sel={it.id === x.id} onClick={() => setSel(x.id)} mark={s.gear[x.sl]?.id === x.id ? 'worn' : null} />)}
+      <p className="note">Mỗi cấp cường hóa +4% chỉ số chính và +1% hiệu ứng pháp khí. Dưới +10 chắc chắn thành công; thất bại chỉ mất nguyên liệu, không tụt cấp.</p>
+      <div className="cards">
+        {list.map((it) => {
+          const c = enhanceCost(it);
+          const p = enhanceP(s, it);
+          const max = (it.en || 0) >= G.ENHANCE_MAX;
+          const can = !max && s.gold >= c.gold && countOf(s, 'ore', c.ore[0]) >= c.ore[1];
+          const worn = s.gear[it.sl]?.id === it.id;
+          return (
+            <GearCard key={it.id} it={it} s={s} tag={worn ? 'Đang mặc' : null} open={open === it.id} onToggle={() => setOpen(open === it.id ? null : it.id)}
+              right={max ? <span className="lvl-max">+100</span> : <span className="price" title="Tỷ lệ thành công"><Ico i={UI_I.dice} size={13} />{Math.round(p * 100)}%</span>}>
+              {!max && (
+                <div className="mats">
+                  <span className={'mat ' + (s.gold >= c.gold ? 'ok' : 'no')}><Ico i={UI_I.gold} size={16} /><b className="num">{fmtGold(c.gold)}</b></span>
+                  <Mat s={s} t="ore" g={c.ore[0]} n={c.ore[1]} />
+                  <span className="mat" title="Tỷ lệ thành công"><Ico i={UI_I.dice} size={16} />Thành công <b className="num">{Math.round(p * 100)}%</b></span>
+                </div>
+              )}
+              <div className="lv-track"><i style={{ width: `${it.en || 0}%` }} /></div>
+              {!max && <button className="mini buy" disabled={!can} onClick={() => act(() => tryN(it, 1))}><Ico i={UI_I.up} />Cường hóa lên +{(it.en || 0) + 1}</button>}
+              {!max && <button className="mini" disabled={!can} onClick={() => act(() => tryN(it, 5))}>Liền 5 lần</button>}
+            </GearCard>
+          );
+        })}
       </div>
-      <p className="note">Dưới +10 chắc chắn thành công. Thất bại chỉ mất nguyên liệu, không tụt cấp.</p>
     </>
   );
 }

@@ -115,6 +115,27 @@ export function Tile({ icon, q = 0, badge, count, foot, sel, onClick, dim, title
   );
 }
 
+// Thẻ vật phẩm: hiện sẵn tên và thông tin chính, bấm vào thì mở rộng tại chỗ để xem thêm và thao tác
+export function Card({ icon, q = 0, badge, count, title, sub, right, tag, open, onToggle, children, fx, dim }) {
+  return (
+    <div className={`card q-b${q}` + (open ? ' open' : '') + (fx ? ' aura' : '') + (dim ? ' dim' : '')}>
+      <button className="c-head" onClick={onToggle} aria-expanded={!!open} disabled={!onToggle}>
+        <span className="c-ico">
+          <Ico i={icon} size={26} />
+          {badge != null && <span className="t-badge">{badge}</span>}
+          {count != null && <span className="t-count num">{count}</span>}
+        </span>
+        <span className="c-main">
+          <b className={'q' + q}>{title}</b>
+          {sub && <span className="c-sub">{sub}</span>}
+        </span>
+        {(right != null || tag) && <span className="c-right">{tag && <small className="c-tag">{tag}</small>}{right}</span>}
+      </button>
+      {open && children && <div className="c-body">{children}</div>}
+    </div>
+  );
+}
+
 // Bảng chi tiết của ô đang chọn
 export function Detail({ icon, q = 0, title, children, actions }) {
   return (

@@ -1,5 +1,5 @@
 import G from './data.js';
-import { R, pick, wpick, clamp, earn, spend, give, tierFor, gearScore, gearName, gearStat, pillNeed, fmtGold, levelPlan } from './util.js';
+import { R, pick, wpick, clamp, earn, spend, give, tierFor, gearScore, gearName, gearStat, pillNeed, fmtGold, levelPlan, fxSum, unit } from './util.js';
 
 // ───── Trang bị ─────
 // boost: cộng thêm trọng số cho phẩm chất cao (lò rèn, sự kiện)
@@ -8,7 +8,23 @@ export function genGear(s, { sl, tier, q, boost = 0 } = {}) {
   tier = clamp(Math.round(tier ?? tierFor(s) - (R() < 0.4 ? 1 : 0)), 1, G.TIERS.length - 1);
   const luckK = 1 + (s.luck - 45) / 60;
   q ||= wpick(G.QUALITY, (x) => x[2] * (x[0] > 1 ? Math.max(0.3, luckK) * (1 + boost * (x[0] - 1)) : 1))[0];
-  return { id: Date.now().toString(36) + Math.floor(R() * 1e6).toString(36), sl, tier, q, en: 0, n: `${pick(G.GEAR[sl].names)} (${G.TIERS[tier]})` };
+  const it = { id: Date.now().toString(36) + Math.floor(R() * 1e6).toString(36), sl, tier, q, en: 0, n: `${pick(G.GEAR[sl].names)} (${G.TIERS[tier]})` };
+  it.fx = rollAffixes(it);
+  return it;
+}
+// Hiệu ứng pháp khí: phẩm chất càng cao càng nhiều, giá trị theo bậc và phẩm chất
+export function rollAffixes(it) {
+  const qi = G.QUALITY.findIndex((x) => x[0] === it.q);
+  const [lo, hi] = G.AFFIX_COUNT[Math.max(0, qi)];
+  const n = lo + Math.floor(R() * (hi - lo + 1)) + (qi === 0 && R() < 0.08 ? 1 : 0);
+  const pool = [...G.AFFIX];
+  const out = [];
+  for (let i = 0; i < n && pool.length; i++) {
+    const a = pool.splice(Math.floor(R() * pool.length), 1)[0];
+    const v = a.base * it.tier * it.q * (0.8 + R() * 0.4);
+    out.push({ id: a.id, v: a.id === 'homenh' ? Math.min(0.6, v) : v });
+  }
+  return out;
 }
 
 export const gearSell = (it) => Math.round(gearScore(it) * 0.6);
@@ -121,6 +137,16 @@ export function buyEstate(s, id, want = 1) {
 export const estateIncome = (s) => G.ESTATES.reduce((a, e) => a + estateInc(e, estateLv(s, e.id)), 0);
 export const estateValue = (s) =>
   G.ESTATES.reduce((a, e) => { let v = 0; for (let l = 0; l < estateLv(s, e.id); l++) v += estateCost(e, l); return a + v * 0.6; }, 0);
+
+// Hiệu ứng pháp khí mỗi năm: hồi phục, tăng chỉ số, sinh kim tệ
+export function artifactYearly(s, yrs) {
+  const add = (k, v) => { if (v) s[k] = Math.max(0, Math.min(100, s[k] + v * yrs)); };
+  add('body', fxSum(s, 'hoixuan'));
+  add('soul', fxSum(s, 'duonghon'));
+  add('tam', fxSum(s, 'tinhtam'));
+  const g = fxSum(s, 'kimquang');
+  if (g) earn(s, 'Pháp khí Kim Quang', g * unit(s) * yrs);
+}
 
 export function estatesYearly(s, e, yrs) {
   const inc = estateIncome(s);

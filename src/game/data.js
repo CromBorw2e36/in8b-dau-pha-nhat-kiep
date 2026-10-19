@@ -106,6 +106,25 @@ G.GEAR_PRICE = [0, 400, 5000, 70000, 1000000, 18000000, 150000000];
 // Phẩm chất: [hệ số, tên, trọng số xuất hiện]
 G.QUALITY = [[1, 'Thường', 70], [1.25, 'Tinh phẩm', 24], [1.6, 'Cực phẩm', 6], [2, 'Huyền bảo', 1.2], [2.6, 'Thần phẩm', 0.25]];
 G.ARMORY_MAX = 40;
+
+// ───── Hiệu ứng pháp khí ─────
+// Trang bị phẩm chất cao mang hiệu ứng đặc biệt. base: giá trị ở bậc 1, nhân theo bậc và phẩm chất khi rèn ra.
+// fmt: cách hiện giá trị · d: mô tả ngắn
+G.AFFIX = [
+  { id: 'tulinh',     n: 'Tụ Linh',    base: 0.03,  fmt: 'pct', d: 'tu luyện nhanh hơn' },
+  { id: 'hoixuan',    n: 'Hồi Xuân',   base: 0.4,   fmt: 'num', d: 'thể chất hồi mỗi năm' },
+  { id: 'duonghon',   n: 'Dưỡng Hồn',  base: 0.15,  fmt: 'num', d: 'linh hồn tăng mỗi năm' },
+  { id: 'tinhtam',    n: 'Tĩnh Tâm',   base: 0.25,  fmt: 'num', d: 'tâm cảnh tăng mỗi năm' },
+  { id: 'phucvan',    n: 'Phúc Vận',   base: 2,     fmt: 'num', d: 'khí vận' },
+  { id: 'phagiap',    n: 'Phá Giáp',   base: 1.2,   fmt: 'num', d: 'chiến lực' },
+  { id: 'thongthien', n: 'Thông Thiên', base: 0.01, fmt: 'pct', d: 'tỷ lệ đột phá' },
+  { id: 'dientho',    n: 'Diên Thọ',   base: 4,     fmt: 'yr',  d: 'thọ nguyên' },
+  { id: 'tambao',     n: 'Tầm Bảo',    base: 0.12,  fmt: 'pct', d: 'cơ hội nhặt được bảo vật' },
+  { id: 'kimquang',   n: 'Kim Quang',  base: 0.04,  fmt: 'gold', d: 'kim tệ tự sinh mỗi năm' },
+  { id: 'homenh',     n: 'Hộ Mệnh',    base: 0.08,  fmt: 'pct', d: 'cơ hội đỡ một lần tử vong (pháp khí vỡ)' },
+];
+// Số hiệu ứng theo phẩm chất: [tối thiểu, tối đa]
+G.AFFIX_COUNT = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 3]];
 G.ENHANCE_MAX = 100;
 // Phẩm Huyền thiết cần cho từng bậc trang bị
 G.ORE_FOR_TIER = [1, 1, 2, 4, 6, 8, 9];

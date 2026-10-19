@@ -3,10 +3,10 @@ import { EVENTS, MOMENTS, FILLERS } from './events.js';
 import {
   R, rand, pick, wpick, clamp, realm, lifeOf, unit, hasAttr, hasTrait, trait, lastEntry, focusObj,
   canAlch, realmLabel, level, die, addQi, applyFx, snapshot, diff, genName, upgradeSkill,
-  give, earn, pillNeed, priceOf, parseKey, fmtGold, gearSum, gearName, dodgeMult, holding,
+  give, earn, pillNeed, priceOf, parseKey, fmtGold, gearSum, gearName, dodgeMult, holding, fxSum,
 } from './util.js';
 import { economy, cultivationPill, moneyLine, sellPrice } from './economy.js';
-import { estatesYearly, estateValue, gearSell } from './gear.js';
+import { estatesYearly, estateValue, gearSell, artifactYearly } from './gear.js';
 import { sectYearly, bLv, landCount, sectTier } from './sect.js';
 import { smithYearly, smithLv, armCost } from './forge.js';
 import { marketTick, consignTick } from './exchange.js';
@@ -95,6 +95,7 @@ function qiGain(s, yrs, f, pill) {
   if (pill) m *= 1 + 0.45 * pill.power; // Tụ Khí Đan khi khổ tu
   m *= 1 + 0.12 * (s.dwelling || 0);     // động phủ
   m *= 1 + gearSum(s, 'qi');             // bảo vật
+  m *= 1 + fxSum(s, 'tulinh');           // pháp khí Tụ Linh
   m *= 1 + 0.06 * bLv(s, 'kinh');        // Tàng Kinh Các
   m *= G.GONG_MULT[s.gong];
   m *= 1 + Math.min(0.75, 0.25 * s.fires.length);
@@ -147,11 +148,12 @@ function yearly(s, e, yrs) {
     }
   }
   s.tam = clamp(s.tam + (50 - s.tam) * 0.04 + rand(-1.5, 1.5));
-  s.luck = clamp(s.luck + (s.baseLuck - s.luck) * 0.05);
+  s.luck = clamp(s.luck + (s.baseLuck + fxSum(s, 'phucvan') - s.luck) * 0.05);
   if (s.age / lifeOf(s) > 0.85) s.body = clamp(s.body - 1.5);
   else s.body = clamp(s.body + Math.max(0, 50 - s.body) * 0.08);
 
   marketTick(s, yrs);
+  artifactYearly(s, yrs);
   estatesYearly(s, e, yrs);
   sectYearly(s, e, yrs, f);
   smithYearly(s, e, yrs);
@@ -228,7 +230,7 @@ export function tick(s) {
   s.log.push(e);
 
   if (s.age >= lifeOf(s)) {
-    die(s, `Thọ nguyên cạn kiệt, tọa hóa ở cảnh giới ${realmLabel(s)}`);
+    die(s, `Thọ nguyên cạn kiệt, tọa hóa ở cảnh giới ${realmLabel(s)}`, false, false);
     s.hist.push([s.age, level(s)]);
     return;
   }

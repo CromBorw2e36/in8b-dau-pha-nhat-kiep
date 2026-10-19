@@ -15,7 +15,7 @@ export function wpick(items, wf) {
 
 export const realm = (s) => G.REALMS[s.R];
 export const nextRealm = (s) => G.REALMS[s.R + 1];
-export const lifeOf = (s) => G.REALMS[s.R].life + (s.lifeBonus || 0);
+export const lifeOf = (s) => G.REALMS[s.R].life + (s.lifeBonus || 0) + Math.round(fxSum(s, 'dientho'));
 // ───── Tiền & vật phẩm ─────
 export const beastGrade = (s) => clamp(s.R, 1, 9); // cấp ma thú tương xứng với cảnh giới
 export const pillNeed = (s) => G.PILL_NEED[s.R];
@@ -90,6 +90,7 @@ export function cp(s) {
   v += s.fires.length * 3 + (s.companion ? 1.5 : 0) + (s.evil ? 1 : 0);
   if (hasTrait(s, 'fierce')) v += 2;
   v += gearSum(s, 'cp');
+  v += fxSum(s, 'phagiap');
   return v;
 }
 
@@ -108,7 +109,20 @@ export function gearStat(it) {
   };
 }
 export const gearSum = (s, k) => Object.values(s.gear || {}).reduce((a, it) => a + (it ? gearStat(it)[k] : 0), 0);
-export const gearScore = (it) => (it ? G.GEAR_PRICE[it.tier] * it.q * (1 + 0.06 * (it.en || 0)) : 0);
+export const gearScore = (it) => (it ? G.GEAR_PRICE[it.tier] * it.q * (1 + 0.06 * (it.en || 0)) * (1 + 0.15 * (it.fx?.length || 0)) : 0);
+// Tổng giá trị một hiệu ứng pháp khí trên đồ đang mặc (cường hóa tăng thêm 1% mỗi cấp)
+export const fxVal = (it, f) => { const v = f.v * (1 + 0.01 * (it.en || 0)); return f.id === 'homenh' ? Math.min(0.6, v) : v; };
+export function fxSum(s, id) {
+  let t = 0;
+  for (const it of Object.values(s.gear || {})) if (it?.fx) for (const f of it.fx) if (f.id === id) t += fxVal(it, f);
+  return t;
+}
+export function fxText(it, f) {
+  const a = G.AFFIX.find((x) => x.id === f.id);
+  const v = fxVal(it, f);
+  const val = a.fmt === 'pct' ? `+${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%` : a.fmt === 'yr' ? `+${Math.round(v)} năm` : a.fmt === 'gold' ? `${v.toFixed(2)} ma hạch` : `+${v.toFixed(v < 1 ? 2 : 1)}`;
+  return { n: a.n, val, d: a.d };
+}
 export const qualityIdx = (it) => Math.max(0, G.QUALITY.findIndex((x) => x[0] === it.q));
 export const gearName = (it) => `${it.n}${it.en ? ` +${it.en}` : ''}${it.q > 1 ? ` · ${G.QUALITY[qualityIdx(it)][1]}` : ''}`;
 // Giảm xác suất tử vong nhờ chiến ngoa
@@ -131,13 +145,30 @@ export const tierFor = (s) => (s.R <= 1 ? 1 : s.R <= 3 ? 2 : s.R <= 5 ? 3 : s.R 
 export const peer = (s, d = 0) => s.R * 10 + 5 + d;
 export const winP = (s, enemy) => clamp(1 / (1 + Math.exp(-(cp(s) - enemy) / 3)), 0.03, 0.97);
 
-export function die(s, cause, win = false) {
+// guard: cho phép pháp khí Hộ Mệnh đỡ cái chết (không áp dụng khi hết thọ nguyên)
+export function die(s, cause, win = false, guard = true) {
+  if (!win && guard && saveByArtifact(s, cause)) return;
   s.dead = true;
   s.cause = cause;
   s.win = win;
   s.pending = null;
   s.needFocus = false;
   lastEntry(s).items.push({ t: win ? cause : `${cause}.`, k: win ? 'key' : 'death' });
+}
+
+// Pháp khí Hộ Mệnh: tung xúc xắc theo từng món, đỡ được thì món đó mất hiệu ứng
+function saveByArtifact(s, cause) {
+  for (const it of Object.values(s.gear || {})) {
+    const f = it?.fx?.find((x) => x.id === 'homenh');
+    if (!f || R() >= fxVal(it, f)) continue;
+    it.fx = it.fx.filter((x) => x !== f);
+    s.body = Math.max(s.body, 15);
+    s.stats = s.stats || {};
+    s.stats.saved = (s.stats.saved || 0) + 1;
+    lastEntry(s).items.push({ t: `${cause}… nhưng ${it.n} bỗng bừng sáng, Hộ Mệnh pháp khí vỡ tan, cứu bạn một mạng!`, k: 'key' });
+    return true;
+  }
+  return false;
 }
 
 // Đấu Đế tự quy ẩn: kết thúc kiếp này với danh hiệu Đấu Đế
@@ -182,7 +213,7 @@ export function hold(s, n) {
 
 export function btChance(s, bonus = 0) {
   const ring = gearSum(s, 'bt');
-  let extra = bonus + ring + (s.tam - 50) / 200 + (s.soul - 50) / 300 + (s.luck - 50) / 400 + (s.wait || 0) * 0.05 + (s.base || 0);
+  let extra = bonus + ring + fxSum(s, 'thongthien') + (s.tam - 50) / 200 + (s.soul - 50) / 300 + (s.luck - 50) / 400 + (s.wait || 0) * 0.05 + (s.base || 0);
   if (hasTrait(s, 'firm')) extra += 0.03;
   // Đấu Thánh → Đấu Đế gần như bất khả: chỉ dị hỏa và công pháp Thiên giai mới giúp được chút ít
   if (s.R >= 10) return 0.001 + Math.min(0.016, s.fires.length * 0.008 + (s.gong === 4 ? 0.006 : 0) + bonus * 0.05 + ring * 0.05);

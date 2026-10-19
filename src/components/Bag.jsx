@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import G from '../game/data.js';
-import { parseKey, itemName, fmtGold, gearScore, gearName, qualityIdx } from '../game/util.js';
+import { parseKey, itemName, fmtGold, gearScore } from '../game/util.js';
 import { equip, unequip, sellGear, sellWorse, gearSell } from '../game/gear.js';
 import { sell, useItem, sellPrice } from '../game/economy.js';
 import { netWorth, save } from '../game/engine.js';
-import { Sheet, SheetBody, SheetHead, Tabs, Tile, Detail } from './ui.jsx';
-import { GearTile, GearStats, gradeQ } from './gearUi.jsx';
+import { Sheet, SheetBody, SheetHead, Tabs, Card } from './ui.jsx';
+import { GearCard, gradeQ } from './gearUi.jsx';
 import { Ico, ITEM_I, SLOT_I, NAV_I, UI_I } from './icons.jsx';
 
 const ORDER = ['tho', 'pha', 'tuk', 'lieu', 'hon', 'calm', 'ore', 'herb', 'core'];
@@ -32,63 +32,51 @@ export default function Bag({ s, bump, onClose, initTab }) {
 }
 
 function Items({ s, act }) {
+  const [open, setOpen] = useState(null);
   const items = Object.entries(s.inv)
     .map(([k, n]) => { const [t, g] = parseKey(k); return { k, t, g, n }; })
     .sort((a, b) => ORDER.indexOf(a.t) - ORDER.indexOf(b.t) || b.g - a.g);
-  const [selK, setSel] = useState(null);
-  const sel = items.find((x) => x.k === selK) || items[0];
   if (!items.length) return <p className="empty"><Ico i={NAV_I.bag} size={28} />Túi trống. Đi lịch luyện hoặc nhận nhiệm vụ để có chiến lợi phẩm.</p>;
   return (
-    <>
-      {sel && (
-        <Detail icon={ITEM_I[sel.t]} q={gradeQ(sel.g)} title={`${itemName(sel.t, sel.g)} ×${sel.n}`}
-          actions={<>
-            {G.ITEMS[sel.t].use && <button className="mini" onClick={() => act(() => useItem(s, sel.k))}>Dùng</button>}
-            <button className="mini" onClick={() => act(() => `Đã bán, thu ${fmtGold(sell(s, sel.k, 1))} kim tệ.`)}><Ico i={UI_I.sell} />Bán 1</button>
-            {sel.n > 1 && <button className="mini ghost" onClick={() => act(() => `Đã bán ${sel.n}, thu ${fmtGold(sell(s, sel.k, sel.n))} kim tệ.`)}>Bán hết</button>}
-          </>}>
-          <p className="d-desc">{G.ITEMS[sel.t].d}</p>
-          <span className="sv"><Ico i={UI_I.sell} size={14} />Chợ thu {fmtGold(sellPrice(sel.t, sel.g, s))}</span>
-        </Detail>
-      )}
-      <div className="grid">
-        {items.map((x) => (
-          <Tile key={x.k} icon={ITEM_I[x.t]} q={gradeQ(x.g)} badge={x.g} count={x.n} sel={sel?.k === x.k} onClick={() => setSel(x.k)} title={itemName(x.t, x.g)} />
-        ))}
-      </div>
-    </>
+    <div className="cards">
+      {items.map(({ k, t, g, n }) => (
+        <Card key={k} icon={ITEM_I[t]} q={gradeQ(g)} badge={g} count={n} title={itemName(t, g)}
+          sub={<span className="c-desc">{G.ITEMS[t].d}</span>}
+          right={<span className="price"><Ico i={UI_I.sell} size={13} />{fmtGold(sellPrice(t, g, s))}</span>}
+          open={open === k} onToggle={() => setOpen(open === k ? null : k)}>
+          <p className="d-desc">{G.ITEMS[t].d}</p>
+          <div className="c-act">
+            {G.ITEMS[t].use && <button className="mini" onClick={() => act(() => useItem(s, k))}>Dùng</button>}
+            <button className="mini" onClick={() => act(() => `Đã bán, thu ${fmtGold(sell(s, k, 1))} kim tệ.`)}><Ico i={UI_I.sell} />Bán 1</button>
+            {n > 1 && <button className="mini ghost" onClick={() => act(() => `Đã bán ${n}, thu ${fmtGold(sell(s, k, n))} kim tệ.`)}>Bán hết {n}</button>}
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 }
 
 function Gear({ s, act }) {
   const [slot, setSlot] = useState('all');
-  const [selId, setSel] = useState(null);
-  const worn = G.GEAR_SLOTS.map((k) => s.gear[k]).filter(Boolean);
+  const [open, setOpen] = useState(null);
+  const toggle = (id) => setOpen(open === id ? null : id);
   const armory = s.armory
     .filter((it) => slot === 'all' || it.sl === slot)
     .sort((a, b) => G.GEAR_SLOTS.indexOf(a.sl) - G.GEAR_SLOTS.indexOf(b.sl) || gearScore(b) - gearScore(a));
-  const sel = [...worn, ...s.armory].find((x) => x.id === selId) || worn[0] || armory[0];
-  const isWorn = sel && s.gear[sel.sl]?.id === sel.id;
 
   return (
     <>
-      {sel && (
-        <Detail icon={SLOT_I[sel.sl]} q={qualityIdx(sel)} title={gearName(sel)}
-          actions={isWorn
-            ? <button className="mini ghost" onClick={() => act(() => unequip(s, sel.sl))}>Tháo</button>
-            : <>
-                <button className="mini" onClick={() => act(() => equip(s, sel.id))}>Mặc</button>
-                <button className="mini ghost" onClick={() => act(() => sellGear(s, sel.id))}><Ico i={UI_I.sell} />{fmtGold(gearSell(sel))}</button>
-              </>}>
-          <GearStats it={sel} s={s} compare={!isWorn} />
-        </Detail>
-      )}
-
       <p className="sub-head">Đang mặc</p>
-      <div className="grid doll">
-        {G.GEAR_SLOTS.map((k) => (s.gear[k]
-          ? <GearTile key={k} it={s.gear[k]} sel={sel?.id === s.gear[k].id} onClick={() => setSel(s.gear[k].id)} />
-          : <Tile key={k} icon={SLOT_I[k]} dim title={`${G.GEAR[k].n} · trống`} />))}
+      <div className="cards">
+        {G.GEAR_SLOTS.map((k) => {
+          const it = s.gear[k];
+          if (!it) return <Card key={k} icon={SLOT_I[k]} dim title={`${G.GEAR[k].n} · trống`} sub={<span className="c-desc">Rơi khi lịch luyện, tự rèn ở lò rèn hoặc mua trên sàn.</span>} />;
+          return (
+            <GearCard key={k} it={it} s={s} open={open === it.id} onToggle={() => toggle(it.id)}>
+              <button className="mini ghost" onClick={() => act(() => unequip(s, k))}>Tháo</button>
+            </GearCard>
+          );
+        })}
       </div>
 
       <div className="sub-row">
@@ -98,13 +86,19 @@ function Gear({ s, act }) {
       {s.armory.length > 0 && (
         <div className="icon-filter">
           <button className={slot === 'all' ? 'on' : ''} onClick={() => setSlot('all')}>Tất cả</button>
-          {G.GEAR_SLOTS.map((k) => <button key={k} className={slot === k ? 'on' : ''} onClick={() => setSlot(k)} title={G.GEAR[k].n} aria-label={G.GEAR[k].n}><Ico i={SLOT_I[k]} size={18} /></button>)}
+          {G.GEAR_SLOTS.map((k) => <button key={k} className={slot === k ? 'on' : ''} onClick={() => setSlot(k)} title={G.GEAR[k].n}><Ico i={SLOT_I[k]} size={16} /> {G.GEAR[k].n}</button>)}
         </div>
       )}
       {armory.length ? (
-        <div className="grid">
-          {armory.map((it) => <GearTile key={it.id} it={it} sel={sel?.id === it.id} onClick={() => setSel(it.id)}
-            mark={s.gear[it.sl] && gearScore(it) > gearScore(s.gear[it.sl]) ? 'better' : null} />)}
+        <div className="cards">
+          {armory.map((it) => (
+            <GearCard key={it.id} it={it} s={s} compare open={open === it.id} onToggle={() => toggle(it.id)}
+              tag={s.gear[it.sl] && gearScore(it) > gearScore(s.gear[it.sl]) ? 'Tốt hơn' : null}
+              right={<span className="price"><Ico i={UI_I.sell} size={13} />{fmtGold(gearSell(it))}</span>}>
+              <button className="mini buy" onClick={() => act(() => equip(s, it.id))}>Mặc vào</button>
+              <button className="mini ghost" onClick={() => act(() => sellGear(s, it.id))}><Ico i={UI_I.sell} />Bán {fmtGold(gearSell(it))}</button>
+            </GearCard>
+          ))}
         </div>
       ) : <p className="empty">{s.armory.length ? 'Không có món nào ở ô này.' : 'Kho trống. Đồ cũ thay ra sẽ được cất ở đây.'}</p>}
     </>

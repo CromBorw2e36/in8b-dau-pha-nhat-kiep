@@ -1,7 +1,7 @@
 import G from './data.js';
 import {
   R, rand, clamp, pick, priceOf, unit, beastGrade, pillNeed, give, takeBest, peekBest, countOf, earn, spend,
-  parseKey, itemName, fmtGold, fmtItems, applyFx, addQi, canAlch, winP, peer, lastEntry, mkIdx, tierFor,
+  parseKey, itemName, fmtGold, fmtItems, applyFx, addQi, canAlch, winP, peer, lastEntry, mkIdx, tierFor, fxSum,
 } from './util.js';
 import { genGear, obtainGear } from './gear.js';
 
@@ -178,7 +178,7 @@ function hunt(s, e, yrs) {
   if (R() < 0.45) { const c = 1 + Math.floor(R() * 2); give(s, 'herb', bg, c); got.push(['herb', bg, c]); }
   if (R() < 0.3) { const og = G.ORE_FOR_TIER[tierFor(s)], c = 1 + Math.floor(R() * 3); give(s, 'ore', og, c); got.push(['ore', og, c]); }
   if (got.length) e.items.push({ t: `Thu hoạch: ${fmtItems(got)}.`, k: 'dim' });
-  if (R() < 0.07 * Math.sqrt(yrs) * (0.7 + s.luck / 100)) e.items.push({ t: `Bạn nhặt được ${obtainGear(s, genGear(s))}.`, k: 'good' });
+  if (R() < 0.07 * Math.sqrt(yrs) * (0.7 + s.luck / 100) * (1 + fxSum(s, 'tambao'))) e.items.push({ t: `Bạn nhặt được ${obtainGear(s, genGear(s))}.`, k: 'good' });
 }
 
 function alchemyBatches(s, e, yrs) {

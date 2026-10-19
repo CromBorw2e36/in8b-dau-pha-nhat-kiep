@@ -1,8 +1,8 @@
 // Phần hiển thị trang bị dùng chung cho Túi, Chợ, Sàn, Lò rèn
 import G from '../game/data.js';
-import { gearName, gearStat, qualityIdx } from '../game/util.js';
+import { gearName, gearStat, qualityIdx, fxText } from '../game/util.js';
 import { gearDelta } from '../game/gear.js';
-import { Tile } from './ui.jsx';
+import { Tile, Card } from './ui.jsx';
 import { Ico, SLOT_I, STAT_I, UI_I } from './icons.jsx';
 
 export const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI'];
@@ -16,22 +16,64 @@ export function GearTile({ it, sel, onClick, foot, mark }) {
   );
 }
 
-// Các dòng chỉ số của một món, kèm so sánh với đồ đang mặc
-export function GearStats({ it, s, compare }) {
+// Các chỉ số của một món
+function statRows(it) {
   const st = gearStat(it);
-  const d = compare ? gearDelta(s, it) : 0;
-  const rows = [
+  return [
     [UI_I.cp, `+${st.cp.toFixed(1)}`, 'Chiến lực'],
-    st.def ? [UI_I.lock, `−${Math.round(st.def * 100)}%`, 'Giảm thương tổn'] : null,
-    st.qi ? [STAT_I.qi, `+${Math.round(st.qi * 100)}%`, 'Tốc độ tu luyện'] : null,
-    st.bt ? [UI_I.up, `+${(st.bt * 100).toFixed(1)}%`, 'Tỷ lệ đột phá'] : null,
+    st.def ? [UI_I.lock, `−${Math.round(st.def * 100)}%`, 'Thương tổn'] : null,
+    st.qi ? [STAT_I.qi, `+${Math.round(st.qi * 100)}%`, 'Tu luyện'] : null,
+    st.bt ? [UI_I.up, `+${(st.bt * 100).toFixed(1)}%`, 'Đột phá'] : null,
     st.dodge ? [UI_I.retire, `${Math.round(st.dodge * 100)}%`, 'Thoát hiểm'] : null,
   ].filter(Boolean);
+}
+
+// Dòng tóm tắt hiện sẵn trên thẻ: chỉ số chính, so sánh và tên các hiệu ứng pháp khí
+export function GearSummary({ it, s, compare }) {
+  const rows = statRows(it).slice(0, 2);
+  const d = compare ? gearDelta(s, it) : 0;
+  return (
+    <>
+      {rows.map(([i, v, n]) => <span key={n} className="sv"><Ico i={i} size={13} />{n} {v}</span>)}
+      {compare && Math.abs(d) >= 0.05 && <span className={'sv cmp ' + (d > 0 ? 'up' : 'down')}>{d > 0 ? '▲' : '▼'}{Math.abs(d).toFixed(1)}</span>}
+      {it.fx?.map((f) => <span key={f.id} className="fx-chip">{fxText(it, f).n}</span>)}
+    </>
+  );
+}
+
+// Đầy đủ chỉ số khi mở thẻ
+export function GearStats({ it, s, compare }) {
+  const d = compare ? gearDelta(s, it) : 0;
   return (
     <div className="stat-line">
-      <span className="muted small">{G.GEAR[it.sl].n} · {G.TIERS[it.tier]}</span>
-      {rows.map(([i, v, t]) => <span key={t} className="sv" title={t}><Ico i={i} size={14} />{v}</span>)}
-      {compare && Math.abs(d) >= 0.05 && <span className={'sv cmp ' + (d > 0 ? 'up' : 'down')} title="So với đồ đang mặc">{d > 0 ? '▲' : '▼'}{Math.abs(d).toFixed(1)}</span>}
+      <span className="muted small">{G.GEAR[it.sl].n} · {G.TIERS[it.tier]}{it.en ? ` · cường hóa +${it.en}` : ''}</span>
+      {statRows(it).map(([i, v, t]) => <span key={t} className="sv"><Ico i={i} size={14} />{t} {v}</span>)}
+      {compare && Math.abs(d) >= 0.05 && <span className={'sv cmp ' + (d > 0 ? 'up' : 'down')} title="So với đồ đang mặc">{d > 0 ? '▲' : '▼'} {Math.abs(d).toFixed(1)} chiến lực</span>}
     </div>
+  );
+}
+
+// Danh sách hiệu ứng pháp khí khi mở thẻ
+export function FxList({ it }) {
+  if (!it.fx?.length) return null;
+  return (
+    <ul className="fx-list">
+      {it.fx.map((f) => {
+        const t = fxText(it, f);
+        return <li key={f.id}><b>{t.n}</b><span className="num">{t.val}</span><small>{t.d}</small></li>;
+      })}
+    </ul>
+  );
+}
+
+// Thẻ trang bị: tóm tắt hiện sẵn, mở ra xem đủ chỉ số, hiệu ứng và nút thao tác
+export function GearCard({ it, s, open, onToggle, compare, right, tag, children }) {
+  return (
+    <Card icon={SLOT_I[it.sl]} q={qualityIdx(it)} badge={ROMAN[it.tier]} count={it.en ? `+${it.en}` : null} fx={it.fx?.length > 0}
+      title={gearName(it)} sub={<GearSummary it={it} s={s} compare={compare} />} right={right} tag={tag} open={open} onToggle={onToggle}>
+      <GearStats it={it} s={s} compare={compare} />
+      <FxList it={it} />
+      {children && <div className="c-act">{children}</div>}
+    </Card>
   );
 }
