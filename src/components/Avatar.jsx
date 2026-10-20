@@ -13,7 +13,7 @@ const AURA = (R = 0) => {
   return ['#f5efe6', '#d9ad5b', '#7c6b54', '#e2dacf'];              // Đấu Sư/Đấu Giả - Huyền Hoàng
 };
 
-const Q_COLOR = ['#b0a48f', '#50c878', '#4da6ff', '#b366ff', '#ffd700'];
+const Q_COLOR = ['#b0a48f', '#50c878', '#4da6ff', '#b366ff', '#ffd700', '#ff3355'];
 
 export default function Avatar({ s, look, size = 220, beasts = true, still = false, className = '' }) {
   const uid = useId().replace(/:/g, '');

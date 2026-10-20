@@ -158,7 +158,7 @@ function Vault({ s, act }) {
       </div>
       <div className="icon-filter">
         <button className={autoSellQ(s) < 0 ? 'on' : ''} onClick={() => act(() => setAutoSellQ(s, -1))}>Tắt</button>
-        {G.QUALITY.slice(0, -1).map((q, i) => (
+        {G.QUALITY.slice(0, -2).map((q, i) => (
           <button key={q[1]} className={autoSellQ(s) === i ? 'on' : ''} onClick={() => act(() => setAutoSellQ(s, i))}>
             <i className={'q-dot q-bg' + i} />{i ? `${q[1]} trở xuống` : q[1]}
           </button>

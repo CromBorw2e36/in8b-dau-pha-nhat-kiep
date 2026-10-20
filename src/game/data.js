@@ -154,8 +154,8 @@ G.GEAR = {
     names: ['Phong Hành Ngoa', 'Truy Vân Ngoa', 'Lôi Ảnh Ngoa', 'Tử Điện Ngoa', 'Hư Không Ngoa', 'Lăng Thiên Ngoa'] },
 };
 G.GEAR_PRICE = [0, 400, 5000, 70000, 1000000, 18000000, 150000000];
-// Phẩm chất: [hệ số, tên, trọng số xuất hiện]
-G.QUALITY = [[1, 'Thường', 70], [1.25, 'Tinh phẩm', 24], [1.6, 'Cực phẩm', 6], [2, 'Huyền bảo', 1.2], [2.6, 'Thần phẩm', 0.25]];
+// Phẩm chất: [hệ số, tên, trọng số xuất hiện]. Chí Tôn không rơi ra, chỉ đạt được bằng luyện hóa
+G.QUALITY = [[1, 'Thường', 70], [1.25, 'Tinh phẩm', 24], [1.6, 'Cực phẩm', 6], [2, 'Huyền bảo', 1.2], [2.6, 'Thần phẩm', 0.25], [3.4, 'Chí Tôn', 0]];
 G.ARMORY_MAX = 40;
 
 // ───── Hiệu ứng pháp khí ─────
@@ -175,15 +175,17 @@ G.AFFIX = [
   { id: 'homenh',     n: 'Hộ Mệnh',    base: 0.08,  fmt: 'pct', d: 'cơ hội đỡ một lần tử vong (pháp khí vỡ)' },
 ];
 // Số hiệu ứng theo phẩm chất: [tối thiểu, tối đa]
-G.AFFIX_COUNT = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 3]];
+G.AFFIX_COUNT = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 3], [10, 10]];
 G.ENHANCE_MAX = 12;
 // Tỷ lệ thành công gốc theo cấp hiện tại: +0..+5 chắc chắn, sau đó giảm dần tới +12
 G.ENHANCE_P = [1, 1, 1, 1, 1, 1, 0.85, 0.72, 0.6, 0.48, 0.36, 0.25];
 // Tẩy luyện: đổ lại các hiệu ứng chưa khóa. Giá theo giá trang bị, mỗi hiệu ứng khóa nhân thêm `lock`.
 G.REFINE = { gold: 0.08, lock: 1.8 };
 // Dung luyện: chuyển một hiệu ứng từ món phụ liệu sang món chính (phụ liệu mất đi).
-// Món chính chứa tối đa (số hiệu ứng tối đa theo phẩm chất + extra), tối thiểu 1.
-G.FUSE = { gold: 0.15, p: 0.72, extra: 1 };
+// Món chính chứa bình thường (số hiệu ứng tối đa theo phẩm chất + extra), tối thiểu 1.
+// Luyện hóa: nhồi vượt mức đó tới `max`; mỗi hiệu ứng vượt hạn giảm tỷ lệ `over` và nhân giá `overGold`.
+// Đủ `max` hiệu ứng thì món đồ hóa Chí Tôn.
+G.FUSE = { gold: 0.15, p: 0.72, extra: 1, max: 10, over: 0.05, overGold: 1.45 };
 
 // ───── Linh thú: thú cưng (đồng hành chiến đấu) và thú cưỡi (tọa kỵ) ─────
 // Nuôi bằng ma hạch tới cấp 10. fx: hiệu ứng mỗi cấp, dùng chung mã với hiệu ứng pháp khí, nhân theo bậc cảnh giới.

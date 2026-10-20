@@ -7,10 +7,11 @@ const Q_COLORS = [
   { main: '#38bdf8', glow: 'rgba(56,189,248,0.55)', edge: '#0284c7', core: '#bae6fd', name: 'Huyền' },
   { main: '#c084fc', glow: 'rgba(192,132,252,0.6)', edge: '#7e22ce', core: '#f3e8ff', name: 'Địa' },
   { main: '#fbbf24', glow: 'rgba(251,191,36,0.7)', edge: '#d97706', core: '#fef08a', name: 'Thiên' },
+  { main: '#f43f5e', glow: 'rgba(244,63,94,0.8)', edge: '#be123c', core: '#ffe4e6', name: 'Chí Tôn' },
 ];
 
 export function getQualityColor(qIdx) {
-  return Q_COLORS[Math.max(0, Math.min(4, qIdx || 0))];
+  return Q_COLORS[Math.max(0, Math.min(Q_COLORS.length - 1, qIdx || 0))];
 }
 
 // ───── 1. ĐỒ HỌA VŨ KHÍ (WEAPONS) ─────

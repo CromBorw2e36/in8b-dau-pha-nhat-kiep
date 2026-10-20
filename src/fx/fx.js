@@ -21,7 +21,7 @@ export const PAL = {
   white: ['#ffffff', '#fff3df'],
 };
 // Màu theo phẩm chất trang bị 0..4
-export const Q_PAL = [['#d8ccb4', '#a9997e'], ['#9be0c0', '#6cc39b'], ['#a8dcf6', '#5fb7e2'], ['#d6c6ff', '#b79bff'], ['#ffe6a3', '#f5c55e', '#fff3df']];
+export const Q_PAL = [['#d8ccb4', '#a9997e'], ['#9be0c0', '#6cc39b'], ['#a8dcf6', '#5fb7e2'], ['#d6c6ff', '#b79bff'], ['#ffe6a3', '#f5c55e', '#fff3df'], ['#ffb3b3', '#f43f5e', '#ffe4e6']];
 
 export function mountFx(canvas) {
   cv = canvas;

@@ -148,11 +148,20 @@ export function refineHit(it, want, min = 0, pct) {
 }
 
 // ───── Dung luyện: chuyển một hiệu ứng từ món phụ liệu sang món chính ─────
-export const fuseCap = (it) => Math.max(1, affixCap(it) + G.FUSE.extra);
-export function fuseCost(it) {
-  return { gold: Math.round(G.GEAR_PRICE[it.tier] * G.FUSE.gold), core: [Math.min(9, oreG(it.tier) + 1), 1] };
+// fuseBase: số hiệu ứng chứa bình thường; vượt mức này là luyện hóa, khó hơn và đắt hơn, tới fuseCap thì hóa Chí Tôn
+export const fuseBase = (it) => Math.max(1, affixCap(it) + G.FUSE.extra);
+export const fuseCap = () => G.FUSE.max;
+export const ASCEND_Q = G.QUALITY.length - 1;
+// Số hiệu ứng vượt hạn sau lần dung luyện này (thay thế hay cộng dồn cùng loại thì không thêm ô)
+export const fuseOver = (main, fxId, replaceId) => {
+  const fx = main.fx || [];
+  const grow = !fx.some((x) => x.id === fxId) && !fx.some((x) => x.id === replaceId) && fx.length < fuseCap();
+  return Math.max(0, fx.length + (grow ? 1 : 0) - fuseBase(main));
+};
+export function fuseCost(it, over = 0) {
+  return { gold: Math.round(G.GEAR_PRICE[it.tier] * G.FUSE.gold * Math.pow(G.FUSE.overGold, over)), core: [Math.min(9, oreG(it.tier) + 1), 1 + Math.floor(over / 3)] };
 }
-export const fuseP = (s, main, mat) => clamp(G.FUSE.p + smithLv(s) * 0.0025 + (mat.tier >= main.tier ? 0.05 : -0.12 * (main.tier - mat.tier)) + deFx(s, 'enh'), 0.15, 0.97);
+export const fuseP = (s, main, mat, over = 0) => clamp(G.FUSE.p + smithLv(s) * 0.0025 + (mat.tier >= main.tier ? 0.05 : -0.12 * (main.tier - mat.tier)) + deFx(s, 'enh') - over * G.FUSE.over, 0.15, 0.97);
 // Phụ liệu dùng được: trong túi, chưa khóa, có hiệu ứng
 export const fuseMats = (s, mainId) => s.armory.filter((it) => !it.lock && it.id !== mainId && it.fx?.length);
 // Giá trị hiệu ứng khi sang món chính: giữ nguyên độ tốt của lần tung gốc, tính lại theo bậc và phẩm chất món chính
@@ -161,7 +170,13 @@ export function fusedVal(main, mat, f) {
   const r = clamp(f.v / (a.base * mat.tier * mat.q), 0.8, 1.2);
   return affixVal(a, main, r);
 }
-// replaceId: hiệu ứng của món chính bị thay khi đã đầy
+// Đủ hiệu ứng thì hóa Chí Tôn: đổi phẩm chất, mọi hiệu ứng tính lại theo hệ số mới, giữ độ tốt
+function ascend(it) {
+  const q = G.QUALITY[ASCEND_Q][0];
+  it.fx = it.fx.map((f) => ({ id: f.id, v: f.id === 'homenh' ? Math.min(0.6, f.v * q / it.q) : f.v * q / it.q }));
+  it.q = q;
+}
+// replaceId: hiệu ứng của món chính bị thay (bỏ trống thì cộng thêm, vượt hạn là luyện hóa)
 export function fuse(s, mainId, matId, fxId, replaceId) {
   const main = findGear(s, mainId);
   const mat = s.armory.find((x) => x.id === matId);
@@ -170,19 +185,27 @@ export function fuse(s, mainId, matId, fxId, replaceId) {
   if (!smithLv(s)) return 'Cần dựng lò rèn trước.';
   main.fx ||= [];
   const same = main.fx.find((x) => x.id === fxId);
-  if (!same && main.fx.length >= fuseCap(main) && !main.fx.some((x) => x.id === replaceId)) return 'Món chính đã đầy hiệu ứng, hãy chọn hiệu ứng để thay.';
-  const c = fuseCost(main);
+  const swap = !same && main.fx.some((x) => x.id === replaceId);
+  if (!same && !swap && main.fx.length >= fuseCap()) return 'Món chính đã đầy hiệu ứng, hãy chọn hiệu ứng để thay.';
+  const over = fuseOver(main, fxId, replaceId);
+  const c = fuseCost(main, over);
   if (s.gold < c.gold || !hasMat(s, c.core, 'core')) return 'Thiếu nguyên liệu hoặc kim tệ.';
-  spend(s, 'Dung luyện trang bị', c.gold);
+  spend(s, over ? 'Luyện hóa trang bị' : 'Dung luyện trang bị', c.gold);
   takeMat(s, 'core', ...c.core);
   s.armory = s.armory.filter((x) => x !== mat);
-  if (R() >= fuseP(s, main, mat)) return { ok: false, t: `Dung luyện thất bại, ${mat.n} tan thành tro bụi.` };
+  if (R() >= fuseP(s, main, mat, over)) return { ok: false, t: `${over ? 'Luyện hóa' : 'Dung luyện'} thất bại, ${mat.n} tan thành tro bụi.` };
   const v = fusedVal(main, mat, f);
   if (same) same.v = Math.max(same.v, v);
-  else if (main.fx.length >= fuseCap(main)) main.fx = main.fx.map((x) => (x.id === replaceId ? { id: fxId, v } : x));
+  else if (swap) main.fx = main.fx.map((x) => (x.id === replaceId ? { id: fxId, v } : x));
   else main.fx.push({ id: fxId, v });
   s.stats.fused = (s.stats.fused || 0) + 1;
-  return { ok: true, t: `${gearName(main)} hấp thụ hiệu ứng ${G.AFFIX.find((a) => a.id === fxId).n}!`, fx: fxId };
+  const n = G.AFFIX.find((a) => a.id === fxId).n;
+  if (main.fx.length >= fuseCap() && qualityIdx(main) < ASCEND_Q) {
+    ascend(main);
+    s.stats.ascend = (s.stats.ascend || 0) + 1;
+    return { ok: true, ascend: true, it: main, t: `${fuseCap()} đạo hiệu ứng hợp nhất, huyết quang xung thiên! ${main.n} hóa thành ${G.QUALITY[ASCEND_Q][1]}!`, fx: fxId };
+  }
+  return { ok: true, t: `${gearName(main)} hấp thụ hiệu ứng ${n}!`, fx: fxId };
 }
 
 // ───── Xưởng binh khí quân dụng ─────

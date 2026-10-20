@@ -39,6 +39,7 @@
   --q2: #38bdf8;
   --q3: #c084fc;
   --q4: #fbbf24;
+  --q5: #f43f5e;
   --qc: var(--q0);
   /* Tên cũ giữ để tương thích */
   --paper: var(--panel);
@@ -530,16 +531,19 @@ button.realm-badge:hover { filter: brightness(1.1); box-shadow: 0 0 12px rgba(24
 .q-b2 { --qc: var(--q2); }
 .q-b3 { --qc: var(--q3); }
 .q-b4 { --qc: var(--q4); }
+.q-b5 { --qc: var(--q5); }
 .q0 { color: var(--ink); }
 .q1 { color: var(--q1); }
 .q2 { color: var(--q2); }
 .q3 { color: var(--q3); }
 .q4 { color: var(--q4); text-shadow: 0 0 12px color-mix(in srgb, var(--q4) 40%, transparent); }
+.q5 { color: var(--q5); text-shadow: 0 0 14px color-mix(in srgb, var(--q5) 55%, transparent); }
 .q-bg0 { background: var(--q0); }
 .q-bg1 { background: var(--q1); }
 .q-bg2 { background: var(--q2); }
 .q-bg3 { background: var(--q3); }
 .q-bg4 { background: var(--q4); }
+.q-bg5 { background: var(--q5); }
 
 /* ─── Thẻ vật phẩm: thông tin hiện sẵn, bấm để mở rộng tại chỗ ─── */
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
@@ -605,12 +609,13 @@ button.realm-badge:hover { filter: brightness(1.1); box-shadow: 0 0 12px rgba(24
   50% { box-shadow: 0 0 16px color-mix(in srgb, var(--qc) 75%, transparent), inset 0 0 14px color-mix(in srgb, var(--qc) 40%, transparent); }
 }
 /* Huyền bảo, Thần phẩm có hiệu ứng: vệt sáng quét qua */
-.card.aura.q-b3 .c-ico::after, .card.aura.q-b4 .c-ico::after {
+.card.aura.q-b3 .c-ico::after, .card.aura.q-b4 .c-ico::after, .card.aura.q-b5 .c-ico::after {
   content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255, 245, 220, 0.45) 50%, transparent 60%);
   animation: sheen 3.2s ease-in-out infinite; pointer-events: none;
 }
 @keyframes sheen { 0% { transform: translateX(-60%); } 55%, 100% { transform: translateX(60%); } }
 .card.aura.q-b4 { box-shadow: 0 0 0 1px color-mix(in srgb, var(--q4) 40%, transparent), 0 0 18px color-mix(in srgb, var(--q4) 18%, transparent); }
+.card.aura.q-b5 { box-shadow: 0 0 0 1px color-mix(in srgb, var(--q5) 50%, transparent), 0 0 22px color-mix(in srgb, var(--q5) 28%, transparent); }
 
 /* Bảng chi tiết */
 .detail {
@@ -1440,7 +1445,7 @@ button.mat:hover { border-color: var(--gold); }
   -webkit-mask: radial-gradient(circle, #000 15%, transparent 60%); mask: radial-gradient(circle, #000 15%, transparent 60%);
   animation: spin 18s linear infinite;
 }
-.q-b3 .anv-rays, .q-b4 .anv-rays, .q-b3 .rv-rays, .q-b4 .rv-rays { opacity: 0.3; }
+.q-b3 .anv-rays, .q-b4 .anv-rays, .q-b5 .anv-rays, .q-b3 .rv-rays, .q-b4 .rv-rays, .q-b5 .rv-rays { opacity: 0.3; }
 .anv-hammer { position: absolute !important; top: 6px; left: calc(50% + 34px); color: var(--gold); transform: rotate(-35deg); transform-origin: 20% 80%; z-index: 2; filter: drop-shadow(0 3px 4px #000); }
 .anv-item {
   width: 104px; height: 104px; display: grid; place-items: center; border-radius: 16px; color: var(--qc);
@@ -1514,6 +1519,15 @@ button.mat:hover { border-color: var(--gold); }
 .fz-fx button.pickable:hover { border-color: var(--gold); }
 .fz-fx button.on { border-color: var(--gold-hi); background: color-mix(in srgb, var(--gold) 16%, var(--panel-2)); }
 .fz-new { display: flex; justify-content: space-between; gap: 6px; padding: 5px 8px; border-radius: 8px; border: 1px dashed var(--q3); color: var(--q3); font: 700 12.5px var(--ui); animation: arm 1.2s ease-in-out infinite; }
+/* Thước luyện hóa: ô bình thường, ô vượt hạn (đỏ), đủ thì hóa Chí Tôn */
+.fz-meter { width: 100%; display: flex; align-items: center; gap: 3px; }
+.fz-meter i { flex: 1; height: 7px; border-radius: 2px; background: rgba(0, 0, 0, 0.5); border: 1px solid color-mix(in srgb, var(--q3) 30%, transparent); }
+.fz-meter i.over { border-color: color-mix(in srgb, var(--q5) 40%, transparent); }
+.fz-meter i.on { background: var(--q3); border-color: var(--q3); }
+.fz-meter i.on.over { background: linear-gradient(180deg, #fda4af, var(--q5)); border-color: var(--q5); box-shadow: 0 0 6px color-mix(in srgb, var(--q5) 55%, transparent); }
+.fz-meter.red i.on { background: var(--q5); border-color: var(--q5); }
+.fz-meter .num { font-size: 11px; margin-left: 4px; color: var(--ink-soft); }
+.btn.primary.ascend { background: linear-gradient(180deg, #fb7185, #be123c); border-color: #f43f5e; box-shadow: 0 0 16px color-mix(in srgb, var(--q5) 45%, transparent); }
 .fz-core { display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 16px; }
 .fz-swirl { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; color: var(--q3); background: radial-gradient(circle, rgba(183, 155, 255, 0.25), transparent 70%); animation: spin 5s linear infinite; }
 .fz-core b { font: 700 16px var(--ui); }
@@ -1592,6 +1606,7 @@ button.mat:hover { border-color: var(--gold); }
 .lc.item.q2 .ico { color: var(--q2); }
 .lc.item.q3 .ico { color: var(--q3); }
 .lc.item.q4 .ico { color: var(--q4); }
+.lc.item.q5 .ico { color: var(--q5); }
 
 /* ═══════════════════════════════════════════════════════════════════════
    DẠ NGUYỆT TIÊN HIỆP — bảng, ô đồ, linh thú, võ học theo nét Thiện Nữ 2
@@ -1660,7 +1675,7 @@ button.mat:hover { border-color: var(--gold); }
     linear-gradient(var(--g), var(--g)) bottom right / 7px 1.5px no-repeat,
     linear-gradient(var(--g), var(--g)) bottom right / 1.5px 7px no-repeat;
 }
-.tile.q-b3, .tile.q-b4 { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 12px 16px -10px rgba(186, 230, 253, 0.28), inset 0 -14px 18px -8px rgba(0, 0, 0, 0.65), 0 0 12px color-mix(in srgb, var(--qc) 35%, transparent); }
+.tile.q-b3, .tile.q-b4, .tile.q-b5 { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 12px 16px -10px rgba(186, 230, 253, 0.28), inset 0 -14px 18px -8px rgba(0, 0, 0, 0.65), 0 0 12px color-mix(in srgb, var(--qc) 35%, transparent); }
 .tile.dim { background: rgba(8, 20, 33, 0.6); border-color: rgba(94, 234, 212, 0.22); opacity: 0.75; }
 .tile.dim::after { --g: rgba(94, 234, 212, 0.3); }
 .tile.sel { border-color: var(--gold-hi); box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.5), 0 0 18px color-mix(in srgb, var(--qc) 55%, transparent); }

@@ -213,7 +213,7 @@ function Gear({ s, act, onOpenTab }) {
           <div className="icon-filter auto-q" title="Đồ mới vào túi thuộc mức này mà kém hơn đồ đang mặc cùng ô sẽ tự bán; đồ đã khóa thì giữ">
             <span className="muted small"><Ico i={UI_I.sell} size={14} /> Tự bán:</span>
             <button className={bagSellQ(s) < 0 ? 'on' : ''} onClick={() => act(() => setBagSellQ(s, -1))}>Tắt</button>
-            {G.QUALITY.slice(0, -1).map((q, i) => (
+            {G.QUALITY.slice(0, -2).map((q, i) => (
               <button key={q[1]} className={bagSellQ(s) === i ? 'on' : ''} onClick={() => act(() => setBagSellQ(s, i))} title={i ? `${q[1]} trở xuống` : q[1]}>
                 <i className={'q-dot q-bg' + i} />{q[1]}{i ? '↓' : ''}
               </button>

@@ -6,7 +6,7 @@ import { fmtGold, itemName, countOf, gearName, gearScore, qualityIdx, fxText } f
 import {
   smithLv, smithPlan, upgradeSmith, craftTierCap, nextTierAt, craftCost, canCraft, craft, qualityOdds,
   enhanceCost, enhanceP, enhance, armCost, armValue, armRate, fulfill, sellArms, matHave, fodderList, fodderBoost, FODDER_MAX, findGear,
-  canRefineItem, refineCost, canAffordRefine, refine, refineHit, fuseCap, fuseCost, fuseP, fuseMats, fusedVal, fuse,
+  canRefineItem, refineCost, canAffordRefine, refine, refineHit, fuseBase, fuseCap, fuseOver, fuseCost, fuseP, fuseMats, fusedVal, fuse, ASCEND_Q,
 } from '../game/forge.js';
 import { rollPct } from '../game/gear.js';
 import { troopCount } from '../game/army.js';
@@ -182,17 +182,23 @@ function Picker({ list, sel, onPick, s }) {
   );
 }
 
-// Vòng lặp tự động: gọi step mỗi nhịp cho tới khi step trả về false
+// Vòng lặp tự động: gọi step mỗi nhịp cho tới khi step trả về false hoặc bị dừng.
+// alive chặn các nhịp còn sót lại giữa lúc dừng và lúc React dọn interval
 function useAuto(step, ms) {
   const [run, setRun] = useState(false);
   const fn = useRef(step);
+  const alive = useRef(false);
   fn.current = step;
   useEffect(() => {
     if (!run) return;
-    const id = setInterval(() => { if (!fn.current()) setRun(false); }, calm() ? 16 : ms);
-    return () => clearInterval(id);
+    const id = setInterval(() => {
+      if (!alive.current) return;
+      if (!fn.current()) { alive.current = false; setRun(false); }
+    }, calm() ? 16 : ms);
+    return () => { clearInterval(id); alive.current = false; };
   }, [run]);
-  return [run, setRun];
+  const set = (v) => { alive.current = v; setRun(v); };
+  return [run, set];
 }
 const BUDGETS = [[0.25, '¼'], [0.5, '½'], [1, 'Tất cả']];
 
@@ -233,10 +239,10 @@ function Craft({ s, act }) {
             <div className="recipe-title"><Ico i={SLOT_I[sl]} size={22} /><b>{G.GEAR[sl].n} · {G.TIERS[t]}</b></div>
             <Mats s={s} act={act} gold={c.gold} mats={[{ t: 'ore', g: c.ore[0], n: c.ore[1] }, { t: 'core', g: c.core[0], n: c.core[1] }]} />
             <div className="odds-bar" title="Tỷ lệ phẩm chất">
-              {G.QUALITY.map((q, i) => <i key={q[1]} className={'q-bg' + i} style={{ width: `${odds[i] * 100}%` }} />)}
+              {G.QUALITY.map((q, i) => q[2] > 0 && <i key={q[1]} className={'q-bg' + i} style={{ width: `${odds[i] * 100}%` }} />)}
             </div>
             <div className="odds-legend">
-              {G.QUALITY.map((q, i) => <span key={q[1]} className={'q' + i} title={q[1]}><i className={'q-bg' + i} />{(odds[i] * 100).toFixed(odds[i] < 0.01 ? 1 : 0)}%</span>)}
+              {G.QUALITY.map((q, i) => q[2] > 0 && <span key={q[1]} className={'q' + i} title={q[1]}><i className={'q-bg' + i} />{(odds[i] * 100).toFixed(odds[i] < 0.01 ? 1 : 0)}%</span>)}
             </div>
             <FodderPick s={s} sel={fod} setSel={setFod} hint="đốt đồ cũ để tăng tỷ lệ phẩm chất tốt" />
           </div>
@@ -249,7 +255,8 @@ function Craft({ s, act }) {
 }
 
 // Trình diện món vừa rèn: hào quang theo phẩm chất, phẩm càng cao càng rực rỡ
-function Reveal({ it, s, onClose }) {
+// keep: món cũ được nâng phẩm (luyện hóa), không phải đồ mới rèn
+function Reveal({ it, s, onClose, keep }) {
   const tile = useRef(null);
   const q = qualityIdx(it);
   const worn = Object.values(s.gear).some((x) => x?.id === it.id);
@@ -274,8 +281,8 @@ function Reveal({ it, s, onClose }) {
         <b className={'rv-name q' + q}>{it.n}</b>
         {/* Tên và hình đã có ở trên: chỉ hiện chỉ số, so sánh và hiệu ứng */}
         <div className={'rv-info q-b' + q}>
-          {worn && <span className="c-tag info">Đã tự trang bị</span>}
-          <GearStats it={it} s={s} compare={!worn} />
+          {worn && !keep && <span className="c-tag info">Đã tự trang bị</span>}
+          <GearStats it={it} s={s} compare={!worn && !keep} />
           <FxList it={it} />
         </div>
         <button className="btn primary" autoFocus onClick={onClose}>Nhận</button>
@@ -373,7 +380,7 @@ function Enhance({ s, act, bump }) {
             <button className="btn primary grow" disabled={!can || running} onClick={() => act(() => tryN(1))}><Ico i={UI_I.craft} size={20} />Đập +{(it.en || 0) + 1}</button>
             <button className="btn grow" disabled={!can || running} onClick={() => act(() => tryN(5))}><Ico i={UI_I.dice} size={18} />Liền 5</button>
           </div>
-          <AutoBox running={running} onStart={start} onStop={() => finishAuto(false, 'Đã dừng.')} can={can} log={log}
+          <AutoBox running={running} onStart={start} onStop={() => { setRunning(false); finishAuto(false, 'Đã dừng.'); }} can={can} log={log}
             budget={budget} setBudget={setBudget}
             title={<>Đập tự động đến <b className="num">+{tgt}</b></>}>
             <div className="auto-target">
@@ -513,7 +520,7 @@ function Refine({ s, act, bump }) {
       <Mats s={s} act={act} gold={c.gold} mats={[{ t: 'ore', g: c.ore[0], n: c.ore[1], buy: c.ore[1] * 5 }]}
         extra={lk.length > 0 && <span className="mat" title="Mỗi hiệu ứng khóa làm giá tăng"><Ico i={UI_I.lock} size={14} /><span>Khóa</span><b className="num">×{(G.REFINE.lock ** lk.length).toFixed(1)}</b></span>} />
       <button className="btn primary" disabled={!can || running} onClick={once}><Ico i={UI_I.refine} size={20} />Tẩy luyện</button>
-      <AutoBox running={running} onStart={start} onStop={() => finishAuto(false, 'Đã dừng.')} can={can && want.length > 0} log={log} budget={budget} setBudget={setBudget}
+      <AutoBox running={running} onStart={start} onStop={() => { setRunning(false); finishAuto(false, 'Đã dừng.'); }} can={can && want.length > 0} log={log} budget={budget} setBudget={setBudget}
         title={want.length ? <>Tự tẩy đến khi có <b>{want.length}</b> hiệu ứng đã chọn</> : 'Chọn hiệu ứng mong muốn rồi bắt đầu'}>
         <div className="want-chips">
           {G.AFFIX.map((a) => <button key={a.id} className={'fx-pick' + (want.includes(a.id) ? ' on' : '')} disabled={running || want.length >= slots && !want.includes(a.id)} onClick={() => flipWant(a.id)} title={a.d}>{a.n}</button>)}
@@ -547,15 +554,21 @@ function Fuse({ s, act }) {
   const right = useRef(null);
   const core = useRef(null);
   const [busy, setBusy] = useState(false);
+  const [shown, setShown] = useState(null);
 
   if (!lv) return <p className="empty"><Ico i={NAV_I.forge} size={28} />Cần dựng lò rèn trước.</p>;
   if (!main) return <p className="empty">Chưa có trang bị nào.</p>;
   const f = mat?.fx?.find((x) => x.id === fxId);
   const same = f && main.fx?.some((x) => x.id === f.id);
-  const full = !same && (main.fx?.length || 0) >= fuseCap(main);
-  const c = fuseCost(main);
-  const p = mat ? fuseP(s, main, mat) : 0;
+  const nfx = main.fx?.length || 0;
+  const full = !same && nfx >= fuseCap();
+  // Vượt số ô bình thường thì cho chọn thay thế, bỏ trống là luyện hóa cộng thêm
+  const canSwap = f && !same && nfx >= fuseBase(main);
+  const over = f ? fuseOver(main, f.id, rep) : 0;
+  const c = fuseCost(main, over);
+  const p = mat ? fuseP(s, main, mat, over) : 0;
   const ready = f && (!full || main.fx.some((x) => x.id === rep)) && s.gold >= c.gold && matHave(s, 'core', c.core[0]) >= c.core[1];
+  const red = qualityIdx(main) >= ASCEND_Q;
 
   const go = () => {
     setBusy(true);
@@ -565,7 +578,8 @@ function Fuse({ s, act }) {
     setTimeout(() => {
       const r = act(() => fuse(s, main.id, mat.id, f.id, rep));
       const el = left.current;
-      if (r?.ok) { play('fuse'); setTimeout(() => play('win'), 250); burst(el, { n: 70, colors: PAL.soul, speed: 7 }); ring(el, { color: '#d6cbff', to: 150, n: 2 }); pulse(el, 1.2); }
+      if (r?.ascend) { play('gong'); flash(Q_PAL[ASCEND_Q][1], 0.6, 900); burst(el, { n: 160, colors: Q_PAL[ASCEND_Q], speed: 10 }); ring(el, { color: Q_PAL[ASCEND_Q][1], to: 260, n: 4, gap: 140 }); setTimeout(() => setShown(r.it), calm() ? 0 : 700); }
+      else if (r?.ok) { play('fuse'); setTimeout(() => play('win'), 250); burst(el, { n: 70, colors: PAL.soul, speed: 7 }); ring(el, { color: '#d6cbff', to: 150, n: 2 }); pulse(el, 1.2); }
       else if (r && typeof r !== 'string') { play('shatter'); burst(core.current, { n: 40, colors: PAL.ink, kind: 'ink', speed: 6 }); wobble(el); }
       setMat(null); setFx(null); setRep(null); setBusy(false);
     }, calm() ? 0 : 640);
@@ -592,15 +606,20 @@ function Fuse({ s, act }) {
     <>
       <div className="split">
       <div className="split-l">
-      <p className="sub-head"><Ico i={UI_I.target} size={16} />Món chính <span className="muted">giữ lại, nhận thêm hiệu ứng (tối đa {fuseCap(main)})</span></p>
+      <p className="sub-head"><Ico i={UI_I.target} size={16} />Món chính <span className="muted">giữ lại, nhận thêm hiệu ứng</span></p>
       <Picker s={s} list={all} sel={main.id} onPick={(x) => { setMain(x); setMat(null); setFx(null); setRep(null); }} />
       <div className="fuse">
         <div className="fz-side" ref={left}>
           <GearTile it={main} sel />
           <b className={'q' + qualityIdx(main)}>{main.n}</b>
-          <FxRows it={main} pick={full} on={rep} onPick={setRep}
+          <div className={'fz-meter' + (red ? ' red' : '')} title={`Bình thường chứa ${fuseBase(main)}, luyện hóa vượt hạn tới ${fuseCap()} thì hóa ${G.QUALITY[ASCEND_Q][1]}`}>
+            {Array.from({ length: fuseCap() }, (_, i) => <i key={i} className={(i < nfx ? 'on' : '') + (i >= fuseBase(main) ? ' over' : '')} />)}
+            <span className="num">{nfx}/{fuseCap()}</span>
+          </div>
+          <FxRows it={main} pick={canSwap} on={rep} onPick={(x) => setRep(rep === x ? null : x)}
             preview={f && <li className="fz-new"><span><Ico i={UI_I.fuse} size={13} /> {fxText(main, { id: f.id, v: fusedVal(main, mat, f) }).n}</span><span className="num">{fxText(main, { id: f.id, v: fusedVal(main, mat, f) }).val}</span></li>} />
           {full && f && <small className="hot">Đã đầy, chọn một hiệu ứng để thay</small>}
+          {!full && canSwap && <small className={rep ? 'muted' : 'hot'}>{rep ? 'Sẽ thay hiệu ứng đã chọn' : `Luyện hóa vượt hạn +${over}: tỷ lệ giảm, giá tăng. Hoặc chọn một hiệu ứng để thay`}</small>}
         </div>
         <div className="fz-core" ref={core}>
           <span className="fz-swirl"><Ico i={UI_I.fuse} size={34} /></span>
@@ -621,10 +640,12 @@ function Fuse({ s, act }) {
         </div>
       ) : <p className="empty">Trong túi chưa có món nào mang hiệu ứng pháp khí (đồ đã khóa không dùng làm phụ liệu).</p>}
       {mat && <Mats s={s} act={act} gold={c.gold} mats={[{ t: 'core', g: c.core[0], n: c.core[1] }]} />}
-      <button className="btn primary" disabled={!ready || busy} onClick={go}><Ico i={UI_I.fuse} size={20} />Dung luyện</button>
+      <button className={'btn primary' + (over ? ' ascend' : '')} disabled={!ready || busy} onClick={go}><Ico i={UI_I.fuse} size={20} />{over ? (nfx + 1 >= fuseCap() && !red ? `Luyện hóa ${G.QUALITY[ASCEND_Q][1]}` : 'Luyện hóa') : 'Dung luyện'}</button>
       <p className="note">Hiệu ứng chuyển sang giữ nguyên độ tốt của lần tung gốc, giá trị tính lại theo bậc và phẩm chất món chính. Phụ liệu kém bậc hơn món chính thì tỷ lệ thành công giảm. Thất bại thì phụ liệu vẫn mất.</p>
+      <p className="note">Luyện hóa: nhồi quá số ô bình thường, mỗi ô vượt hạn giảm {Math.round(G.FUSE.over * 100)}% tỷ lệ và giá ×{G.FUSE.overGold}. Gom đủ {fuseCap()} hiệu ứng thì món đồ hóa <b className={'q' + ASCEND_Q}>{G.QUALITY[ASCEND_Q][1]}</b>: hệ số phẩm chất ×{G.QUALITY[ASCEND_Q][0]}, mọi hiệu ứng mạnh thêm theo.</p>
       </div>
       </div>
+      {shown && <Reveal it={shown} s={s} keep onClose={() => setShown(null)} />}
     </>
   );
 }
