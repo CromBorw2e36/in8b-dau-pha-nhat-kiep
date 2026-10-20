@@ -4,15 +4,29 @@ import { gearName, gearStat, qualityIdx, fxText } from '../game/util.js';
 import { gearDelta, toggleLock } from '../game/gear.js';
 import { Tile, Card } from './ui.jsx';
 import { Ico, SLOT_I, STAT_I, UI_I } from './icons.jsx';
+import GearArt from './gearArt.jsx';
 
 export const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI'];
 // Phẩm của vật phẩm theo cấp/phẩm 1..9 → màu viền 0..4
 export const gradeQ = (g) => (g >= 9 ? 4 : g >= 7 ? 3 : g >= 5 ? 2 : g >= 3 ? 1 : 0);
+// Sắc độ nhãn cường hóa: thường, cao (+7), cực hạn (+12)
+export const enTone = (it) => (it.en >= G.ENHANCE_MAX ? 'en en-max' : it.en >= 7 ? 'en en-hi' : 'en');
 
 export function GearTile({ it, sel, onClick, foot, mark }) {
   return (
-    <Tile icon={SLOT_I[it.sl]} q={qualityIdx(it)} badge={ROMAN[it.tier]} count={it.en ? `+${it.en}` : null} foot={foot} mark={mark}
-      sel={sel} onClick={onClick} title={gearName(it)} />
+    <Tile
+      customArt={<GearArt it={it} size={44} />}
+      icon={SLOT_I[it.sl]}
+      q={qualityIdx(it)}
+      badge={ROMAN[it.tier]}
+      count={it.en ? `+${it.en}` : null}
+      countTone={enTone(it)}
+      foot={foot}
+      mark={mark}
+      sel={sel}
+      onClick={onClick}
+      title={gearName(it)}
+    />
   );
 }
 
@@ -69,7 +83,7 @@ export function FxList({ it }) {
 // Thẻ trang bị: tóm tắt hiện sẵn, mở ra xem đủ chỉ số, hiệu ứng và nút thao tác
 export function GearCard({ it, s, open, onToggle, compare, right, tag, tone, children }) {
   return (
-    <Card icon={SLOT_I[it.sl]} q={qualityIdx(it)} badge={ROMAN[it.tier]} count={it.en ? `+${it.en}` : null} fx={it.fx?.length > 0}
+    <Card customArt={<GearArt it={it} size={36} />} icon={SLOT_I[it.sl]} q={qualityIdx(it)} badge={ROMAN[it.tier]} count={it.en ? `+${it.en}` : null} countTone={enTone(it)} fx={it.fx?.length > 0}
       title={it.lock ? <><span className="gear-lock" title="Đã khóa"><Ico i={UI_I.lock} size={13} /></span>{gearName(it)}</> : gearName(it)} sub={<GearSummary it={it} s={s} compare={compare} />} right={right} tag={tag} tone={tone} open={open} onToggle={onToggle}>
       <GearStats it={it} s={s} compare={compare} />
       <FxList it={it} />

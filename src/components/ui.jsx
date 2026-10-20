@@ -111,12 +111,13 @@ export function Tabs({ tabs, tab, onTab }) {
 }
 
 // Ô vuông kiểu game: icon, phẩm chất (viền màu), nhãn ở góc trên, số lượng ở góc dưới
-export function Tile({ icon, q = 0, badge, count, foot, sel, onClick, dim, title, mark }) {
+// countTone: lớp phụ cho số ở góc dưới (vd. sắc độ cấp cường hóa)
+export function Tile({ icon, customArt, q = 0, badge, count, countTone, foot, sel, onClick, dim, title, mark }) {
   return (
-    <button className={`tile q-b${q}` + (sel ? ' sel' : '') + (dim ? ' dim' : '')} onClick={onClick} title={title} aria-label={title} aria-pressed={!!sel}>
-      <Ico i={icon} size={30} />
+    <button className={`tile q-b${q}` + (sel ? ' sel' : '') + (dim ? ' dim' : '') + (customArt ? ' has-art' : '')} onClick={onClick} title={title} aria-label={title} aria-pressed={!!sel}>
+      {customArt || <Ico i={icon} size={30} />}
       {badge != null && <span className="t-badge">{badge}</span>}
-      {count != null && <span className="t-count num">{count}</span>}
+      {count != null && <span className={'t-count num' + (countTone ? ' ' + countTone : '')}>{count}</span>}
       {mark && <span className={'t-mark ' + mark} />}
       {foot != null && <span className="t-foot num">{foot}</span>}
     </button>
@@ -124,14 +125,14 @@ export function Tile({ icon, q = 0, badge, count, foot, sel, onClick, dim, title
 }
 
 // Thẻ vật phẩm: hiện sẵn tên và thông tin chính, bấm vào thì mở rộng tại chỗ để xem thêm và thao tác
-export function Card({ icon, q = 0, badge, count, title, sub, right, tag, tone, open, onToggle, children, fx, dim }) {
+export function Card({ icon, customArt, q = 0, badge, count, countTone, title, sub, right, tag, tone, open, onToggle, children, fx, dim }) {
   return (
     <div className={`card q-b${q}` + (open ? ' open' : '') + (fx ? ' aura' : '') + (dim ? ' dim' : '')}>
       <button className="c-head" onClick={onToggle} aria-expanded={!!open} disabled={!onToggle}>
         <span className="c-ico">
-          <Ico i={icon} size={26} />
+          {customArt || <Ico i={icon} size={26} />}
           {badge != null && <span className="t-badge">{badge}</span>}
-          {count != null && <span className="t-count num">{count}</span>}
+          {count != null && <span className={'t-count num' + (countTone ? ' ' + countTone : '')}>{count}</span>}
         </span>
         <span className="c-main">
           <b className={'q' + q}>{title}</b>

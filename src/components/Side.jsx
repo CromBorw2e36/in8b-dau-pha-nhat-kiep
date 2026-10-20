@@ -7,6 +7,8 @@ import { outfitOf } from '../game/wardrobe.js';
 import Avatar from './Avatar.jsx';
 import { Tile } from './ui.jsx';
 import { GearTile } from './gearUi.jsx';
+import BeastArt from './beastArt.jsx';
+import { SlotFallbackArt } from './gearArt.jsx';
 import { Ico, UI_I, SLOT_I, NAV_I, FOCUS_I, BEAST_I, STAT_I } from './icons.jsx';
 
 export function SideLeft({ s, onOpen }) {
@@ -22,11 +24,21 @@ export function SideLeft({ s, onOpen }) {
       <div className="side-slots">
         {G.GEAR_SLOTS.map((k) => (s.gear[k]
           ? <GearTile key={k} it={s.gear[k]} onClick={() => onOpen('bag:gear')} />
-          : <Tile key={k} icon={SLOT_I[k]} dim title={`${G.GEAR[k].n} trống`} onClick={() => onOpen('bag:gear')} />))}
-        <Tile icon={pet ? BEAST_I[pet.id] : UI_I.beast} q={pet ? Math.min(4, Math.floor(pet.lv / 2.5)) : 0} dim={!pet} badge={pet ? `${pet.lv}` : null}
-          title={pet ? beastDef('pet', pet.id).n : 'Chưa có thú cưng'} onClick={() => onOpen('bag:beast')} />
-        <Tile icon={mount ? BEAST_I[mount.id] : UI_I.mount} q={mount ? Math.min(4, Math.floor(mount.lv / 2.5)) : 0} dim={!mount} badge={mount ? `${mount.lv}` : null}
-          title={mount ? beastDef('mount', mount.id).n : 'Chưa có thú cưỡi'} onClick={() => onOpen('bag:beast')} />
+          : <button key={k} className="tile dim" title={`${G.GEAR[k].n} trống`} onClick={() => onOpen('bag:gear')}><SlotFallbackArt sl={k} size={36} dim /></button>))}
+        {pet ? (
+          <button className="tile beast-tile-btn" onClick={() => onOpen('bag:beast')} title={beastDef('pet', pet.id).n}>
+            <BeastArt id={pet.id} kind="pet" size={38} lv={pet.lv} active />
+          </button>
+        ) : (
+          <Tile icon={UI_I.beast} dim title="Chưa có thú cưng" onClick={() => onOpen('bag:beast')} />
+        )}
+        {mount ? (
+          <button className="tile beast-tile-btn" onClick={() => onOpen('bag:beast')} title={beastDef('mount', mount.id).n}>
+            <BeastArt id={mount.id} kind="mount" size={38} lv={mount.lv} active />
+          </button>
+        ) : (
+          <Tile icon={UI_I.mount} dim title="Chưa có thú cưỡi" onClick={() => onOpen('bag:beast')} />
+        )}
       </div>
     </aside>
   );
@@ -88,7 +100,7 @@ export function SideRight({ s, onOpen, onBreak }) {
         ) : <p className="muted small">Một năm bình lặng.</p>}
       </div>
       <div className="side-quick">
-        {[['bag:gear', 'Trang bị', SLOT_I.wep], ['bag:beast', 'Linh thú', UI_I.beast], ['bag:look', 'Ngoại trang', UI_I.outfit], ['forge', 'Lò rèn', NAV_I.forge, !s.started || s.dead], ['market', 'Chợ', NAV_I.market], ['sect', 'Tông môn', NAV_I.sect, !s.started || s.dead]].map(([id, n, i, off]) => (
+        {[['bag:gear', 'Trang bị', SLOT_I.wep], ['bag:beast', 'Linh thú', UI_I.beast], ['bag:skill', 'Võ học', STAT_I.qi], ['bag:look', 'Ngoại trang', UI_I.outfit], ['forge', 'Lò rèn', NAV_I.forge, !s.started || s.dead], ['market', 'Chợ', NAV_I.market], ['sect', 'Tông môn', NAV_I.sect, !s.started || s.dead]].map(([id, n, i, off]) => (
           <button key={id} disabled={off} onClick={() => onOpen(id)}><Ico i={i} size={20} /><span>{n}</span></button>
         ))}
       </div>

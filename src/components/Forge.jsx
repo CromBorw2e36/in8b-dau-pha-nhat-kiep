@@ -14,6 +14,7 @@ import { placeBid, bidFor, itemFair } from '../game/exchange.js';
 import { save } from '../game/engine.js';
 import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy } from './ui.jsx';
 import { GearCard, GearTile, ROMAN } from './gearUi.jsx';
+import GearArt from './gearArt.jsx';
 import { Ico, ITEM_I, SLOT_I, NAV_I, UI_I, TROOP_I } from './icons.jsx';
 import { calm, pulse, wobble } from './motion.js';
 import { burst, sparks, ring, flash, Q_PAL, PAL } from '../fx/fx.js';
@@ -145,7 +146,7 @@ function Anvil({ it, stageRef, children, big }) {
       <span className="anv-rays" aria-hidden="true" />
       <span className="anv-hammer" aria-hidden="true"><Ico i={UI_I.craft} size={38} /></span>
       <div className="anv-item">
-        <Ico i={SLOT_I[it.sl]} size={big ? 72 : 60} />
+        <GearArt it={it} size={big ? 76 : 64} />
         <span className="anv-tier">{ROMAN[it.tier]}</span>
         <AnimatePresence mode="popLayout">
           <motion.span key={it.en || 0} className="anv-en num" initial={{ scale: 2.2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0, y: -10 }} transition={{ type: 'spring', stiffness: 500, damping: 20 }}>+{it.en || 0}</motion.span>
@@ -266,7 +267,7 @@ function Reveal({ it, s, onClose }) {
     <div className="reveal-ov" onClick={onClose}>
       <div className={`reveal-card q-b${q}`} onClick={(e) => e.stopPropagation()}>
         <span className="rv-rays" aria-hidden="true" />
-        <div className="rv-tile" ref={tile}><Ico i={SLOT_I[it.sl]} size={78} /><span className="anv-tier">{ROMAN[it.tier]}</span></div>
+        <div className="rv-tile" ref={tile}><GearArt it={it} size={84} /><span className="anv-tier">{ROMAN[it.tier]}</span></div>
         <p className="eyebrow">{G.QUALITY[q][1]} · {G.TIERS[it.tier]}</p>
         <b className={'rv-name q' + q}>{it.n}</b>
         <GearCard it={it} s={s} open compare={!Object.values(s.gear).some((x) => x?.id === it.id)} tag={Object.values(s.gear).some((x) => x?.id === it.id) ? 'Đã mặc' : null} />
@@ -287,7 +288,7 @@ function Enhance({ s, act, bump }) {
   const [log, setLog] = useState(null);
   const stage = useRef(null);
   const it = findGear(s, id) || list[0];
-  const tgt = Math.max((it?.en || 0) + 1, Math.min(G.ENHANCE_MAX, target ?? Math.ceil(((it?.en || 0) + 1) / 10) * 10));
+  const tgt = Math.max((it?.en || 0) + 1, Math.min(G.ENHANCE_MAX, target ?? G.ENHANCE_MAX));
   const run0 = useRef(null);
 
   const [running, setRunning] = useAuto(() => {
@@ -347,7 +348,12 @@ function Enhance({ s, act, bump }) {
       <div className="split-l">
       <Picker s={s} list={list} sel={it.id} onPick={(x) => { if (!running) { setId(x); setFod([]); setLog(null); } }} />
       <Anvil it={it} stageRef={stage} big>
-        <div className="anv-bar"><div className="lv-track thick"><i style={{ width: `${it.en || 0}%` }} /></div><span className="num">{it.en || 0}/100</span></div>
+        <div className="anv-bar">
+          <div className="en-pips" aria-label={`Cường hóa ${it.en || 0}/${G.ENHANCE_MAX}`}>
+            {Array.from({ length: G.ENHANCE_MAX }, (_, i) => <i key={i} className={(i < (it.en || 0) ? 'on' : '') + (i >= 6 ? ' risk' : '')} />)}
+          </div>
+          <span className="num">+{it.en || 0}/{G.ENHANCE_MAX}</span>
+        </div>
         <span className={'anv-p num ' + (p >= 0.8 ? 'up' : p >= 0.5 ? '' : 'down')}><Ico i={UI_I.dice} size={15} /> {Math.round(p * 100)}%</span>
       </Anvil>
       </div>
@@ -364,17 +370,16 @@ function Enhance({ s, act, bump }) {
             budget={budget} setBudget={setBudget}
             title={<>Đập tự động đến <b className="num">+{tgt}</b></>}>
             <div className="auto-target">
-              {[5, 10, 20, 50].map((d) => {
-                const v = Math.min(G.ENHANCE_MAX, (it.en || 0) + d);
-                return <button key={d} className={tgt === v ? 'on' : ''} disabled={running} onClick={() => setTarget(v)}>+{v}</button>;
-              })}
+              {[6, 9, 10, 11, 12].filter((v) => v > (it.en || 0)).map((v) => (
+                <button key={v} className={tgt === v ? 'on' : ''} disabled={running} onClick={() => setTarget(v)}>+{v}</button>
+              ))}
               <input type="range" min={(it.en || 0) + 1} max={G.ENHANCE_MAX} value={tgt} disabled={running} onChange={(e) => setTarget(+e.target.value)} aria-label="Cấp mục tiêu" />
             </div>
           </AutoBox>
         </>
       )}
       {max && <p className="note center"><Ico i={UI_I.ok} /> Đã cường hóa tới cực hạn.</p>}
-      <p className="note">Mỗi cấp +4% chỉ số chính và +1% hiệu ứng pháp khí. Dưới +10 chắc chắn thành công; thất bại chỉ mất nguyên liệu, không tụt cấp.</p>
+      <p className="note">Tối đa +{G.ENHANCE_MAX}. Mỗi cấp +10% chỉ số chính và +3% hiệu ứng pháp khí. Tới +6 chắc chắn thành công, từ +7 tỷ lệ giảm dần (+12 gốc chỉ 25%); lò rèn cấp cao và tế phẩm bù thêm. Thất bại chỉ mất nguyên liệu, không tụt cấp.</p>
       </div>
       </div>
     </>

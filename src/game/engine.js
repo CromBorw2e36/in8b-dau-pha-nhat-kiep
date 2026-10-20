@@ -2,7 +2,7 @@ import G from './data.js';
 import { EVENTS, MOMENTS, FILLERS } from './events.js';
 import {
   R, rand, pick, wpick, clamp, realm, lifeOf, unit, hasAttr, hasTrait, trait, lastEntry, focusObj,
-  canAlch, realmLabel, level, die, addQi, applyFx, snapshot, diff, genName, upgradeSkill,
+  canAlch, realmLabel, level, die, addQi, applyFx, snapshot, diff, genName,
   give, earn, pillNeed, priceOf, parseKey, fmtGold, gearSum, gearName, dodgeMult, holding, fxSum,
 } from './util.js';
 import { economy, cultivationPill, moneyLine, sellPrice } from './economy.js';
@@ -15,6 +15,7 @@ import { troopCount } from './army.js';
 import { emperorYearly, legacyYearly, readLegacy, clearLegacy, applyLegacy, unified } from './emperor.js';
 import { upYearly, dechienReady, readRebirth, clearRebirth, rebirthRoot, applyRebirth } from './upper.js';
 import { ensureBeasts, beastsYearly } from './beasts.js';
+import { ensureSkills, upgradeSkill, upgradeGong, gongMasteryMult, SKILL_CATALOG } from './skills.js';
 
 export const EV = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
 const NUM = ['', 'nhất', 'nhị', 'tam', 'tứ', 'ngũ', 'lục', 'thất', 'bát', 'cửu', 'thập'];
@@ -53,6 +54,7 @@ export function newLife() {
     gold: origin.gold, inv: {}, led: [], gear: Object.fromEntries(G.GEAR_SLOTS.map((k) => [k, null])), armory: [], estates: {}, sect: null, land: {}, war: {}, auto: { sell: true, buy: true }, salary: 0, dwelling: 0, post: [], gong: origin.wealth >= 2 ? 1 : 0, skill: 0, mastery: 0, fires: [], alch: 0, alchXp: 0,
     mkt: {}, cons: [], bids: [], ex: null, exNew: 0, smithy: { lv: 0, prod: true }, arms: 0, orders: [], army: { n: {}, armed: 0, train: 0 }, stats: {},
     beasts: { pets: [], mounts: [], pet: null, mount: null }, outfit: null,
+    skills: { gongId: 'thonap', skillId: 'toaithach', unlocked: ['thonap', 'toaithach'], mastery: { thonap: 50, toaithach: 0 } },
     faction: null, master: null, partner: null, lostPartner: null, companion: null, evil: false, fame: 0, disciples: 0, cured: false,
     parents: { alive: origin.id !== 'orphan', age: Math.round(rand(20, 34)) },
     focus: null, needFocus: false, pending: null, tmp: null,
@@ -83,6 +85,8 @@ export function newLife() {
   if (s.rebornFrom) s.log[0].items.push({ t: `Trùng sinh lần ${s.ng}: ký ức của Đấu Đế ${s.rebornFrom} sau trận Đế chiến vẫn còn trong thức hải. Căn cốt ${G.ROOTS[s.root].n.toLowerCase()}, tu luyện nhanh hơn — nhưng đại lục kiếp này cũng hiểm ác hơn.`, k: 'key' });
   if (gifts) s.log[0].items.push({ t: `Kiếp trước, Đấu Đế ${s.heirOf} để lại ngọc giản truyền thừa: ${gifts.join(', ')}. Có món phải chờ bạn đủ cảnh giới mới giải phong.`, k: 'key' });
   else if (s.heirOf) s.log[0].items.push({ t: `Trong huyết mạch bạn còn vương chút đế uy của Đấu Đế ${s.heirOf}. Phúc ấm kiếp trước theo bạn vào đời.`, k: 'good' });
+  ensureSkills(s);
+  ensureBeasts(s);
   return s;
 }
 
@@ -111,7 +115,7 @@ function qiGain(s, yrs, f, pill) {
   m *= 1 + gearSum(s, 'qi');             // bảo vật
   m *= 1 + fxSum(s, 'tulinh');           // pháp khí Tụ Linh
   m *= 1 + 0.06 * bLv(s, 'kinh');        // Tàng Kinh Các
-  m *= G.GONG_MULT[s.gong];
+  m *= G.GONG_MULT[s.gong] * gongMasteryMult(s); // công pháp và độ lĩnh ngộ
   m *= 1 + Math.min(0.75, 0.25 * s.fires.length);
   for (const id of s.traits) if (trait(id)?.qi) m *= trait(id).qi;
   m *= 1 + (s.ng || 0) * G.NG.qi;       // ký ức kiếp trước
@@ -154,11 +158,17 @@ function yearly(s, e, yrs) {
       if (s.skill === 0) { upgradeSkill(s); e.items.push({ t: 'Bạn bắt đầu tu luyện một môn đấu kỹ Hoàng giai.', k: 'good' }); }
       const was = s.mastery;
       s.mastery = Math.min(100, s.mastery + rand(8, 18));
+      if (s.skills?.skillId) {
+        s.skills.mastery[s.skills.skillId] = s.mastery;
+      }
       if (was < 100 && s.mastery >= 100) e.items.push({ t: `Đấu kỹ ${G.GRADES[s.skill]} của bạn đã luyện đến đại thành.`, k: 'good' });
     }
     // Tông môn ghi nhận người làm nhiệm vụ chăm chỉ
     if (f.id === 'nv' && s.faction && !s.evil && R() < 0.2) {
-      if (s.gong < 2 && R() < 0.4) { s.gong++; e.items.push({ t: `Nhờ điểm cống hiến, tông môn truyền cho bạn một bộ công pháp ${G.GRADES[s.gong]}.`, k: 'good' }); }
+      if (s.gong < 2 && R() < 0.4) {
+        upgradeGong(s);
+        e.items.push({ t: `Nhờ điểm cống hiến, tông môn truyền cho bạn một bộ công pháp ${G.GRADES[s.gong]}.`, k: 'good' });
+      }
       else { give(s, 'tuk', pillNeed(s), 1); e.items.push({ t: `Bạn dùng điểm cống hiến đổi lấy một viên Tụ Khí Đan ${pillNeed(s)} phẩm.`, k: 'dim' }); }
     }
   }
@@ -356,6 +366,7 @@ export function choose(s, ch) {
   if (ch.roll) applyFx(s, ch.fx);
   applyFx(s, res.fx);
   if (res.do) res.do(s);
+  ensureSkills(s); // sự kiện có thể nâng thẳng s.gong / s.skill: đồng bộ võ học đang dùng
   const text = typeof res.log === 'function' ? res.log(s) : res.log;
   if (text) e.items.push({ t: text, k: res.k || (ok === false ? 'bad' : ok ? 'good' : '') });
   if (s.post?.length) { e.items.push(...s.post); s.post = []; }
@@ -397,8 +408,8 @@ export function summary(s) {
     facts: [
       ['Tư chất', G.ROOTS[s.root].n + (s.special ? ` · ${s.special}` : '')],
       ['Thuộc tính', s.attrs.join(' · ')],
-      ['Công pháp', G.GRADES[s.gong]],
-      ['Đấu kỹ', G.GRADES[s.skill]],
+      ['Công pháp', s.skills?.gongId ? (SKILL_CATALOG.gong.find((x) => x.id === s.skills.gongId)?.n || G.GRADES[s.gong]) : G.GRADES[s.gong]],
+      ['Đấu kỹ', s.skills?.skillId ? (SKILL_CATALOG.skill.find((x) => x.id === s.skills.skillId)?.n || G.GRADES[s.skill]) : G.GRADES[s.skill]],
       ['Dị hỏa', s.fires.length ? s.fires.join(', ') : 'Không'],
       ['Luyện dược', s.alch ? `${s.alch} phẩm` : 'Không'],
       ['Thế lực', s.faction || 'Tán tu'],
@@ -437,10 +448,14 @@ export function migrate(v) {
   v.army ||= { n: {}, armed: 0, train: 0 }; v.stats ||= {};
   if (v.R >= 11 && v.deSeen == null) v.deSeen = Math.floor((v.step || 0) / 10) * 10; // không báo lại đế pháp đã có
   if (v.sect) { for (const b of G.BUILDS) v.sect.b[b.id] ??= 0; v.sect.vault ||= { inv: {}, gear: [] }; }
-  // Bản lưu cũ có chồng vượt giới hạn thì cắt về 9999
+  // Bản lưu cũ có chồng vượt giới hạn thì cắt về 999
   for (const inv of [v.inv, v.sect?.vault?.inv]) if (inv) for (const k of Object.keys(inv)) inv[k] = Math.min(inv[k], G.STACK_MAX);
+  // Cường hóa cũ tới +100 nay chỉ còn +12 (mỗi cấp mạnh hơn nên không mất sức mạnh)
+  for (const it of [...Object.values(v.gear), ...v.armory, ...(v.sect?.vault?.gear || [])]) if (it?.en > G.ENHANCE_MAX) it.en = G.ENHANCE_MAX;
+  if (v.stats.enhance > G.ENHANCE_MAX) v.stats.enhance = G.ENHANCE_MAX;
   if (v.focus === 'mon') v.focus = 'nv';
   ensureBeasts(v);
+  ensureSkills(v);
   v.outfit ??= null;
   return v;
 }

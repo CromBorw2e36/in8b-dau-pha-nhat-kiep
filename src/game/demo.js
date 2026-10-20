@@ -25,7 +25,7 @@ export function demoLife() {
   s.smithy = { lv: 47, prod: true };
   s.arms = 860;
   s.army = { n: { bo: 900, cung: 300, ky: 120, phap: 40 }, armed: 1100, train: 36 };
-  for (const sl of G.GEAR_SLOTS) s.gear[sl] = { ...genGear(s, { sl, tier: 4, q: sl === 'wep' ? 2 : 1.25 }), en: sl === 'wep' ? 27 : 8 };
+  for (const sl of G.GEAR_SLOTS) s.gear[sl] = { ...genGear(s, { sl, tier: 4, q: sl === 'wep' ? 2 : 1.25 }), en: sl === 'wep' ? 11 : 6 };
   s.armory = Array.from({ length: 7 }, (_, i) => genGear(s, { tier: 3 + (i % 3), boost: 2 }));
   give(s, 'ore', 6, 64); give(s, 'core', 7, 14); give(s, 'tuk', 7, 6); give(s, 'pha', 7, 2); give(s, 'tho', 6, 1); give(s, 'hon', 7, 3); give(s, 'herb', 6, 9);
   s.mkt = { core: 1.21, herb: 0.84, ore: 1.05, pill: 0.97, gear: 1.33, arms: 1.48 };

@@ -84,6 +84,17 @@ export function feed(s, kind, id, n = 1) {
   return { t: b.lv > lv0 ? `${d.n} lên cấp ${b.lv}!` : `${d.n} ăn ${used} khỏa ma hạch, +${gained} kinh nghiệm.`, up: b.lv > lv0 };
 }
 
+// Cộng (hoặc trừ) kinh nghiệm cho thú đang dùng, tự lên / xuống cấp. Trả về con thú hoặc null
+export function beastXp(s, kind, n) {
+  const b = activeBeast(s, kind);
+  if (!b) return null;
+  b.xp += n;
+  while (b.lv < G.BEAST_MAX && b.xp >= xpNeed(b.lv)) { b.xp -= xpNeed(b.lv); b.lv++; }
+  while (b.xp < 0 && b.lv > 1) { b.lv--; b.xp += xpNeed(b.lv); }
+  b.xp = b.lv >= G.BEAST_MAX ? 0 : Math.max(0, b.xp);
+  return b;
+}
+
 // Lớn dần theo năm tháng khi đang theo chủ
 export function beastsYearly(s, yrs) {
   if (!s.beasts) return;

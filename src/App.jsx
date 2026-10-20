@@ -7,6 +7,7 @@ import Game from './components/Game.jsx';
 import End from './components/End.jsx';
 import Intro, { introDue } from './components/Intro.jsx';
 import FxLayer from './fx/FxLayer.jsx';
+import MoonScene from './fx/MoonScene.jsx';
 import { play } from './fx/sfx.js';
 
 // Chuyển màn: mực loang từ giữa ra (clip-path), xong thì bỏ clip để không cắt các bảng nổi
@@ -46,6 +47,8 @@ export default function App() {
   const s = life.current;
   return (
     <>
+      {/* Nền 3D nằm dưới mọi nội dung; ở màn chơi thì dịu đi để chữ nhật ký dễ đọc */}
+      <MoonScene realm={s?.R || 0} dim={screen === 'game'} />
       <div className="app">
         <AnimatePresence mode="wait">
           {!intro && (

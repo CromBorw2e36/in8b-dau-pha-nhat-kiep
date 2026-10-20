@@ -16,6 +16,7 @@ Phong cách: sơn mài, mực tàu, son đỏ, vàng thếp. Chuyển động c�
 | Hạt sáng, tia lửa, xoáy, sóng xung kích, mực loang, rung màn hình, lóe sáng | `src/fx/fx.js`: `burst`, `sparks`, `vortex`, `rise`, `ink`, `ring`, `shake`, `flash` (nhận phần tử DOM hoặc `{x, y}`) |
 | Âm thanh | `play(name)` trong `src/fx/sfx.js` |
 | Cảnh toàn màn hình sau một lựa chọn | `src/components/Stage.jsx` (`Clash`, `Fate`, `Break`) |
+| Nền 3D (trăng, sao, núi, lá vàng, linh khí) | `src/fx/MoonScene.jsx` dùng three.js, tải lười bằng `import('three')`. Khoảnh khắc lớn (lên cảnh giới) dùng `animate()` của anime.js trên object `fx` (`glow`, `surge`) mà vòng lặp three đọc mỗi khung hình. Không WebGL thì dùng `QiAtmosphere.jsx`. Nằm ở `z-index: -1`, ngoài `.app`; màn chơi thêm lớp `dim`. |
 
 ## Quy tắc
 

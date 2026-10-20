@@ -58,7 +58,7 @@ export const FODDER_MAX = 5;
 export const fodderList = (s, exceptId) => s.armory.filter((it) => !it.lock && it.id !== exceptId);
 const pickFodder = (s, ids, exceptId) => fodderList(s, exceptId).filter((it) => ids.includes(it.id)).slice(0, FODDER_MAX);
 // Giá trị một món tế phẩm so với bậc đích: phẩm chất cao, bậc gần và cường hóa nhiều thì quý hơn
-const fodderPts = (it, tier) => (G.QUALITY[qualityIdx(it)][0] + (it.en || 0) / 25) * Math.min(1, it.tier / tier) ** 2;
+const fodderPts = (it, tier) => (G.QUALITY[qualityIdx(it)][0] + (it.en || 0) / 3) * Math.min(1, it.tier / tier) ** 2;
 export const fodderBoost = (s, ids, tier) => pickFodder(s, ids).reduce((a, it) => a + 0.4 * fodderPts(it, tier), 0);
 export const fodderEnh = (s, ids, it) => pickFodder(s, ids, it.id).reduce((a, x) => a + 0.04 * fodderPts(x, it.tier), 0);
 function burnFodder(s, ids, exceptId) {
@@ -82,13 +82,16 @@ export function craft(s, sl, tier, fodder = []) {
   return { t: `Lò rèn đỏ rực ba ngày ba đêm. Thành phẩm: ${obtainGear(s, it)}.`, name: gearName(it), q: qualityIdx(it), it };
 }
 
-// ───── Cường hóa +0 → +100 ─────
+// ───── Cường hóa +0 → +12 ─────
 export function enhanceCost(it) {
   const en = it.en || 0;
-  return { gold: Math.round(G.GEAR_PRICE[it.tier] * 0.05 * Math.pow(1 + en, 1.3)), ore: [oreG(it.tier), 1 + Math.floor(en / 8)] };
+  return { gold: Math.round(G.GEAR_PRICE[it.tier] * 0.06 * Math.pow(1 + en, 1.6)), ore: [oreG(it.tier), 1 + en] };
 }
-// Dưới +10 chắc chắn thành công, sau đó giảm dần; lò rèn cấp cao bù lại
-export const enhanceP = (s, it, fodder = []) => ((it.en || 0) < 10 ? 1 : clamp(1 - ((it.en || 0) - 9) * 0.011 + smithLv(s) * 0.003 + deFx(s, 'enh') + fodderEnh(s, fodder, it), 0.2, 1));
+// Tới +6 chắc chắn thành công, sau đó giảm dần theo G.ENHANCE_P; lò rèn cấp cao bù lại
+export const enhanceP = (s, it, fodder = []) => {
+  const base = G.ENHANCE_P[it.en || 0] ?? 0;
+  return base >= 1 ? 1 : clamp(base + smithLv(s) * 0.002 + deFx(s, 'enh') + fodderEnh(s, fodder, it), 0.1, 1);
+};
 export const findGear = (s, id) => Object.values(s.gear).find((x) => x?.id === id) || s.armory.find((x) => x.id === id);
 
 export function enhance(s, id, fodder = []) {

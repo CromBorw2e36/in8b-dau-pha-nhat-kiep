@@ -14,7 +14,9 @@ import { troopCount, armyPower, armyLoss } from './army.js';
 import { shock, itemFair } from './exchange.js';
 import { unified } from './emperor.js';
 import { bossPower, dechienP, upHeld, writeRebirth } from './upper.js';
-import { addBeast, owns } from './beasts.js';
+import { addBeast, owns, ensureBeasts } from './beasts.js';
+import { ensureSkills } from './skills.js';
+import { ARCS } from './arcs.js';
 
 // Vây thành bằng quân đội: chỉ tính quân và tông môn, bạn không ra trận nên không có rủi ro tính mạng
 const armySiegeP = (s) => clamp(1 / (1 + Math.exp(-(armyPower(s) + sectPower(s) + 10 - regionDef(s, region(s.tmp))) / 8)), 0.04, 0.92);
@@ -226,9 +228,52 @@ export const EVENTS = [
     text: (s) => `Sâu trong Ma Thú Sơn Mạch, một con ${beastName(s)} đang canh giữ một gốc linh dược ngàn năm.`,
     ch: [
       { t: 'Xông lên cướp linh dược', fight: 1, roll: (s) => winP(s, peer(s, 1)),
-        ok: { fx: { qi: 60, item: (s) => [['core', beastGrade(s), 1], ['herb', beastGrade(s) + 1, 2]] },
-              log: (s) => `Bạn hạ được ma thú, thu về một khỏa ma hạch cấp ${beastGrade(s)} và hai gốc linh dược ${Math.min(9, beastGrade(s) + 1)} phẩm.`, k: 'good' },
+        ok: {
+          fx: { qi: 60, item: (s) => [['core', beastGrade(s), 1], ['herb', beastGrade(s) + 1, 2]] },
+          do: (s) => {
+            ensureBeasts(s);
+            if (!s.beasts.mount && s.R >= 1 && R() < 0.25) {
+              const list = G.MOUNTS.filter((m) => s.R >= m.minR && !owns(s, 'mount', m.id));
+              if (list.length) {
+                const m = list[0];
+                addBeast(s, 'mount', m.id);
+                s.beasts.mount = m.id;
+                s.post ||= [];
+                s.post.push({ t: `Bên cạnh linh dược, bạn phát hiện một con ấu thú ${m.n} có linh tính. Bạn thu nhận và cưỡi nó làm tọa kỵ!`, k: 'key' });
+              }
+            }
+          },
+          log: (s) => `Bạn hạ được ma thú, thu về một khỏa ma hạch cấp ${beastGrade(s)} và hai gốc linh dược ${Math.min(9, beastGrade(s) + 1)} phẩm.`,
+          k: 'good',
+        },
         fail: { fx: { body: -15 }, log: 'Ma thú quá mạnh, bạn trọng thương bỏ chạy.', dieP: (s) => (s.body < 30 ? 0.15 : 0.03), die: 'Vẫn lạc dưới nanh vuốt ma thú' } },
+      {
+        t: 'Thuần phục ma thú làm tọa kỵ',
+        if: (s) => s.R >= 1 && G.MOUNTS.some((m) => s.R >= m.minR && !owns(s, 'mount', m.id)),
+        fight: 1,
+        roll: (s) => winP(s, peer(s, 1.1)),
+        ok: {
+          do: (s) => {
+            ensureBeasts(s);
+            const list = G.MOUNTS.filter((m) => s.R >= m.minR && !owns(s, 'mount', m.id));
+            const target = list[list.length - 1];
+            if (target) {
+              addBeast(s, 'mount', target.id);
+              s.beasts.mount = target.id;
+              s.tmp = target.n;
+            }
+          },
+          fx: { qi: 40, tam: 2 },
+          log: (s) => `Bạn áp chế được hung tính của ma thú, thành công thuần phục ${s.tmp || 'tọa kỵ'} làm thú cưỡi!`,
+          k: 'key',
+        },
+        fail: {
+          fx: { body: -18 },
+          log: 'Hung tính ma thú bộc phát dữ dội, phản phệ khiến bạn trọng thương bỏ chạy.',
+          dieP: (s) => (s.body < 30 ? 0.15 : 0.03),
+          die: 'Vẫn lạc dưới nanh vuốt ma thú',
+        },
+      },
       { t: 'Lặng lẽ rút lui', fx: { tam: 1 }, log: 'Bạn nín thở lùi lại. Sống sót mới là quan trọng.' },
     ],
   },
@@ -270,17 +315,17 @@ export const EVENTS = [
     ],
   },
   {
-    id: 'mount_tame', a: [14, 9999], r: [1, 11], wild: true, once: true, w: 0.5, icon: '🐺',
+    id: 'mount_tame', a: [14, 9999], r: [1, 11], wild: true, cd: 8, w: 0.5, icon: '🐺',
     if: (s) => G.MOUNTS.some((m) => s.R >= m.minR && !owns(s, 'mount', m.id)),
     prep: (s) => { const list = G.MOUNTS.filter((m) => s.R >= m.minR && !owns(s, 'mount', m.id)); s.tmp = list[list.length - 1].id; },
     title: () => 'Dã thú vô chủ',
     text: (s) => `Giữa thảo nguyên, một con ${G.MOUNTS.find((m) => m.id === s.tmp).n} hoang dã ngẩng đầu gầm vang. Nó chưa từng chịu khuất phục ai.`,
     ch: [
       { t: 'Đánh cho nó tâm phục khẩu phục', fight: 1, roll: (s) => winP(s, peer(s, 1)),
-        ok: { do: (s) => { addBeast(s, 'mount', s.tmp); s.beasts.mount = s.tmp; }, log: (s) => `Sau ba ngày vật lộn, ${G.MOUNTS.find((m) => m.id === s.tmp).n} cúi đầu nhận bạn làm chủ.`, k: 'key' },
+        ok: { do: (s) => { ensureBeasts(s); addBeast(s, 'mount', s.tmp); s.beasts.mount = s.tmp; }, log: (s) => `Sau ba ngày vật lộn, ${G.MOUNTS.find((m) => m.id === s.tmp).n} cúi đầu nhận bạn làm chủ.`, k: 'key' },
         fail: { fx: { body: -12 }, log: 'Nó hất bạn văng xa mấy trượng rồi phóng đi mất.', dieP: 0.04, die: 'Bị dã thú giẫm nát giữa thảo nguyên' } },
       { t: 'Dùng ma hạch dụ dỗ', if: (s) => countOf(s, 'core', beastGrade(s)) >= 3, roll: () => 0.55,
-        ok: { do: (s) => { feedCores(s); addBeast(s, 'mount', s.tmp); s.beasts.mount = s.tmp; }, log: (s) => `Ăn xong ba khỏa ma hạch, ${G.MOUNTS.find((m) => m.id === s.tmp).n} ngoan ngoãn để bạn leo lên lưng.`, k: 'key' },
+        ok: { do: (s) => { feedCores(s); ensureBeasts(s); addBeast(s, 'mount', s.tmp); s.beasts.mount = s.tmp; }, log: (s) => `Ăn xong ba khỏa ma hạch, ${G.MOUNTS.find((m) => m.id === s.tmp).n} ngoan ngoãn để bạn leo lên lưng.`, k: 'key' },
         fail: { do: feedCores, log: 'Nó ăn sạch ma hạch rồi bỏ chạy. Mất cả chì lẫn chài.', k: 'bad' } },
       { t: 'Để nó tự do', fx: { tam: 2 }, log: 'Bạn đứng nhìn nó lao vút về phía chân trời.' },
     ],
@@ -840,6 +885,28 @@ export const EVENTS = [
       { t: 'Khiêu chiến thần thú', fight: 1, roll: (s) => winP(s, peer(s, 6)),
         ok: { do: (s) => { s.tmp = obtainGear(s, genGear(s, { tier: 6, q: pick([1.6, 2, 2, 2.6]) })); }, fx: { fame: 4 }, log: (s) => `Thần thú gục ngã. Bạn rèn từ xương nó ra ${s.tmp}.`, k: 'key' },
         fail: { fx: { body: -35 }, log: 'Một tiếng gầm, bạn văng xa trăm trượng.', dieP: 0.15, die: 'Vẫn lạc dưới móng vuốt thần thú viễn cổ' } },
+      {
+        t: 'Thuần phục thần thú làm chí tôn tọa kỵ',
+        if: (s) => !owns(s, 'mount', 'giao'),
+        fight: 1,
+        roll: (s) => winP(s, peer(s, 7)),
+        ok: {
+          do: (s) => {
+            ensureBeasts(s);
+            addBeast(s, 'mount', 'giao');
+            s.beasts.mount = 'giao';
+          },
+          fx: { fame: 8, qi: 200 },
+          log: 'Thần thú viễn cổ cúi đầu quy phục! Thanh Lân Giao Long nhận bạn làm chủ, trở thành tọa kỵ cái thế chấn nhiếp bát hoang.',
+          k: 'key',
+        },
+        fail: {
+          fx: { body: -40 },
+          log: 'Long uy cuồng bạo xé toạc không gian, bạn bị chấn nát kinh mạch.',
+          dieP: 0.2,
+          die: 'Vẫn lạc dưới vuốt thần thú viễn cổ',
+        },
+      },
       { t: 'Không kinh động nó', fx: { tam: 1 }, log: 'Bạn lặng lẽ rời Thú Vực.' },
     ],
   },
@@ -884,6 +951,8 @@ export const EVENTS = [
       { t: 'Đóng cửa bế quan', fx: { qi: 150, tam: 2 }, log: 'Bạn bế quan, mặc cho thiên hạ đứng chờ ngoài núi.' },
     ],
   },
+  // Chuỗi nhiều hồi và kỳ ngộ gắn với trang bị, linh thú, võ học
+  ...ARCS,
 ];
 
 /* Khoảnh khắc: không có lựa chọn, chỉ ghi lại. */

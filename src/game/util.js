@@ -122,23 +122,23 @@ export function cp(s) {
 }
 
 // ───── Trang bị ─────
-// en: cấp cường hóa 0..100, mỗi cấp +4% chỉ số chính
+// en: cấp cường hóa 0..12, mỗi cấp +10% chỉ số chính
 export function gearStat(it) {
   const D = G.GEAR[it.sl];
   const en = it.en || 0;
-  const m = 1 + 0.04 * en;
+  const m = 1 + 0.1 * en;
   return {
     cp: D.cp[it.tier] * it.q * m,
-    def: Math.min(0.7, (D.def?.[it.tier] || 0) * Math.min(it.q, 1.3) * (1 + 0.01 * en)),
+    def: Math.min(0.7, (D.def?.[it.tier] || 0) * Math.min(it.q, 1.3) * (1 + 0.03 * en)),
     qi: (D.qi?.[it.tier] || 0) * it.q * m,
-    bt: (D.bt?.[it.tier] || 0) * it.q * (1 + 0.02 * en),
-    dodge: Math.min(0.6, (D.dodge?.[it.tier] || 0) * Math.min(it.q, 1.6) * (1 + 0.01 * en)),
+    bt: (D.bt?.[it.tier] || 0) * it.q * (1 + 0.05 * en),
+    dodge: Math.min(0.6, (D.dodge?.[it.tier] || 0) * Math.min(it.q, 1.6) * (1 + 0.03 * en)),
   };
 }
 export const gearSum = (s, k) => Object.values(s.gear || {}).reduce((a, it) => a + (it ? gearStat(it)[k] : 0), 0);
-export const gearScore = (it) => (it ? G.GEAR_PRICE[it.tier] * it.q * (1 + 0.06 * (it.en || 0)) * (1 + 0.15 * (it.fx?.length || 0)) : 0);
-// Tổng giá trị một hiệu ứng pháp khí trên đồ đang mặc (cường hóa tăng thêm 1% mỗi cấp)
-export const fxVal = (it, f) => { const v = f.v * (1 + 0.01 * (it.en || 0)); return f.id === 'homenh' ? Math.min(0.6, v) : v; };
+export const gearScore = (it) => (it ? G.GEAR_PRICE[it.tier] * it.q * (1 + 0.15 * (it.en || 0)) * (1 + 0.15 * (it.fx?.length || 0)) : 0);
+// Tổng giá trị một hiệu ứng pháp khí trên đồ đang mặc (cường hóa tăng thêm 3% mỗi cấp)
+export const fxVal = (it, f) => { const v = f.v * (1 + 0.03 * (it.en || 0)); return f.id === 'homenh' ? Math.min(0.6, v) : v; };
 export function fxSum(s, id) {
   let t = beastFx(s, id);
   for (const it of Object.values(s.gear || {})) if (it?.fx) for (const f of it.fx) if (f.id === id) t += fxVal(it, f);
@@ -366,12 +366,4 @@ export function fmtGold(v) {
   return v.toLocaleString('vi-VN');
 }
 
-export function upgradeSkill(s) {
-  s.skill = Math.min(4, s.skill + 1);
-  s.mastery = 0;
-  return `đấu kỹ ${G.GRADES[s.skill]}`;
-}
-export function upgradeGong(s) {
-  s.gong = Math.min(4, s.gong + 1);
-  return `công pháp ${G.GRADES[s.gong]}`;
-}
+export { upgradeSkill, upgradeGong } from './skills.js';

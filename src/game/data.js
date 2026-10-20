@@ -138,7 +138,7 @@ G.FOCUS = [
 ];
 
 // ───── Trang bị ─────
-// Bậc 1..6, 5 ô. Cường hóa +0 → +100: mỗi cấp +4% chỉ số chính.
+// Bậc 1..6, 5 ô. Cường hóa +0 → +12: mỗi cấp +10% chỉ số chính.
 G.TIERS = ['—', 'Phàm khí', 'Hoàng giai', 'Huyền giai', 'Địa giai', 'Thiên giai', 'Thánh khí'];
 G.GEAR_SLOTS = ['wep', 'arm', 'acc', 'rng', 'boo'];
 G.GEAR = {
@@ -176,7 +176,9 @@ G.AFFIX = [
 ];
 // Số hiệu ứng theo phẩm chất: [tối thiểu, tối đa]
 G.AFFIX_COUNT = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 3]];
-G.ENHANCE_MAX = 100;
+G.ENHANCE_MAX = 12;
+// Tỷ lệ thành công gốc theo cấp hiện tại: +0..+5 chắc chắn, sau đó giảm dần tới +12
+G.ENHANCE_P = [1, 1, 1, 1, 1, 1, 0.85, 0.72, 0.6, 0.48, 0.36, 0.25];
 // Tẩy luyện: đổ lại các hiệu ứng chưa khóa. Giá theo giá trang bị, mỗi hiệu ứng khóa nhân thêm `lock`.
 G.REFINE = { gold: 0.08, lock: 1.8 };
 // Dung luyện: chuyển một hiệu ứng từ món phụ liệu sang món chính (phụ liệu mất đi).
@@ -354,7 +356,7 @@ G.CONSIGN_FEE = 0.05;
 G.BID_MAX = 6; // số đơn đặt mua treo cùng lúc
 G.AUCTION_EVERY = 6; // phòng đấu giá mở phiên mỗi 6 lượt
 G.AUCTION_OPEN = 3; // mỗi phiên kéo dài 3 lượt
-G.STACK_MAX = 9999; // mỗi chồng vật phẩm cộng dồn tối đa 9999 (túi và kho tông môn)
+G.STACK_MAX = 999; // mỗi chồng vật phẩm cộng dồn tối đa 999 (túi và kho tông môn)
 // Phẩm đan dược phù hợp với từng cảnh giới
 G.PILL_NEED = [1, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 9];
 // Sinh hoạt phí mỗi năm theo cảnh giới (ăn ở, y phục, đi lại)

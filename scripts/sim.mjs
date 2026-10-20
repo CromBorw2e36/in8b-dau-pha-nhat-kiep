@@ -21,7 +21,7 @@ const { consignItem, npcList, buyListing, itemFair } = await imp('exchange.js');
 
 const N = +process.argv[2] || 300;
 const TICK_SEC = 3.2; // thời gian một lượt ở tốc độ 1×
-const st = { realm: {}, errors: 0, ages: 0, ticks: 0, events: 0, secs: 0, maxSecs: 0, sect: 0, lands: 0, wep: 0, emp: 0, smith: 0, troops: 0, en: 0, crafted: 0, maxLands: 0, deStep: 0, unify: 0 };
+const st = { realm: {}, errors: 0, ages: 0, ticks: 0, events: 0, secs: 0, maxSecs: 0, sect: 0, lands: 0, wep: 0, emp: 0, smith: 0, troops: 0, en: 0, crafted: 0, maxLands: 0, deStep: 0, unify: 0, mounts: 0, skillsUnlocked: 0, highSkills: 0 };
 const rnd = (a) => a[Math.floor(Math.random() * a.length)];
 
 for (let i = 0; i < N; i++) {
@@ -83,6 +83,11 @@ for (let i = 0; i < N; i++) {
   st.smith += s.smithy.lv;
   st.en = Math.max(st.en, s.stats.enhance || 0);
   st.crafted += s.stats.crafted || 0;
+  if (s.beasts?.mount) st.mounts++;
+  if (s.skills) {
+    st.skillsUnlocked += s.skills.unlocked.length;
+    if (s.skill >= 3) st.highSkills++;
+  }
 }
 
 const pct = (x) => ((x / N) * 100).toFixed(1) + '%';
@@ -93,4 +98,5 @@ console.log(`Tuổi thọ TB: ${Math.round(st.ages / N)} · lượt/kiếp: ${Ma
 console.log(`Thời gian/kiếp ở 1× (chưa tính lúc chọn): TB ${(st.secs / N / 60).toFixed(1)} phút, dài nhất ${(st.maxSecs / 60).toFixed(1)} phút`);
 console.log(`Khai tông: ${pct(st.sect)} · lãnh địa TB mỗi tông: ${(st.lands / Math.max(1, st.sect)).toFixed(1)} (nhiều nhất ${st.maxLands}/${G.REGIONS.length}) · bậc vũ khí TB: ${(st.wep / N).toFixed(2)}`);
 console.log(`Lò rèn TB: cấp ${(st.smith / N).toFixed(1)} · chế tạo TB ${(st.crafted / N).toFixed(1)} món · cường hóa cao nhất +${st.en} · quân TB ${Math.round(st.troops / Math.max(1, st.sect))}/tông`);
+console.log(`Tọa kỵ sở hữu: ${pct(st.mounts)} · võ học mở khóa TB: ${(st.skillsUnlocked / N).toFixed(1)}/kiếp · đạt Địa/Thiên giai: ${pct(st.highSkills)}`);
 console.log(`Đấu Đế quy ẩn: ${st.emp} · TB ${(st.deStep / Math.max(1, st.emp)).toFixed(0)} trọng sau 100 năm làm Đế · nhất thống: ${st.unify}`);
