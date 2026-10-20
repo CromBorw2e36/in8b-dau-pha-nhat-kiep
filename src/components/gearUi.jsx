@@ -84,7 +84,7 @@ export function FxList({ it }) {
 export function GearCard({ it, s, open, onToggle, compare, right, tag, tone, children }) {
   return (
     <Card customArt={<GearArt it={it} size={36} />} icon={SLOT_I[it.sl]} q={qualityIdx(it)} badge={ROMAN[it.tier]} count={it.en ? `+${it.en}` : null} countTone={enTone(it)} fx={it.fx?.length > 0}
-      title={it.lock ? <><span className="gear-lock" title="Đã khóa"><Ico i={UI_I.lock} size={13} /></span>{gearName(it)}</> : gearName(it)} sub={<GearSummary it={it} s={s} compare={compare} />} right={right} tag={tag} tone={tone} open={open} onToggle={onToggle}>
+      title={it.lock ? <><span className="gear-lock" title="Đã khóa"><Ico i={UI_I.lock} size={13} /></span>{gearName(it)}</> : gearName(it)} sub={open ? null : <GearSummary it={it} s={s} compare={compare} />} right={right} tag={tag} tone={tone} open={open} onToggle={onToggle}>
       <GearStats it={it} s={s} compare={compare} />
       <FxList it={it} />
       {children && <div className="c-act">{children}</div>}

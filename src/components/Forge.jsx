@@ -13,7 +13,7 @@ import { troopCount } from '../game/army.js';
 import { placeBid, bidFor, itemFair } from '../game/exchange.js';
 import { save } from '../game/engine.js';
 import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy } from './ui.jsx';
-import { GearCard, GearTile, ROMAN } from './gearUi.jsx';
+import { GearTile, GearStats, FxList, ROMAN } from './gearUi.jsx';
 import GearArt from './gearArt.jsx';
 import { Ico, ITEM_I, SLOT_I, NAV_I, UI_I, TROOP_I } from './icons.jsx';
 import { calm, pulse, wobble } from './motion.js';
@@ -252,6 +252,7 @@ function Craft({ s, act }) {
 function Reveal({ it, s, onClose }) {
   const tile = useRef(null);
   const q = qualityIdx(it);
+  const worn = Object.values(s.gear).some((x) => x?.id === it.id);
   useEffect(() => {
     const el = tile.current;
     if (!calm()) animate(el, { scale: [0.2, 1.15, 1], rotate: [-25, 6, 0], opacity: [0, 1], duration: 760, ease: 'outBack(1.6)' });
@@ -266,11 +267,17 @@ function Reveal({ it, s, onClose }) {
   return (
     <div className="reveal-ov" onClick={onClose}>
       <div className={`reveal-card q-b${q}`} onClick={(e) => e.stopPropagation()}>
-        <span className="rv-rays" aria-hidden="true" />
+        {/* Lớp cắt giữ tia sáng xoay trong khung, không làm bảng tràn sinh thanh cuộn */}
+        <span className="rv-clip" aria-hidden="true"><span className="rv-rays" /></span>
         <div className="rv-tile" ref={tile}><GearArt it={it} size={84} /><span className="anv-tier">{ROMAN[it.tier]}</span></div>
         <p className="eyebrow">{G.QUALITY[q][1]} · {G.TIERS[it.tier]}</p>
         <b className={'rv-name q' + q}>{it.n}</b>
-        <GearCard it={it} s={s} open compare={!Object.values(s.gear).some((x) => x?.id === it.id)} tag={Object.values(s.gear).some((x) => x?.id === it.id) ? 'Đã mặc' : null} />
+        {/* Tên và hình đã có ở trên: chỉ hiện chỉ số, so sánh và hiệu ứng */}
+        <div className={'rv-info q-b' + q}>
+          {worn && <span className="c-tag info">Đã tự trang bị</span>}
+          <GearStats it={it} s={s} compare={!worn} />
+          <FxList it={it} />
+        </div>
         <button className="btn primary" autoFocus onClick={onClose}>Nhận</button>
       </div>
     </div>

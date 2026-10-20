@@ -54,6 +54,7 @@ Bản lưu cũ luôn được nâng cấp tự động khi mở game, không c�
 - **Mỗi chồng vật phẩm tối đa 999** (trước là 9999).
 - **Nền 3D Dạ Nguyệt** (three.js): trăng rằm phát sáng, trời sao lấp lánh, ba lớp núi trong sương, lá vàng rơi lật trong không gian 3D, linh khí bay lên đổi màu theo cảnh giới; khung cảnh nghiêng nhẹ theo con trỏ. Khi lên cảnh giới, trăng bừng sáng và linh khí cuộn mạnh rồi lắng lại. Ở màn chơi nền dịu đi để dễ đọc; máy không hỗ trợ WebGL dùng lại nền 2D; bật giảm chuyển động thì nền đứng yên. three.js tải sau nên không làm chậm lần mở game.
 - **Thanh trạng thái** làm lại: ô chỉ số tô theo màu riêng, không giãn quá rộng (laptop xếp 2 × 2); tài nguyên xếp lưới thẳng hàng; tên nhân vật vàng thếp, viền dưới kim tuyến.
+- **Màn laptop thấp** (cao từ 820px trở xuống): thanh trạng thái thu gọn — chỉ số một hàng, tài nguyên 3 cột — nhường chỗ cho nhật ký; hai cột bên bớt khoảng trống. Thanh cuộn toàn game mảnh, màu vàng nhạt, không mũi tên.
 - **Con trỏ riêng**: mũi kiếm vàng thếp khi di chuột, mũi ngọc lam kèm tia sáng trên chỗ bấm được. Không còn bôi đen chữ hay kéo ảnh khi chạm giữ; ô nhập liệu vẫn chọn chữ bình thường.
 
 ### Sửa
@@ -64,6 +65,7 @@ Bản lưu cũ luôn được nâng cấp tự động khi mở game, không c�
 - Đổi sang môn bậc thấp rồi được truyền môn mới thì bị tụt bậc.
 - Thú cưng, thú cưỡi trên hình nhân không hiện; hoa văn lửa của ngoại trang thiếu màu.
 - Hàng chip «Tự bán» trong kho mất kiểu dáng.
+- Bảng trình diện đồ vừa rèn lặp tên, chiến lực và so sánh hai lần, còn bị tràn sinh thanh cuộn; thẻ đồ khi mở cũng không còn lặp dòng tóm tắt.
 - Bốn ô chỉ số (Thể chất, Linh hồn, Tâm cảnh, Khí vận) trên máy tính bị kéo quá cao; nay gọn một hàng.
 - Bảng nổi có thể bị lệch do hiệu ứng tăng tốc đồ họa để lại trên khung bảng.
 - Bảng Đế lộ bị trống nội dung.
