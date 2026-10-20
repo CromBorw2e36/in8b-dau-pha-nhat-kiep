@@ -32,6 +32,9 @@ export function demoLife() {
   s.cons = [{ id: 'c1', kind: 'item', key: 'tuk:7', n: 4, price: 260000, t: s.t }];
   s.orders = [{ id: 'o1', buyer: 'Liên quân Trung Châu', n: 400, price: 5200, due: s.t + 4 }, { id: 'o2', buyer: 'Hộ vệ Đan Tháp', n: 1200, price: 4800, due: s.t + 2 }];
   s.exNew = 2;
+  s.beasts = { pets: [{ id: 'mang', lv: 6, xp: 40 }, { id: 'ho', lv: 3, xp: 5 }], mounts: [{ id: 'su', lv: 4, xp: 12 }], pet: 'mang', mount: 'su' };
+  s.companion = 'Thôn Thiên Mãng';
+  s.outfit = 'thanh';
   s.focus = 'tong';
   s.needFocus = false;
   s.pending = null;

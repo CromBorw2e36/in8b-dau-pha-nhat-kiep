@@ -25,6 +25,8 @@ Một game mô phỏng cuộc đời (life-sim) dạng chữ, chơi trên trình
    - [Kinh tế: kim tệ, chợ, sàn giao dịch](#kinh-tế-kim-tệ-chợ-sàn-giao-dịch)
    - [Trang bị](#trang-bị)
    - [Lò rèn (Luyện Khí Phòng)](#lò-rèn-luyện-khí-phòng)
+   - [Linh thú](#linh-thú)
+   - [Ngoại trang](#ngoại-trang)
    - [Sản nghiệp](#sản-nghiệp)
    - [Tông môn](#tông-môn)
    - [Quân đội](#quân-đội)
@@ -52,9 +54,9 @@ npm run preview    # xem thử bản đã đóng gói (có service worker / chơ
 npm run sim        # giả lập 300 kiếp để kiểm tra lỗi & cân bằng (xem phần dưới)
 ```
 
-Công nghệ: **React 19** + **Vite** + **anime.js** + **react-icons** (bộ [Game Icons](https://game-icons.net), giấy phép CC BY 3.0) (vài chuyển động có chủ đích: con dấu đóng xuống, vòng mực khi đột phá, số kim tệ chạy; tự tắt khi máy bật *giảm chuyển động*). Không dùng thư viện UI hay state manager nào khác. Toàn bộ logic game là JavaScript thuần trong `src/game/`.
+Công nghệ: **React 19** + **Vite** + **anime.js** (chuỗi chuyển động: con dấu, búa rèn, cảnh giao chiến) + **motion** (chuyển màn, bảng mở/đóng, trang bị bay vào ô) + **react-icons** (bộ [Game Icons](https://game-icons.net), giấy phép CC BY 3.0). Hiệu ứng hạt (đấu khí, tia lửa, sóng xung kích) vẽ bằng một lớp canvas tự viết trong `src/fx/fx.js`; âm thanh tổng hợp bằng WebAudio trong `src/fx/sfx.js`, không cần tệp âm thanh nên vẫn chơi offline được. Mọi chuyển động tự tắt khi máy bật *giảm chuyển động*; âm thanh bật tắt bằng nút loa. Không dùng thư viện UI hay state manager nào khác. Toàn bộ logic game là JavaScript thuần trong `src/game/`.
 
-Khi chạy `npm run dev`, mở `http://localhost:5173/#demo` để vào thẳng một nhân vật hậu kỳ dựng sẵn (xem giao diện nhanh). Thêm đường dẫn để mở sẵn một bảng: `#demo/forge/craft`, `#demo/market/ex`, `#demo/sect/map`, `#demo/bag/gear`, hoặc một sự kiện: `#demo/event/hon_invasion`. Chế độ này không có trong bản build.
+Khi chạy `npm run dev`, mở `http://localhost:5173/#demo` để vào thẳng một nhân vật hậu kỳ dựng sẵn (xem giao diện nhanh). Thêm đường dẫn để mở sẵn một bảng: `#demo/forge/craft`, `#demo/market/ex`, `#demo/sect/map`, `#demo/bag/gear` (`beast`, `look`), `#demo/forge/refine` (`fuse`), một sự kiện: `#demo/event/hon_invasion` (thử cảnh diễn: `duel` giao chiến, `breakthrough` đột phá, `treasure` thiên mệnh), hoặc bia ký: `#demo/end`. Chế độ này không có trong bản build.
 
 ---
 
@@ -76,9 +78,10 @@ Khi chạy `npm run dev`, mở `http://localhost:5173/#demo` để vào thẳng 
 |---|---|
 | ❚❚ / ▶ | Tạm dừng / tiếp tục |
 | *Đang chuyên tâm* | Đổi việc đang làm |
+| 🔊 | Bật / tắt âm thanh (được ghi nhớ) |
 | 1× / 1.5× / 3× / 6× | Tốc độ thời gian (được ghi nhớ) |
-| **Túi** | Vật phẩm, trang bị đang mặc, kho binh khí |
-| **Rèn** | Chế tạo, cường hóa, xưởng binh khí quân dụng và hợp đồng |
+| **Túi** | Hành trang: nhân vật và trang bị, linh thú, ngoại trang, vật phẩm |
+| **Rèn** | Chế tạo, cường hóa (có đập tự động), tẩy luyện, dung luyện, xưởng binh khí quân dụng và hợp đồng |
 | **Chợ** | Chợ, Binh Khí Phường, Sàn giao dịch, sản nghiệp, sổ thu chi |
 | **Môn** | Công trình, quân đội, bản đồ chinh phạt |
 
@@ -86,9 +89,19 @@ Chấm đỏ trên nút báo có việc cần xem: hàng ký gửi vừa bán đ
 
 Giao diện theo phong cách **sơn mài**: nền đen nâu, viền vàng thếp, son đỏ. Hạn chế chữ: chỉ số, tài nguyên, gợi ý lựa chọn đều là icon (di chuột hoặc nhấn giữ để xem tên; bấm vào bảng chỉ số để xem giải thích đầy đủ). Vật phẩm và trang bị hiện dạng ô lưới, viền màu theo phẩm chất; bấm vào ô để xem chi tiết và thao tác.
 
-Trên máy tính (màn hình rộng từ 960px), game chia hai cột: thông tin nhân vật bên trái, nhật ký bên phải, các bảng hiện giữa màn hình. Trên điện thoại và app đã cài, bố cục dọc như cũ.
+Trên máy tính, thanh trạng thái trải ngang và nhật ký ở giữa; từ 1280px có thêm hai cột bên: **nhân vật** (hình nhân vật, các ô trang bị, linh thú, chiến lực) bên trái và **thế cục** (vòng đấu khí, tỷ lệ đột phá, thu chi năm qua, lối tắt) bên phải. Các bảng lớn (Hành trang, Lò rèn) chia hai cột: món đồ / nhân vật bên trái, thao tác bên phải. Trên điện thoại bố cục dọc như cũ. Ảnh nhân vật nhỏ cạnh tên trên thanh trạng thái mở thẳng phần trang bị.
+
+Dòng thu chi và chiến lợi phẩm trong nhật ký hiện bằng chip biểu tượng kèm số thay cho câu chữ (di chuột để xem câu đầy đủ).
 
 Trên mỗi lựa chọn có gợi ý ảnh hưởng bằng icon chỉ số kèm ▲ ▼ ±, icon xúc xắc (*may rủi*) và đầu lâu (*nguy hiểm tính mạng*). Bấm vào bảng chỉ số trên HUD để xem giải thích từng icon. Nút **Xem thông số** (hoặc phím `Esc`) tạm ẩn bảng sự kiện để bạn xem lại chỉ số trước khi chọn.
+
+Lựa chọn có tung xúc xắc hiện sẵn **tỷ lệ thành công** (icon kiếm chéo là trận giao chiến, icon xúc xắc là may rủi). Sau khi chọn, game diễn một cảnh ngắn rồi mới hiện kết quả (chạm để bỏ qua):
+
+- **Giao chiến**: hai bên lao vào nhau, ba lần va chạm có số sát thương, bên thua bị đánh văng.
+- **Thiên mệnh**: vòng xoay có phần vàng đúng bằng tỷ lệ thành công, kim dừng ở đâu là số phận ở đó.
+- **Xung kích cảnh giới**: đấu khí cuộn xoáy vào giữa rồi bùng nổ và viết tên cảnh giới mới; thất bại thì vết nứt lan ra và vỡ.
+
+Màn mở đầu (giọt mực, núi non, tên game viết bằng nét bút) chiếu một lần mỗi phiên; chạm để bỏ qua.
 
 ---
 
@@ -208,7 +221,7 @@ Có 5 ô trang bị, xem ở **Túi → Trang bị**:
 | Kim Quang | Tự sinh kim tệ mỗi năm |
 | Hộ Mệnh | Có tỷ lệ (tối đa 60%) đỡ một lần tử vong, rồi hiệu ứng vỡ mất. Không cứu được khi hết thọ nguyên. |
 
-- Vật phẩm và trang bị hiện dạng **thẻ**: icon, tên theo màu phẩm chất, chỉ số chính, tên hiệu ứng và giá có sẵn trên thẻ. Bấm vào thẻ để mở rộng tại chỗ, xem đầy đủ và thao tác.
+- **Túi → Trang bị** hiện hình nhân vật ở giữa, các ô trang bị xếp quanh người (vũ khí đeo sau lưng, màu theo phẩm chất). Kho đồ là lưới ô; bấm một ô để xem chỉ số, so sánh và thao tác, bấm **Mặc vào** thì món đồ bay vào ô tương ứng.
 - Món mới tốt hơn sẽ **tự trang bị**, đồ cũ vào **kho** (tối đa 40 món, kho đầy thì tự bán món kém nhất). Kho có lọc theo ô, mỗi món hiện chênh lệch chiến lực so với đồ đang mặc, và nút **Bán đồ kém hơn**.
 
 ### Lò rèn (Luyện Khí Phòng)
@@ -216,12 +229,38 @@ Có 5 ô trang bị, xem ở **Túi → Trang bị**:
 Mở bằng nút **Lò rèn**. Dựng lò rồi nâng cấp tới **cấp 100**.
 
 - **Chế tạo**: chọn ô và bậc, tốn kim tệ, Huyền thiết và một khỏa ma hạch. Lò cấp 15 mở Hoàng giai, 30 Huyền giai, 45 Địa giai, 60 Thiên giai, 75 Thánh khí (không vượt quá bậc hợp cảnh giới +1). Cấp lò, dị hỏa và linh hồn càng cao thì càng dễ ra Huyền bảo, Thần phẩm. Bảng hiện sẵn tỷ lệ từng phẩm chất.
-- **Cường hóa**: dưới +10 chắc chắn thành công, sau đó tỷ lệ giảm dần (thấp nhất 20%), lò cấp cao bù lại. Thất bại chỉ mất nguyên liệu, không tụt cấp.
+- **Cường hóa**: dưới +10 chắc chắn thành công, sau đó tỷ lệ giảm dần (thấp nhất 20%), lò cấp cao bù lại. Thất bại chỉ mất nguyên liệu, không tụt cấp. Món đồ đặt trên đe, mỗi nhát búa bắn tia lửa. **Đập tự động**: chọn cấp mục tiêu và ngân sách (¼, ½ hoặc toàn bộ kim tệ đang có), game đập liên tục tới khi đạt cấp, hết ngân sách hoặc hết nguyên liệu.
+- **Tẩy luyện**: đổ lại ngẫu nhiên các hiệu ứng pháp khí của một món (cả loại lẫn giá trị). Khóa những hiệu ứng muốn giữ, mỗi hiệu ứng khóa làm giá ×1,8. Thanh màu cạnh mỗi hiệu ứng là **độ tốt** của lần tung (80% → 120% giá trị chuẩn). **Tẩy tự động**: chọn các hiệu ứng mong muốn, độ tốt tối thiểu và ngân sách; game tẩy tới khi món đồ có đủ.
+- **Dung luyện**: chuyển một hiệu ứng từ món phụ liệu sang món chính; phụ liệu tan biến. Hiệu ứng giữ nguyên độ tốt gốc, giá trị tính lại theo bậc và phẩm chất món chính. Món chính chứa được nhiều hơn mức thường một hiệu ứng (đồ Thường cũng có thể mang 1 hiệu ứng); khi đầy thì chọn hiệu ứng bị thay. Tỷ lệ thành công khoảng 72%, lò cấp cao tăng thêm, phụ liệu kém bậc thì giảm. Thất bại thì phụ liệu vẫn mất.
+- Món vừa rèn được **trình diện** giữa màn hình, hào quang theo phẩm chất (Thần phẩm lóe sáng cả màn hình).
 - **Xưởng quân dụng**: mỗi năm sản xuất 4 bộ binh khí × cấp lò (dùng tối đa 1/4 số kim tệ đang có). Binh khí dùng để:
   - giao **hợp đồng quân đội** (Dong Binh Công Hội, cấm quân Gia Mã, Liên quân Trung Châu, Chiến đoàn Cổ tộc…), giá 1,6–2,5 lần giá vốn;
   - bán cho thương nhân bất cứ lúc nào;
   - tự động phát cho binh sĩ của bạn (quân có binh khí mạnh hơn 60%).
 - Huyền thiết có từ lịch luyện, Chợ, Sàn, Ma tinh khoáng mạch, vùng có mỏ (Tháp Qua Nhĩ, Thạch tộc) và sự kiện *mạch Huyền thiết*.
+
+### Linh thú
+
+**Túi → Linh thú**. Mỗi lúc mang theo một **thú cưng** và cưỡi một **thú cưỡi**; con đang theo cộng hiệu ứng cho bạn và hiện bên cạnh hình nhân vật.
+
+| Thú cưng | Hiệu ứng mỗi cấp | | Thú cưỡi | Hiệu ứng mỗi cấp |
+|---|---|---|---|---|
+| Tiểu Hỏa Hồ | chiến lực | | Truy Phong Lang | thoát hiểm, chiến lực |
+| Nguyệt Linh Thố | khí vận, tầm bảo | | Liệt Hỏa Câu | thoát hiểm, tầm bảo |
+| Tử Tinh Ưng | tầm bảo, chiến lực | | Tử Tinh Dực Sư | thoát hiểm, chiến lực |
+| Huyền Vũ Quy | hồi thể, thọ nguyên | | Kim Sí Đại Bằng | thoát hiểm, tầm bảo |
+| Thôn Thiên Mãng | chiến lực lớn | | Thanh Lân Giao Long | thoát hiểm, chiến lực lớn |
+| Bạch Ngọc Kỳ Lân | tỷ lệ đột phá, khí vận | | | |
+
+- **Có được**: cứu ma thú nhỏ khi lịch luyện (sự kiện cũ, nay tạo thú cưng thật), thuần phục dã thú trên thảo nguyên (sự kiện *Dã thú vô chủ*: đánh cho phục hoặc dụ bằng ma hạch), hoặc mua ở thú lan (giá theo ma hạch cùng cấp, có yêu cầu cảnh giới).
+- **Lên cấp 1 → 10**: cho ăn ma hạch (phẩm càng cao càng nhiều kinh nghiệm) và tự lớn dần theo năm tháng khi đang theo chủ. Chiến lực, hồi phục, thọ nguyên lớn theo bậc cảnh giới; tỷ lệ % thì không.
+- Thoát hiểm của thú cưỡi cộng với chiến ngoa, xác suất tử nạn giảm tối đa còn 20%.
+
+### Ngoại trang
+
+**Túi → Ngoại trang**. Chỉ đổi dáng vẻ nhân vật (màu áo, viền, đai, áo choàng, mũ miện, mạng che, hoa văn lửa), không cộng chỉ số. Bộ nào đã mở thì **giữ mãi qua mọi kiếp** (lưu riêng như thành tựu, có trong mã sao lưu).
+
+Hai bộ có sẵn (Áo vải thô, Thanh sam thư sinh); các bộ khác mở khi đạt cột mốc trong một kiếp: Đấu Sư (Hắc bào thiếu niên), luyện dược 3 phẩm (Đan sư bào), chiếm 3 vùng đất (Huyết chiến giáp), ma đạo (Ma đạo hắc bào), khai tông (Tông chủ bào), 3 dị hỏa (Viêm đế bào), Đấu Đế (Đế bào cửu long). Tuyết y và Huyết chiến giáp có thể may bằng kim tệ.
 
 ### Sản nghiệp
 
@@ -325,7 +364,7 @@ Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường 
 
 ## Lưu trữ & sao lưu
 
-- Game tự lưu sau mỗi lượt vào `localStorage` của trình duyệt. Khóa `dpnk_save` là kiếp đang chơi, `dpnk_book` là Sổ luân hồi, `dpnk_ach` là thành tựu, `dpnk_speed` là tốc độ, `dpnk_feed` là chế độ xem nhật ký.
+- Game tự lưu sau mỗi lượt vào `localStorage` của trình duyệt. Khóa `dpnk_save` là kiếp đang chơi, `dpnk_book` là Sổ luân hồi, `dpnk_ach` là thành tựu, `dpnk_speed` là tốc độ, `dpnk_feed` là chế độ xem nhật ký, `dpnk_wardrobe` là các bộ ngoại trang đã mở, `dpnk_sfx` là bật/tắt âm thanh. Màn mở đầu đánh dấu đã xem bằng `dpnk_intro` trong `sessionStorage`.
 - Bản lưu cũ được nâng cấp tự động khi có tính năng mới (hàm `migrate` trong [`engine.js`](src/game/engine.js)).
 - **Sao lưu / chuyển máy**: ở trang chủ có mục sao lưu, xuất ra một mã dạng `DPNK1.z…` (JSON nén gzip, mã hóa base64). Bạn có thể copy mã, tải về file `.txt`, rồi dán vào máy khác để khôi phục. Sổ luân hồi được gộp, không trùng lặp.
 
@@ -354,12 +393,20 @@ Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường 
     ├── App.jsx              # điều hướng màn hình: start → birth → game → end
     ├── pwa.js               # đăng ký service worker, nút "cài ứng dụng"
     ├── styles.css           # toàn bộ giao diện (biến màu sáng/tối ở :root)
+    ├── fx/
+    │   ├── fx.js            # lớp hạt canvas: burst, sparks, vortex, rise, ink, ring, shake, flash
+    │   ├── FxLayer.jsx      # canvas phủ toàn màn hình, gắn một lần ở App
+    │   └── sfx.js           # âm thanh tổng hợp bằng WebAudio, nút bật/tắt
     ├── components/
+    │   ├── Intro.jsx        # màn mở đầu (một lần mỗi phiên)
     │   ├── Start.jsx        # trang chủ, Sổ luân hồi, thành tựu, bảng cảnh giới
-    │   ├── Birth.jsx        # màn sinh ra, đầu thai lại
+    │   ├── Birth.jsx        # màn sinh ra: tư chất quay số, thiên phú lật bài, đầu thai lại
     │   ├── Game.jsx         # màn chính: HUD, nhật ký, điều khiển, bảng sự kiện, thông báo nổi
-    │   ├── Bag.jsx          # túi đồ, trang bị, kho binh khí
-    │   ├── Forge.jsx        # lò rèn: chế tạo, cường hóa, xưởng quân dụng
+    │   ├── Stage.jsx        # cảnh diễn toàn màn hình: giao chiến, thiên mệnh, xung kích cảnh giới
+    │   ├── Side.jsx         # hai cột bên trên máy tính rộng: nhân vật, thế cục
+    │   ├── Avatar.jsx       # hình nhân vật SVG nhiều lớp theo ngoại trang, vũ khí, cảnh giới, linh thú
+    │   ├── Bag.jsx          # hành trang: nhân vật và trang bị, linh thú, ngoại trang, vật phẩm
+    │   ├── Forge.jsx        # lò rèn: chế tạo, cường hóa, tẩy luyện, dung luyện, xưởng quân dụng
     │   ├── Market.jsx       # chợ, sàn giao dịch, sản nghiệp, thu chi
     │   ├── Sect.jsx         # tông môn, công trình, quân đội, bản đồ
     │   ├── WorldMap.jsx     # sa bàn: kéo, phóng to, thành trì, thẻ vùng đất
@@ -367,7 +414,7 @@ Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường 
     │   ├── End.jsx          # bia ký cuối đời
     │   ├── Backup.jsx       # sao lưu / khôi phục
     │   ├── ui.jsx           # Bar, Sheet, Tabs, LevelBuy, GearRow, Toasts, LifeChart…
-    │   ├── motion.js        # chuyển động bằng anime.js
+    │   ├── motion.js        # nhịp chuyển động chung và các hàm anime.js (đóng dấu, vẽ nét, số chạy…)
     │   ├── icons.jsx        # bảng icon dùng chung (Game Icons qua react-icons)
     │   ├── gearUi.jsx       # thẻ trang bị, chỉ số, hiệu ứng pháp khí dùng chung
     │   └── glyphs.jsx       # chữ trên con dấu son
@@ -377,7 +424,9 @@ Màn **Bia ký** gồm: danh hiệu (Phàm nhân giữa hồng trần, Cường 
         ├── events.js        # sự kiện có lựa chọn, khoảnh khắc, câu độn
         ├── economy.js       # chợ, đan dược, săn bắn, luyện đan, bảng nhiệm vụ, thu chi
         ├── gear.js          # trang bị, binh khí phường, sản nghiệp
-        ├── forge.js         # lò rèn, chế tạo, cường hóa, binh khí quân dụng, hợp đồng
+        ├── forge.js         # lò rèn, chế tạo, cường hóa, tẩy luyện, dung luyện, binh khí quân dụng, hợp đồng
+        ├── beasts.js        # linh thú: mua, cho ăn, lên cấp, mang theo
+        ├── wardrobe.js      # ngoại trang: mở khóa qua mọi kiếp, may, thay
         ├── army.js          # quân đội: chiêu mộ, huấn luyện, quân lương, tổn thất
         ├── exchange.js      # giá thị trường, ký gửi, hàng trên sàn
         ├── sect.js          # tông môn, công trình, lãnh địa, chinh phạt, phòng thủ
@@ -440,7 +489,7 @@ Thêm một object vào mảng `EVENTS` trong [`src/game/events.js`](src/game/ev
   text: (s) => 'Mô tả tình huống.',
   ch: [
     { t: 'Lựa chọn chắc chắn', fx: { tam: 3 }, log: 'Kết quả.' },
-    { t: 'Lựa chọn may rủi', roll: (s) => winP(s, peer(s, 1)),   // xác suất thành công 0..1
+    { t: 'Lựa chọn may rủi', fight: 1, roll: (s) => winP(s, peer(s, 1)),   // xác suất thành công 0..1; fight: diễn cảnh giao chiến thay cho vòng thiên mệnh
       ok:   { fx: { qi: 60, fame: 1 }, log: 'Thành công!', k: 'good' },
       fail: { fx: { body: -12 }, log: 'Thất bại.', dieP: 0.05, die: 'Nguyên nhân tử vong' } },
   ],

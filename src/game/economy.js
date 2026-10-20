@@ -166,7 +166,8 @@ export function moneyLine(s) {
   const interesting = s.led.some(([l, amt]) => amt !== 0 && !BORING.has(l));
   if (!interesting) return null;
   const { income, expense } = ledgerSummary(s.led);
-  return `Thu ${fmtGold(income)} · Chi ${fmtGold(expense)} · Còn ${fmtGold(s.gold)} kim tệ`;
+  // m: số liệu để giao diện vẽ thành chip, t: dạng chữ cho bản lưu cũ và tìm kiếm
+  return { t: `Thu ${fmtGold(income)} · Chi ${fmtGold(expense)} · Còn ${fmtGold(s.gold)} kim tệ`, m: [Math.round(income), Math.round(expense), Math.round(s.gold)] };
 }
 
 function hunt(s, e, yrs) {
@@ -178,7 +179,7 @@ function hunt(s, e, yrs) {
   for (const [g, c] of Object.entries(cores)) { give(s, 'core', +g, c); got.push(['core', +g, c]); }
   if (R() < 0.45) { const c = 1 + Math.floor(R() * 2); give(s, 'herb', bg, c); got.push(['herb', bg, c]); }
   if (R() < 0.3) { const og = G.ORE_FOR_TIER[tierFor(s)], c = 1 + Math.floor(R() * 3); give(s, 'ore', og, c); got.push(['ore', og, c]); }
-  if (got.length) e.items.push({ t: `Thu hoạch: ${fmtItems(got)}.`, k: 'dim' });
+  if (got.length) e.items.push({ t: `Thu hoạch: ${fmtItems(got)}.`, k: 'dim', loot: got });
   if (R() < 0.07 * Math.sqrt(yrs) * (0.7 + s.luck / 100) * (1 + fxSum(s, 'tambao'))) e.items.push({ t: `Bạn nhặt được ${obtainGear(s, genGear(s))}.`, k: 'good' });
 }
 

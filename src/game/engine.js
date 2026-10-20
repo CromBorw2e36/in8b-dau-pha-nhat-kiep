@@ -14,6 +14,7 @@ import { auctionTick } from './auction.js';
 import { troopCount } from './army.js';
 import { emperorYearly, legacyYearly, readLegacy, clearLegacy, applyLegacy, unified } from './emperor.js';
 import { upYearly, dechienReady, readRebirth, clearRebirth, rebirthRoot, applyRebirth } from './upper.js';
+import { ensureBeasts, beastsYearly } from './beasts.js';
 
 export const EV = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
 const NUM = ['', 'nhất', 'nhị', 'tam', 'tứ', 'ngũ', 'lục', 'thất', 'bát', 'cửu', 'thập'];
@@ -51,6 +52,7 @@ export function newLife() {
     body: clamp(50 + rand(-8, 8)), soul: clamp(40 + rand(-10, 10)), tam: clamp(50 + rand(-8, 8)), luck: clamp(45 + rand(-15, 15)),
     gold: origin.gold, inv: {}, led: [], gear: Object.fromEntries(G.GEAR_SLOTS.map((k) => [k, null])), armory: [], estates: {}, sect: null, land: {}, war: {}, auto: { sell: true, buy: true }, salary: 0, dwelling: 0, post: [], gong: origin.wealth >= 2 ? 1 : 0, skill: 0, mastery: 0, fires: [], alch: 0, alchXp: 0,
     mkt: {}, cons: [], bids: [], ex: null, exNew: 0, smithy: { lv: 0, prod: true }, arms: 0, orders: [], army: { n: {}, armed: 0, train: 0 }, stats: {},
+    beasts: { pets: [], mounts: [], pet: null, mount: null }, outfit: null,
     faction: null, master: null, partner: null, lostPartner: null, companion: null, evil: false, fame: 0, disciples: 0, cured: false,
     parents: { alive: origin.id !== 'orphan', age: Math.round(rand(20, 34)) },
     focus: null, needFocus: false, pending: null, tmp: null,
@@ -167,6 +169,7 @@ function yearly(s, e, yrs) {
 
   marketTick(s, yrs);
   artifactYearly(s, yrs);
+  beastsYearly(s, yrs);
   estatesYearly(s, e, yrs);
   sectYearly(s, e, yrs, f);
   smithYearly(s, e, yrs);
@@ -304,7 +307,7 @@ export function tick(s) {
 
   if (!e.items.length && !s.pending) e.items.push({ t: pick(FILLERS[s.started ? s.focus || 'tu' : 'baby']), k: 'dim' });
   const ml = moneyLine(s);
-  if (ml) e.items.push({ t: ml, k: 'money' });
+  if (ml) e.items.push({ ...ml, k: 'money' });
   s.hist.push([s.age, level(s)]);
 }
 
@@ -337,13 +340,16 @@ export function hints(ch) {
   };
 }
 
+// Tỷ lệ thành công thực của một lựa chọn có tung xúc xắc (giao diện hiện đúng con số này)
+export const rollP = (s, ch) => (ch.roll ? clamp(ch.roll(s) + (hasTrait(s, 'lucky') ? 0.04 : 0), 0.03, 0.97) : null);
+
 export function choose(s, ch) {
   const e = lastEntry(s);
   const before = snapshot(s);
   let res = ch;
   let ok = null;
   if (ch.roll) {
-    ok = R() < clamp(ch.roll(s) + (hasTrait(s, 'lucky') ? 0.04 : 0), 0.03, 0.97);
+    ok = R() < rollP(s, ch);
     res = ok ? ch.ok : ch.fail;
   }
   s.pending = null;
@@ -434,6 +440,8 @@ export function migrate(v) {
   // Bản lưu cũ có chồng vượt giới hạn thì cắt về 9999
   for (const inv of [v.inv, v.sect?.vault?.inv]) if (inv) for (const k of Object.keys(inv)) inv[k] = Math.min(inv[k], G.STACK_MAX);
   if (v.focus === 'mon') v.focus = 'nv';
+  ensureBeasts(v);
+  v.outfit ??= null;
   return v;
 }
 export function load() {

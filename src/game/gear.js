@@ -17,14 +17,28 @@ export function rollAffixes(it) {
   const qi = G.QUALITY.findIndex((x) => x[0] === it.q);
   const [lo, hi] = G.AFFIX_COUNT[Math.max(0, qi)];
   const n = lo + Math.floor(R() * (hi - lo + 1)) + (qi === 0 && R() < 0.08 ? 1 : 0);
-  const pool = [...G.AFFIX];
+  return rollFresh(it, n, []);
+}
+// Giá trị một hiệu ứng: theo bậc và phẩm chất, dao động 80%..120%
+export function affixVal(a, it, r = 0.8 + R() * 0.4) {
+  const v = a.base * it.tier * it.q * r;
+  return a.id === 'homenh' ? Math.min(0.6, v) : v;
+}
+// Tung n hiệu ứng mới, không trùng các mã trong `keep`
+export function rollFresh(it, n, keep) {
+  const pool = G.AFFIX.filter((a) => !keep.includes(a.id));
   const out = [];
   for (let i = 0; i < n && pool.length; i++) {
     const a = pool.splice(Math.floor(R() * pool.length), 1)[0];
-    const v = a.base * it.tier * it.q * (0.8 + R() * 0.4);
-    out.push({ id: a.id, v: a.id === 'homenh' ? Math.min(0.6, v) : v });
+    out.push({ id: a.id, v: affixVal(a, it) });
   }
   return out;
+}
+// Độ tốt của một lần tung: 0 (80%) .. 1 (120%)
+export function rollPct(it, f) {
+  const a = G.AFFIX.find((x) => x.id === f.id);
+  if (f.id === 'homenh' && f.v >= 0.6) return 1;
+  return clamp((f.v / (a.base * it.tier * it.q) - 0.8) / 0.4, 0, 1);
 }
 
 export const gearSell = (it) => Math.round(gearScore(it) * 0.6);

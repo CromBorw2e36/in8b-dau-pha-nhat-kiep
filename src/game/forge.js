@@ -1,6 +1,6 @@
 import G from './data.js';
 import { R, rand, pick, clamp, unit, earn, spend, give, countOf, tierFor, gearName, fmtGold, itemName, levelPlan, mkIdx, qualityIdx } from './util.js';
-import { genGear, obtainGear } from './gear.js';
+import { genGear, obtainGear, rollFresh, affixVal } from './gear.js';
 import { vaultCount, takeFromVault } from './vault.js';
 import { deFx } from './emperor.js';
 
@@ -79,7 +79,7 @@ export function craft(s, sl, tier, fodder = []) {
   s.stats.crafted = (s.stats.crafted || 0) + 1;
   if (it.q >= 2) s.stats.legend = (s.stats.legend || 0) + 1;
   // name/q: giao diện tô màu tên món theo phẩm chất
-  return { t: `Lò rèn đỏ rực ba ngày ba đêm. Thành phẩm: ${obtainGear(s, it)}.`, name: gearName(it), q: qualityIdx(it) };
+  return { t: `Lò rèn đỏ rực ba ngày ba đêm. Thành phẩm: ${obtainGear(s, it)}.`, name: gearName(it), q: qualityIdx(it), it };
 }
 
 // ───── Cường hóa +0 → +100 ─────
@@ -107,6 +107,79 @@ export function enhance(s, id, fodder = []) {
     return { ok: true, t: `${gearName(it)}: cường hóa thành công!` };
   }
   return { ok: false, t: `Cường hóa thất bại, nguyên liệu tan thành tro. ${it.n} vẫn ở +${it.en || 0}.` };
+}
+
+// ───── Tẩy luyện: đổ lại hiệu ứng pháp khí, giữ các hiệu ứng đã khóa ─────
+const affixCap = (it) => G.AFFIX_COUNT[qualityIdx(it)][1];
+// Món nào tẩy luyện được: phẩm chất cho phép có hiệu ứng, hoặc đã có sẵn hiệu ứng (nhờ dung luyện)
+export const canRefineItem = (it) => affixCap(it) > 0 || (it.fx?.length || 0) > 0;
+export function refineCost(it, locks = 0) {
+  return { gold: Math.round(G.GEAR_PRICE[it.tier] * G.REFINE.gold * Math.pow(G.REFINE.lock, locks)), ore: [oreG(it.tier), 2 + it.tier] };
+}
+export const canAffordRefine = (s, it, locks = 0) => {
+  const c = refineCost(it, locks);
+  return smithLv(s) > 0 && s.gold >= c.gold && hasMat(s, c.ore, 'ore');
+};
+// locks: mã các hiệu ứng muốn giữ nguyên. Trả về { t, changed } hoặc chuỗi lỗi
+export function refine(s, id, locks = []) {
+  const it = findGear(s, id);
+  if (!it || !canRefineItem(it)) return null;
+  if (!smithLv(s)) return 'Cần dựng lò rèn trước.';
+  const keep = (it.fx || []).filter((f) => locks.includes(f.id));
+  if (keep.length && keep.length >= (it.fx?.length || 0)) return 'Phải để ít nhất một hiệu ứng không khóa.';
+  const c = refineCost(it, keep.length);
+  if (!canAffordRefine(s, it, keep.length)) return 'Thiếu nguyên liệu hoặc kim tệ.';
+  spend(s, 'Tẩy luyện trang bị', c.gold);
+  takeMat(s, 'ore', ...c.ore);
+  // Số hiệu ứng: không ít hơn hiện có, có cơ hội lên tới mức tối đa của phẩm chất
+  const [lo, hi] = G.AFFIX_COUNT[qualityIdx(it)];
+  const n = Math.max(it.fx?.length || 0, lo + Math.floor(R() * (hi - lo + 1)), keep.length + 1);
+  const fresh = rollFresh(it, n - keep.length, keep.map((f) => f.id));
+  it.fx = [...keep, ...fresh];
+  s.stats.refined = (s.stats.refined || 0) + 1;
+  return { t: `${gearName(it)}: tẩy luyện xong.`, changed: fresh.map((f) => f.id) };
+}
+// Đã đạt mục tiêu tẩy luyện chưa: có đủ các hiệu ứng mong muốn, mỗi cái đạt ít nhất `min` (0..1) độ tốt
+export function refineHit(it, want, min = 0, pct) {
+  return want.length > 0 && want.every((id) => { const f = it.fx?.find((x) => x.id === id); return f && (!min || pct(it, f) >= min); });
+}
+
+// ───── Dung luyện: chuyển một hiệu ứng từ món phụ liệu sang món chính ─────
+export const fuseCap = (it) => Math.max(1, affixCap(it) + G.FUSE.extra);
+export function fuseCost(it) {
+  return { gold: Math.round(G.GEAR_PRICE[it.tier] * G.FUSE.gold), core: [Math.min(9, oreG(it.tier) + 1), 1] };
+}
+export const fuseP = (s, main, mat) => clamp(G.FUSE.p + smithLv(s) * 0.0025 + (mat.tier >= main.tier ? 0.05 : -0.12 * (main.tier - mat.tier)) + deFx(s, 'enh'), 0.15, 0.97);
+// Phụ liệu dùng được: trong túi, chưa khóa, có hiệu ứng
+export const fuseMats = (s, mainId) => s.armory.filter((it) => !it.lock && it.id !== mainId && it.fx?.length);
+// Giá trị hiệu ứng khi sang món chính: giữ nguyên độ tốt của lần tung gốc, tính lại theo bậc và phẩm chất món chính
+export function fusedVal(main, mat, f) {
+  const a = G.AFFIX.find((x) => x.id === f.id);
+  const r = clamp(f.v / (a.base * mat.tier * mat.q), 0.8, 1.2);
+  return affixVal(a, main, r);
+}
+// replaceId: hiệu ứng của món chính bị thay khi đã đầy
+export function fuse(s, mainId, matId, fxId, replaceId) {
+  const main = findGear(s, mainId);
+  const mat = s.armory.find((x) => x.id === matId);
+  const f = mat?.fx?.find((x) => x.id === fxId);
+  if (!main || !mat || !f || mat.lock || main === mat) return null;
+  if (!smithLv(s)) return 'Cần dựng lò rèn trước.';
+  main.fx ||= [];
+  const same = main.fx.find((x) => x.id === fxId);
+  if (!same && main.fx.length >= fuseCap(main) && !main.fx.some((x) => x.id === replaceId)) return 'Món chính đã đầy hiệu ứng, hãy chọn hiệu ứng để thay.';
+  const c = fuseCost(main);
+  if (s.gold < c.gold || !hasMat(s, c.core, 'core')) return 'Thiếu nguyên liệu hoặc kim tệ.';
+  spend(s, 'Dung luyện trang bị', c.gold);
+  takeMat(s, 'core', ...c.core);
+  s.armory = s.armory.filter((x) => x !== mat);
+  if (R() >= fuseP(s, main, mat)) return { ok: false, t: `Dung luyện thất bại, ${mat.n} tan thành tro bụi.` };
+  const v = fusedVal(main, mat, f);
+  if (same) same.v = Math.max(same.v, v);
+  else if (main.fx.length >= fuseCap(main)) main.fx = main.fx.map((x) => (x.id === replaceId ? { id: fxId, v } : x));
+  else main.fx.push({ id: fxId, v });
+  s.stats.fused = (s.stats.fused || 0) + 1;
+  return { ok: true, t: `${gearName(main)} hấp thụ hiệu ứng ${G.AFFIX.find((a) => a.id === fxId).n}!`, fx: fxId };
 }
 
 // ───── Xưởng binh khí quân dụng ─────

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import G from '../game/data.js';
 import { fmtGold, itemName } from '../game/util.js';
 import { Ico, STAT_I, ITEM_I, UI_I } from './icons.jsx';
+import { play, sfxOn, setSfx } from '../fx/sfx.js';
 
 export function Bar({ value, max = 100, tone, thin }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
@@ -15,15 +16,21 @@ export function Bar({ value, max = 100, tone, thin }) {
 export const STAT_NAME = { body: 'Thể chất', soul: 'Linh hồn', tam: 'Tâm cảnh', luck: 'Khí vận', gold: 'Kim tệ', qi: 'Đấu khí', item: 'Vật phẩm', life: 'Thọ nguyên' };
 
 // Gợi ý ảnh hưởng của một lựa chọn: icon chỉ số + mũi tên
-export function Hints({ h }) {
+// p: tỷ lệ thành công (nếu có tung xúc xắc) · fight: lựa chọn là một trận giao chiến
+export function Hints({ h, p, fight }) {
   return (
     <span className="hints">
+      {p != null && (
+        <span className={'hint odds ' + (p >= 0.65 ? 'up' : p >= 0.4 ? 'mix' : 'down')} title={fight ? 'Tỷ lệ thắng' : 'Tỷ lệ thành công'}>
+          <Ico i={fight ? UI_I.clash : UI_I.dice} size={15} /><b className="num">{Math.round(p * 100)}%</b>
+        </span>
+      )}
       {h.list.map(({ k, sign }) => (
         <span key={k} className={'hint ' + (sign === 2 ? 'mix' : sign > 0 ? 'up' : 'down')} title={`${STAT_NAME[k]} ${sign === 2 ? 'có thể tăng hoặc giảm' : sign > 0 ? 'tăng' : 'giảm'}`}>
           <Ico i={STAT_I[k]} size={15} /><span className="h-name">{STAT_NAME[k]}</span>{sign === 2 ? '±' : sign > 0 ? '▲' : '▼'}
         </span>
       ))}
-      {h.risky && <span className="hint dice" title="Có tung xúc xắc"><Ico i={UI_I.dice} size={15} /><span className="h-name">May rủi</span></span>}
+      {h.risky && p == null && <span className="hint dice" title="Có tung xúc xắc"><Ico i={UI_I.dice} size={15} /><span className="h-name">May rủi</span></span>}
       {h.deadly && <span className="hint deadly" title="Thất bại có thể mất mạng"><Ico i={UI_I.deadly} size={15} /><span className="h-name">Nguy hiểm</span></span>}
     </span>
   );
@@ -52,6 +59,7 @@ export function Deltas({ d }) {
 // onPeek: tạm ẩn bảng để xem thông số phía sau (bấm nền mờ cũng có tác dụng tương tự)
 // mark: chữ in chìm trên nền bảng · tall: bảng cao cố định, nội dung trong <SheetBody> tự cuộn
 export function Sheet({ children, onClose, onPeek, mark, tall }) {
+  useEffect(() => { play('open'); }, []);
   return (
     <div className="sheet">
       <div className="sheet-backdrop" onClick={onClose || onPeek} />
@@ -60,7 +68,7 @@ export function Sheet({ children, onClose, onPeek, mark, tall }) {
         {onPeek && (
           <button className="peek-btn" onClick={onPeek} title="Tạm ẩn để xem thông số (Esc)" aria-label="Xem thông số"><Ico i={UI_I.realm} size={16} /> Xem</button>
         )}
-        {onClose && <button className="close-btn" onClick={onClose} aria-label="Đóng"><Ico i={UI_I.close} size={18} /></button>}
+        {onClose && <button className="close-btn" onClick={() => { play('close'); onClose(); }} aria-label="Đóng"><Ico i={UI_I.close} size={18} /></button>}
         {children}
       </div>
     </div>
@@ -293,5 +301,15 @@ export function LifeChart({ hist, height = 140 }) {
       <text x={P} y={H - 3} className="axis">0</text>
       <text x={W - 6} y={H - 3} className="axis" textAnchor="end">{maxA} tuổi</text>
     </svg>
+  );
+}
+
+// Bật / tắt âm thanh (ghi nhớ trên máy)
+export function SoundBtn({ className = '' }) {
+  const [on, setOn] = useState(sfxOn);
+  return (
+    <button className={'icon-btn sfx-btn ' + className} onClick={() => { setSfx(!on); setOn(!on); }} aria-pressed={on} aria-label={on ? 'Tắt âm thanh' : 'Bật âm thanh'} title={on ? 'Tắt âm thanh' : 'Bật âm thanh'}>
+      <Ico i={on ? UI_I.sfx : UI_I.sfxOff} size={18} />
+    </button>
   );
 }

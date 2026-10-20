@@ -14,6 +14,9 @@ import {
   GiTrophyCup, GiReceiveMoney, GiPayMoney, GiPriceTag, GiMountaintop, GiTreasureMap, GiWizardFace, GiTowerFlag,
   GiImperialCrown, GiDragonHead, GiScrollQuill, GiPortal, GiDna1,
   GiAbacus, GiExitDoor, GiThreeFriends, GiTargetDummy, GiHammerDrop, GiFire, GiYinYang, GiOpenBook, GiSpellBook,
+  GiFoxHead, GiRabbit, GiEagleHead, GiTurtle, GiSnake, GiUnicorn, GiWolfHead, GiHorseHead, GiLion, GiGriffinSymbol, GiSpikedDragonHead,
+  GiSpeaker, GiSpeakerOff, GiPerspectiveDiceSixFacesRandom, GiMagicSwirl, GiAutoRepair, GiStopSign, GiTargetArrows, GiRobe, GiPawPrint,
+  GiSaddle, GiHoodedFigure, GiMeat, GiShatter, GiSwordClash,
 } from 'react-icons/gi';
 
 export function Ico({ i: I, size = 18, className = '', title }) {
@@ -40,4 +43,8 @@ export const UI_I = {
   map: GiTreasureMap, army: GiCrossedSwords, elder: GiWizardFace, land: GiTowerFlag, ledger: GiAbacus, home: GiExitDoor, members: GiThreeFriends,
   train: GiTargetDummy, craft: GiHammerDrop, up: GiUpgrade, cp: GiCrossedSwords, fame: GiLaurelCrown, power: GiCastle, fire: GiFire,
   alch: GiCauldron, gong: GiOpenBook, skill: GiSpellBook, realm: GiYinYang, gold: GiTwoCoins, vault: GiOpenTreasureChest, auction: GiGavel, time: GiHourglass, take: GiSwapBag,
+  sfx: GiSpeaker, sfxOff: GiSpeakerOff, refine: GiPerspectiveDiceSixFacesRandom, fuse: GiMagicSwirl, auto: GiAutoRepair, stop: GiStopSign, target: GiTargetArrows,
+  outfit: GiRobe, beast: GiPawPrint, mount: GiSaddle, feed: GiMeat, foe: GiHoodedFigure, shatter: GiShatter, clash: GiSwordClash,
 };
+// Linh thú: thú cưng và thú cưỡi
+export const BEAST_I = { ho: GiFoxHead, tho: GiRabbit, ung: GiEagleHead, quy: GiTurtle, mang: GiSnake, lan: GiUnicorn, lang: GiWolfHead, cau: GiHorseHead, su: GiLion, bang: GiGriffinSymbol, giao: GiSpikedDragonHead };

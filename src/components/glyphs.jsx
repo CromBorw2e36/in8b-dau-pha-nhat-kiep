@@ -13,7 +13,7 @@ export const EV_G = {
   tournament: 'Võ', clan_crisis: 'Tộc', heart: 'Ma', pill_exam: 'Đan', disciple: 'Đồ', ruin: 'Đế', daolu: 'Duyên', kidnap: 'Cứu',
   mission: 'Việc', gear_find: 'Binh', smith: 'Khí', estate_trouble: 'Phố', found_hint: 'Tông', conquer: 'Chiến', raid: 'Thủ', elder: 'Lão', betray: 'Phản', sect_war: 'Chiến', genius: 'Tài', vassal: 'Thuộc', robbed: 'Cướp', rescue: 'Nghĩa', guest: 'Khách', guest_duty: 'Thủ', dwelling: 'Phủ', parent_ill: 'Hiếu', borrow: 'Vay',
   arms_boom: 'Binh', smith_master: 'Rèn', ore_vein: 'Thiết', mutiny: 'Loạn', drill: 'Luyện', ex_vip: 'Sàn', market_swing: 'Thị',
-  hon_invasion: 'Hồn', thienmo: 'Mộ', ancient_ally: 'Minh', emperor_pill: 'Đan', beast_emperor: 'Long', heir: 'Truyền', court: 'Triều',
+  hon_invasion: 'Hồn', mount_tame: 'Kỵ', thienmo: 'Mộ', ancient_ally: 'Minh', emperor_pill: 'Đan', beast_emperor: 'Long', heir: 'Truyền', court: 'Triều',
 };
 
 // Con dấu son. tone: 'red' (mặc định) | 'ink' | 'gold' | 'outline'

@@ -1,17 +1,24 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import G from '../game/data.js';
-import { tick, choose, choicesOf, hints, save, EV, breakNow } from '../game/engine.js';
-import { lifeOf, realmLabel, canAlch, cp, holding, holdLeft } from '../game/util.js';
+import { tick, choose, choicesOf, hints, save, EV, breakNow, rollP } from '../game/engine.js';
+import { lifeOf, realmLabel, canAlch, cp, holding, holdLeft, fmtGold, itemName } from '../game/util.js';
+import { gradeQ } from './gearUi.jsx';
 import { smithLv } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
 import { attackBlock, conquerP, regionDef, landCount } from '../game/sect.js';
 import { checkAch } from '../game/ach.js';
 import { canAscend } from '../game/emperor.js';
 import { dechienIn } from '../game/upper.js';
-import { Bar, Hints, Deltas, Sheet, StatHelp, Toasts, STAT_NAME } from './ui.jsx';
+import { Bar, Hints, Deltas, Sheet, StatHelp, Toasts, SoundBtn, STAT_NAME } from './ui.jsx';
 import { Seal, EV_G, NUM_G } from './glyphs.jsx';
-import { Ico, EMP_I, STAT_I, NAV_I, FOCUS_I, KIND_I, UI_I } from './icons.jsx';
-import { stamp, burst, cascade, useCountUp } from './motion.js';
+import { Ico, EMP_I, STAT_I, NAV_I, FOCUS_I, KIND_I, UI_I, ITEM_I } from './icons.jsx';
+import { stamp, burst, cascade, useCountUp, pulse, wobble, calm } from './motion.js';
+import { checkOutfits } from '../game/wardrobe.js';
+import { Clash, Fate, Break } from './Stage.jsx';
+import { AvatarBadge } from './Avatar.jsx';
+import { SideLeft, SideRight } from './Side.jsx';
+import { play } from '../fx/sfx.js';
+import * as fx from '../fx/fx.js';
 import Bag from './Bag.jsx';
 import Sect from './Sect.jsx';
 import Market from './Market.jsx';
@@ -43,6 +50,10 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
   const [major, setMajor] = useState(() => readKey(FEED_KEY, '0') === '1');
   const [open, setOpen] = useState({}); // nhóm năm bình lặng đã mở
   const [toasts, setToasts] = useState([]);
+  const [stage, setStage] = useState(null); // cảnh diễn sau khi chọn: giao chiến, thiên mệnh, đột phá
+  const [picked, setPicked] = useState(null); // lựa chọn vừa bấm, chờ hiệu ứng rồi mới tính kết quả
+  const qiRef = useRef(null);
+  const badgeRef = useRef(null);
   const feed = useRef(null);
   const seen = useRef(s.log.length);
   const goldRef = useCountUp(s.gold);
@@ -52,7 +63,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
   // Mỗi quyết định mới đều hiện bảng ra trước
   useEffect(() => { setPeek(false); }, [s.pending, s.needFocus, result]);
 
-  const blocked = paused || s.dead || s.pending || s.needFocus || focusOpen || result || panel;
+  const blocked = paused || s.dead || s.pending || s.needFocus || focusOpen || result || panel || stage;
 
   useEffect(() => {
     if (blocked) return;
@@ -68,8 +79,22 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
       if (it.k === 'up') toast(it.t, 'up', UI_I.up);
       else if (it.k === 'key' && it.t.length < 140) toast(it.t, 'key', KIND_I.key);
     }
-    for (const a of checkAch(s)) toast(a.n, 'ach', UI_I.ach);
+    for (const a of checkAch(s)) { toast(a.n, 'ach', UI_I.ach); play('bell'); }
+    for (const o of checkOutfits(s)) { toast(`Ngoại trang mới: ${o.n}`, 'ach', UI_I.outfit); play('bell'); }
   }, [ver]);
+
+  // Lên tinh/đoạn/trọng: thanh đấu khí lóe sáng; lên cảnh giới: huy hiệu cảnh giới nảy lên
+  const lvKey = useRef(`${s.R}:${s.step}`);
+  useEffect(() => {
+    const k = `${s.R}:${s.step}`;
+    if (k === lvKey.current) return;
+    const upR = +k.split(':')[0] > +lvKey.current.split(':')[0];
+    lvKey.current = k;
+    if (!s.started) return;
+    pulse(qiRef.current, 1.06);
+    fx.burst(qiRef.current, { n: 18, colors: fx.PAL.qi, speed: 4, life: 600 });
+    if (upR) pulse(badgeRef.current, 1.3);
+  }, [s.R, s.step]);
 
   useEffect(() => {
     if (s.dead && !result) { const id = setTimeout(onEnd, 1400); return () => clearTimeout(id); }
@@ -89,15 +114,35 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
       const n = parseInt(e.key, 10);
       if (n >= 1 && s.pending && !result && !peek) {
         const ch = choicesOf(s)[n - 1];
-        if (ch) pickChoice(ch);
+        if (ch) pickChoice(ch, n - 1);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const pickChoice = (ch) => { const r = choose(s, ch); save(s); setResult(r); bump(); };
-  const pickFocus = (id) => { s.focus = id; s.needFocus = false; setFocusOpen(false); save(s); bump(); };
+  // Bấm lựa chọn: thẻ được chọn sáng lên, các thẻ khác mờ đi, rồi mới tính kết quả và diễn cảnh
+  const pickChoice = (ch, i) => {
+    if (picked != null || stage) return;
+    play('pick');
+    setPicked(i);
+    const evNow = ev;
+    setTimeout(() => {
+      const p = rollP(s, ch);
+      // Tiêu đề lấy trước khi tính kết quả: nhiều sự kiện đọc s.tmp, có thể đổi sau khi chọn
+      let title = null;
+      try { title = evNow?.title?.(s) || null; } catch {}
+      const r = choose(s, ch);
+      save(s);
+      setPicked(null);
+      const kind = !ch.roll || calm() ? null : evNow?.id === 'breakthrough' ? 'break' : ch.fight ? 'clash' : 'fate';
+      if (kind) setStage({ kind, p, ok: r.ok, ev: evNow, r, title });
+      else setResult(r);
+      bump();
+    }, calm() ? 0 : 320);
+  };
+  const endStage = () => { setResult(stage.r); setStage(null); };
+  const pickFocus = (id) => { play('stamp'); s.focus = id; s.needFocus = false; setFocusOpen(false); save(s); bump(); };
 
   const life = lifeOf(s);
   const ev = s.pending ? EV[s.pending] : null;
@@ -156,13 +201,14 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
       <header className="hud">
         <div className="hud-top">
           <button className="icon-btn home" onClick={onHome} aria-label="Về trang chủ" title="Về trang chủ"><Ico i={UI_I.home} size={18} /></button>
+          <AvatarBadge s={s} size={42} onClick={() => setPanel('bag:gear')} />
           <div className="who">
             <div className="who-name">{s.name}</div>
             <div className="who-sub">{s.faction || 'Tán tu'}{s.evil ? ' · ma đạo' : ''}{s.heirOf ? ' · hậu duệ Đế' : ''}{s.up ? ' · Thượng giới' : ''}{s.ng ? ` · trùng sinh ${s.ng}` : ''}</div>
           </div>
           {s.R >= 11
-            ? <button className="realm-badge" data-r={s.R} onClick={() => setPanel('emperor')} title="Đế lộ: đế cảnh, nhất thống, truyền thừa"><Ico i={EMP_I.de} size={14} /><span>{realmLabel(s)}</span></button>
-            : <div className="realm-badge" data-r={s.R}><Ico i={UI_I.realm} size={14} /><span>{realmLabel(s)}</span></div>}
+            ? <button ref={badgeRef} className="realm-badge" data-r={s.R} onClick={() => setPanel('emperor')} title="Đế lộ: đế cảnh, nhất thống, truyền thừa"><Ico i={EMP_I.de} size={14} /><span>{realmLabel(s)}</span></button>
+            : <div ref={badgeRef} className="realm-badge" data-r={s.R}><Ico i={UI_I.realm} size={14} /><span>{realmLabel(s)}</span></div>}
         </div>
 
         <div className="meters">
@@ -178,7 +224,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
             <span className="m-val num">{s.age}<small>/{life === Infinity ? '∞' : life}</small></span>
           </div>
           {s.started && (
-            <div className={'meter' + (s.ready ? ' hot' : '')} title="Tiến độ tu luyện">
+            <div ref={qiRef} className={'meter' + (s.ready ? ' hot' : '')} title="Tiến độ tu luyện">
               <Ico i={STAT_I.qi} size={16} className="m-ico" /><span className="m-name">Đấu khí</span>
               <Bar value={topped ? 100 : s.qi} tone="var(--qi)" thin />
               <span className="m-val num">{topped ? 'Viên mãn' : s.ready ? (holding(s) ? `Củng cố · ${holdLeft(s)} lượt` : 'Bình cảnh') : `${Math.floor(s.qi)}%`}</span>
@@ -215,6 +261,9 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
         </div>
       </header>
 
+      <div className="mid">
+      <SideLeft s={s} onOpen={setPanel} />
+      <div className="mid-col">
       <div className="feed-bar">
         <Ico i={KIND_I.key} size={16} /><span className="fb-title">Sử ký</span>
         <button className={'feed-toggle' + (major ? ' on' : '')} onClick={toggleMajor} aria-pressed={major} title="Chỉ xem đại sự">
@@ -234,12 +283,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
               <div className="yr">
                 <div className="yr-age num">{r.e.a}</div>
                 <div className="yr-body">
-                  {r.e.items.map((it, j) => (
-                    <p key={j} className={'log ' + (it.k || '')}>
-                      {KIND_I[it.k] && <Ico i={KIND_I[it.k]} size={15} className="log-ico" />}
-                      <span>{it.t}</span>
-                    </p>
-                  ))}
+                  {r.e.items.map((it, j) => <LogLine key={j} it={it} />)}
                 </div>
               </div>
             )}
@@ -247,6 +291,9 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
         ))}
         {s.dead && <div className="divider end"><span>Một kiếp khép lại</span></div>}
       </main>
+      </div>
+      <SideRight s={s} onOpen={setPanel} onBreak={() => { if (breakNow(s)) { save(s); bump(); } }} />
+      </div>
 
       {peek && (
         <div className="peek-bar">
@@ -265,6 +312,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
             <span className="f-name">{s.started ? f?.n || 'Chọn việc' : 'Thơ ấu'}</span>
             <Ico i={UI_I.speed} size={14} className="f-more" />
           </button>
+          <SoundBtn />
           <button className="icon-btn speed" onClick={() => setSpeed((v) => (v + 1) % SPEEDS.length)} aria-label="Tốc độ" title="Tốc độ thời gian">
             <Ico i={UI_I.speed} size={16} /><small>{SPEED_LABEL[speed]}</small>
           </button>
@@ -287,7 +335,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
         </nav>
       </footer>
 
-      {panel === 'bag' && <Bag s={s} bump={bump} initTab={demo?.tab} onClose={() => setPanel(null)} />}
+      {panel?.startsWith('bag') && <Bag s={s} bump={bump} initTab={panel.split(':')[1] || demo?.tab} onClose={() => setPanel(null)} />}
       {panel === 'forge' && <Forge s={s} bump={bump} initTab={demo?.tab} onClose={() => setPanel(null)} />}
       {panel === 'market' && <Market s={s} bump={bump} initTab={demo?.tab} onClose={() => setPanel(null)} />}
       {panel === 'sect' && <Sect s={s} bump={bump} initTab={demo?.tab} onClose={() => setPanel(null)} />}
@@ -316,7 +364,11 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
         </Sheet>
       )}
 
-      {ev && !result && !s.dead && !peek && !showFocus && <EventSheet s={s} ev={ev} onPick={pickChoice} onPeek={() => setPeek(true)} />}
+      {ev && !result && !stage && !s.dead && !peek && !showFocus && <EventSheet s={s} ev={ev} picked={picked} onPick={pickChoice} onPeek={() => setPeek(true)} />}
+
+      {stage?.kind === 'clash' && <Clash s={s} ev={stage.ev} name={stage.title} p={stage.p} ok={stage.ok} onDone={endStage} />}
+      {stage?.kind === 'fate' && <Fate p={stage.p} ok={stage.ok} label={stage.title} onDone={endStage} />}
+      {stage?.kind === 'break' && <Break s={s} ok={stage.ok} onDone={endStage} />}
 
       {result && !peek && <ResultSheet s={s} result={result} onPeek={() => setPeek(true)} onDone={() => { setResult(null); if (s.dead) onEnd(); }} />}
 
@@ -325,23 +377,58 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
   );
 }
 
-function EventSheet({ s, ev, onPick, onPeek }) {
+// Một dòng nhật ký. Thu chi và chiến lợi phẩm vẽ thành chip biểu tượng thay cho câu chữ
+function LogLine({ it }) {
+  if (it.m) {
+    const [inc, out, left] = it.m;
+    return (
+      <p className="log chips-line" title={it.t}>
+        <Ico i={UI_I.gold} size={14} className="log-ico" />
+        {inc > 0 && <span className="lc up">+{fmtGold(inc)}</span>}
+        {out > 0 && <span className="lc down">−{fmtGold(out)}</span>}
+        <span className="lc left">{fmtGold(left)}</span>
+      </p>
+    );
+  }
+  if (it.loot) {
+    return (
+      <p className="log chips-line" title={it.t}>
+        <Ico i={UI_I.take} size={14} className="log-ico" />
+        {it.loot.map(([t, g, n]) => <span key={t + g} className={'lc item q' + gradeQ(g)} title={itemName(t, g)}><Ico i={ITEM_I[t]} size={14} /><small>{g}</small>×{n}</span>)}
+      </p>
+    );
+  }
+  return (
+    <p className={'log ' + (it.k || '')}>
+      {KIND_I[it.k] && <Ico i={KIND_I[it.k]} size={15} className="log-ico" />}
+      <span>{it.t}</span>
+    </p>
+  );
+}
+
+function EventSheet({ s, ev, picked, onPick, onPeek }) {
   const box = useRef(null);
-  useLayoutEffect(() => { cascade(box.current?.querySelectorAll('.choice')); }, [ev.id]);
+  useLayoutEffect(() => { cascade(box.current?.querySelectorAll('.choice'), 260); }, [ev.id]);
+  useLayoutEffect(() => {
+    if (picked == null) return;
+    const el = box.current?.children[picked];
+    pulse(el, 1.04);
+    fx.burst(el, { n: 22, colors: fx.PAL.gold, speed: 4, life: 500 });
+  }, [picked]);
   return (
     <Sheet mark={EV_G[ev.id]} onPeek={onPeek}>
       <Seal ch={EV_G[ev.id] || 'Sự'} size="lg" className="ev-seal" />
       <p className="eyebrow">{s.age} tuổi · {realmLabel(s)}</p>
       {ev.title && <h3>{ev.title(s)}</h3>}
       <p className="ev-text">{ev.text(s)}</p>
-      <div className="choices" ref={box}>
+      <div className={'choices' + (picked != null ? ' decided' : '')} ref={box}>
         {choicesOf(s).map((ch, i) => (
-          <button key={i} className="choice" onClick={() => onPick(ch)}>
+          <button key={i} className={'choice' + (picked === i ? ' picked' : '') + (ch.fight ? ' fight' : '')} onClick={() => onPick(ch, i)}>
             <span className="choice-n">{NUM_G[i]}</span>
             <span className="choice-body">
               <span>{typeof ch.t === 'function' ? ch.t(s) : ch.t}</span>
               {ch.sub && <small className="choice-sub">{ch.sub}</small>}
-              <Hints h={hints(ch)} />
+              <Hints h={hints(ch)} p={rollP(s, ch)} fight={ch.fight} />
             </span>
           </button>
         ))}
@@ -354,13 +441,25 @@ function ResultSheet({ s, result, onPeek, onDone }) {
   const sealRef = useRef(null);
   const wrap = useRef(null);
   const rings = useRef(null);
+  const deltas = useRef(null);
   const up = !!result.delta?.lv;
   useLayoutEffect(() => {
     stamp(sealRef.current, wrap.current);
     if (up) burst(rings.current?.querySelectorAll('i'));
+    cascade(deltas.current?.querySelectorAll('.delta'), 380);
+    const t = setTimeout(() => {
+      if (result.dead) { play('death'); return; }
+      play('stamp');
+      if (result.ok) fx.burst(sealRef.current, { n: 36, colors: fx.PAL.gold, speed: 6 });
+      else if (result.ok === false) wobble(sealRef.current);
+      if (result.delta?.gold > 0) setTimeout(() => play('coin'), 300);
+    }, 330);
+    return () => clearTimeout(t);
   }, [result]);
   const ch = result.dead ? 'Tử' : result.ok ? 'Thành' : 'Bại';
   return (
+    <>
+    {result.dead && <div className="mourn-veil" aria-hidden="true" />}
     <Sheet mark={result.dead ? 'Tử' : result.ok === false ? 'Bại' : result.ok ? 'Thành' : null} onPeek={onPeek}>
       <div ref={wrap} className="result-wrap">
         {(result.dead || result.ok !== null) && (
@@ -375,10 +474,11 @@ function ResultSheet({ s, result, onPeek, onDone }) {
       </div>
       {result.text && <p className="ev-text">{result.text}</p>}
       {result.dead && <p className="ev-text death-text">{s.cause}.</p>}
-      <Deltas d={result.delta} />
+      <div ref={deltas}><Deltas d={result.delta} /></div>
       <button className="btn primary" autoFocus onClick={onDone}>
         {result.dead ? 'Xem lại cả đời' : 'Tiếp tục'}
       </button>
     </Sheet>
+    </>
   );
 }

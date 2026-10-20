@@ -114,7 +114,7 @@ export const level = (s) => (s.started ? s.R + s.step / realm(s).st : 0);
 export function cp(s) {
   let v = s.R * 10 + s.step + (s.body - 50) / 10;
   v += s.skill * 2 * (0.5 + s.mastery / 200);
-  v += s.fires.length * 3 + (s.companion ? 1.5 : 0) + (s.evil ? 1 : 0);
+  v += s.fires.length * 3 + (s.companion || activeBeast(s, 'pet') ? 1.5 : 0) + (s.evil ? 1 : 0);
   if (hasTrait(s, 'fierce')) v += 2;
   v += gearSum(s, 'cp');
   v += fxSum(s, 'phagiap');
@@ -140,8 +140,28 @@ export const gearScore = (it) => (it ? G.GEAR_PRICE[it.tier] * it.q * (1 + 0.06 
 // Tổng giá trị một hiệu ứng pháp khí trên đồ đang mặc (cường hóa tăng thêm 1% mỗi cấp)
 export const fxVal = (it, f) => { const v = f.v * (1 + 0.01 * (it.en || 0)); return f.id === 'homenh' ? Math.min(0.6, v) : v; };
 export function fxSum(s, id) {
-  let t = 0;
+  let t = beastFx(s, id);
   for (const it of Object.values(s.gear || {})) if (it?.fx) for (const f of it.fx) if (f.id === id) t += fxVal(it, f);
+  return t;
+}
+// ───── Linh thú ─────
+// Hiệu ứng tính theo số tuyệt đối (chiến lực, hồi phục, thọ) lớn dần theo bậc cảnh giới; tỷ lệ % thì không
+const BEAST_SCALED = new Set(['phagiap', 'hoixuan', 'duonghon', 'tinhtam', 'dientho', 'kimquang']);
+export const beastDef = (kind, id) => (kind === 'pet' ? G.PETS : G.MOUNTS).find((b) => b.id === id);
+// Con đang theo bên mình (thú cưng) hoặc đang cưỡi
+export const activeBeast = (s, kind) => {
+  const b = s.beasts;
+  const id = b?.[kind];
+  return id ? b[kind === 'pet' ? 'pets' : 'mounts'].find((x) => x.id === id) || null : null;
+};
+export function beastVal(s, kind, b, id) {
+  const v = beastDef(kind, b.id)?.fx[id];
+  return v ? v * b.lv * (BEAST_SCALED.has(id) ? tierFor(s) : 1) : 0;
+}
+export function beastFx(s, id) {
+  if (!s.beasts) return 0;
+  let t = 0;
+  for (const kind of ['pet', 'mount']) { const b = activeBeast(s, kind); if (b) t += beastVal(s, kind, b, id); }
   return t;
 }
 export function fxText(it, f) {
@@ -152,8 +172,8 @@ export function fxText(it, f) {
 }
 export const qualityIdx = (it) => Math.max(0, G.QUALITY.findIndex((x) => x[0] === it.q));
 export const gearName = (it) => `${it.n}${it.en ? ` +${it.en}` : ''}${it.q > 1 ? ` · ${G.QUALITY[qualityIdx(it)][1]}` : ''}`;
-// Giảm xác suất tử vong nhờ chiến ngoa
-export const dodgeMult = (s) => 1 - gearSum(s, 'dodge');
+// Giảm xác suất tử vong nhờ chiến ngoa và thú cưỡi
+export const dodgeMult = (s) => Math.max(0.2, 1 - gearSum(s, 'dodge') - beastFx(s, 'dodge'));
 // Cấp hiệu dụng của công trình: 10 cấp đầu tính đủ, sau đó mỗi cấp 35%
 export const effLv = (lv) => (lv <= 10 ? lv : 10 + (lv - 10) * 0.35);
 // Mua nhiều cấp liền: trả về số cấp mua được và tổng giá (want = Infinity để mua tối đa)

@@ -177,6 +177,49 @@ G.AFFIX = [
 // Số hiệu ứng theo phẩm chất: [tối thiểu, tối đa]
 G.AFFIX_COUNT = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 3]];
 G.ENHANCE_MAX = 100;
+// Tẩy luyện: đổ lại các hiệu ứng chưa khóa. Giá theo giá trang bị, mỗi hiệu ứng khóa nhân thêm `lock`.
+G.REFINE = { gold: 0.08, lock: 1.8 };
+// Dung luyện: chuyển một hiệu ứng từ món phụ liệu sang món chính (phụ liệu mất đi).
+// Món chính chứa tối đa (số hiệu ứng tối đa theo phẩm chất + extra), tối thiểu 1.
+G.FUSE = { gold: 0.15, p: 0.72, extra: 1 };
+
+// ───── Linh thú: thú cưng (đồng hành chiến đấu) và thú cưỡi (tọa kỵ) ─────
+// Nuôi bằng ma hạch tới cấp 10. fx: hiệu ứng mỗi cấp, dùng chung mã với hiệu ứng pháp khí, nhân theo bậc cảnh giới.
+// dodge: giảm xác suất tử nạn (cộng với chiến ngoa). price: giá tính theo số ma hạch cùng cấp; minR: cảnh giới để mua.
+G.BEAST_MAX = 10;
+G.PETS = [
+  { id: 'ho', n: 'Tiểu Hỏa Hồ', d: 'Hồ ly lửa tinh quái, phun lửa đỡ đòn cho chủ.', fx: { phagiap: 0.22 }, price: 40, minR: 1 },
+  { id: 'tho', n: 'Nguyệt Linh Thố', d: 'Thỏ trắng ăn ánh trăng, đi đâu cũng gặp may.', fx: { phucvan: 0.7, tambao: 0.012 }, price: 60, minR: 1 },
+  { id: 'ung', n: 'Tử Tinh Ưng', d: 'Chim ưng mắt tím, nhìn thấu bảo vật giấu kín.', fx: { tambao: 0.03, phagiap: 0.08 }, price: 90, minR: 2 },
+  { id: 'quy', n: 'Huyền Vũ Quy', d: 'Rùa đen sống vạn năm, khí tức trường thọ lan sang chủ nhân.', fx: { hoixuan: 0.12, dientho: 0.8 }, price: 160, minR: 3 },
+  { id: 'mang', n: 'Thôn Thiên Mãng', d: 'Mãng xà nuốt trời, lớn lên thành hung thú đáng sợ.', fx: { phagiap: 0.36 }, price: 320, minR: 5 },
+  { id: 'lan', n: 'Bạch Ngọc Kỳ Lân', d: 'Thánh thú cát tường, giúp chủ nhân vượt bình cảnh.', fx: { thongthien: 0.0035, phucvan: 0.5 }, price: 600, minR: 7 },
+];
+G.MOUNTS = [
+  { id: 'lang', n: 'Truy Phong Lang', d: 'Sói gió chạy như bay, thoát hiểm nhanh như chớp.', fx: { dodge: 0.008, phagiap: 0.05 }, price: 30, minR: 1 },
+  { id: 'cau', n: 'Liệt Hỏa Câu', d: 'Ngựa lửa ngày đi nghìn dặm, lịch luyện thêm nhiều chiến lợi phẩm.', fx: { dodge: 0.008, tambao: 0.015 }, price: 70, minR: 2 },
+  { id: 'su', n: 'Tử Tinh Dực Sư', d: 'Sư tử có cánh, cưỡi vào trận như hổ thêm cánh.', fx: { dodge: 0.01, phagiap: 0.16 }, price: 180, minR: 4 },
+  { id: 'bang', n: 'Kim Sí Đại Bằng', d: 'Một cánh chín vạn dặm, chẳng hiểm cảnh nào giữ chân được.', fx: { dodge: 0.016, tambao: 0.02 }, price: 380, minR: 6 },
+  { id: 'giao', n: 'Thanh Lân Giao Long', d: 'Giao long sắp hóa rồng, uy áp khiến kẻ địch run sợ.', fx: { dodge: 0.012, phagiap: 0.3 }, price: 800, minR: 8 },
+];
+// Thú đồng hành cũ (chỉ lưu tên) đổi sang thú cưng mới
+G.PET_LEGACY = { 'Tiểu Hỏa Hồ': 'ho', 'Tử Tinh Ưng': 'ung', 'Thôn Thiên Mãng con': 'mang', 'Bạch Ngọc Kỳ Lân con': 'lan' };
+
+// ───── Ngoại trang: chỉ đổi dáng vẻ, mở khóa giữ qua mọi kiếp ─────
+// c: [áo, viền, đai, áo trong] · x: phụ kiện (cape, hood, crown, veil, armor, flame)
+// open: điều kiện mở khóa trong một kiếp · buy: giá tính theo số ma hạch cùng cấp nếu mua được
+G.OUTFITS = [
+  { id: 'vai', n: 'Áo vải thô', c: ['#6b5a47', '#3a2f24', '#8a6b3a', '#d9cdb5'], how: 'Có sẵn' },
+  { id: 'thanh', n: 'Thanh sam thư sinh', c: ['#3e6f86', '#cfe3ea', '#20414f', '#eef4f2'], how: 'Có sẵn' },
+  { id: 'hac', n: 'Hắc bào thiếu niên', c: ['#1d1714', '#c9432f', '#c9432f', '#e9dcc4'], how: 'Đạt Đấu Sư', open: (s) => s.R >= 2 },
+  { id: 'dan', n: 'Đan sư bào', c: ['#ece3cf', '#d9ad5b', '#b0402c', '#ffffff'], x: ['veil'], how: 'Luyện dược sư 3 phẩm', open: (s) => s.alch >= 3 },
+  { id: 'tuyet', n: 'Tuyết y', c: ['#e8eef2', '#8fb6cc', '#5b7f96', '#ffffff'], x: ['veil'], how: 'Mua', buy: 120 },
+  { id: 'chien', n: 'Huyết chiến giáp', c: ['#6d1a0e', '#d9ad5b', '#2b1a10', '#c9432f'], x: ['armor', 'cape'], how: 'Chiếm 3 vùng đất', open: (s) => Object.keys(s.land || {}).length >= 3, buy: 400 },
+  { id: 'ma', n: 'Ma đạo hắc bào', c: ['#2a1834', '#8e4fd1', '#14091c', '#4d2a63'], x: ['hood'], how: 'Đi theo ma đạo', open: (s) => !!s.evil },
+  { id: 'tong', n: 'Tông chủ bào', c: ['#4a2a6b', '#f4d58f', '#d9ad5b', '#efe2ff'], x: ['cape', 'crown'], how: 'Khai tông lập phái', open: (s) => !!s.sect },
+  { id: 'viem', n: 'Viêm đế bào', c: ['#8a2418', '#f2c063', '#e0602a', '#ffd9a8'], x: ['flame', 'cape'], how: 'Thôn phệ 3 dị hỏa', open: (s) => s.fires.length >= 3 },
+  { id: 'de', n: 'Đế bào cửu long', c: ['#b8862d', '#fff3df', '#6d1a0e', '#fff3df'], x: ['crown', 'cape', 'flame'], how: 'Thành tựu Đấu Đế', open: (s) => s.R >= 11 },
+];
 // Phẩm Huyền thiết cần cho từng bậc trang bị
 G.ORE_FOR_TIER = [1, 1, 2, 4, 6, 8, 9];
 
