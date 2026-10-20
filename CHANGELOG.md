@@ -10,6 +10,17 @@ Bản lưu cũ luôn được nâng cấp tự động khi mở game, không c�
 
 ### Thêm
 
+- **Trưởng lão có tên tuổi**: mỗi trưởng lão là một nhân vật riêng với chức vị, cảnh giới, bộ trang bị và độ trung thành, xem ở tab *Trưởng lão* trong Tông môn.
+  - Mỗi năm tự tu luyện, tự rèn đồ mới và tự cường hóa. Có giới hạn để không phá game: luôn kém tông chủ một cảnh giới (cao nhất Đấu Tôn), cường hóa tối đa +9, không bao giờ tự lên Chí Tôn.
+  - Thực lực tông môn tính theo chiến lực thật của từng trưởng lão thay cho con số cố định.
+  - Tông chủ ban thưởng đồ trong túi để tăng trung thành; món cũ của trưởng lão truyền cho đệ tử, không trả về túi. Có thể trục xuất.
+  - Chỉ trưởng lão dưới 45 trung thành mới phản bội cuỗm tiền; ngân khố cạn thì trung thành giảm dần.
+- **Lão sư tái tạo nhục thân** (chuỗi 3 hồi cho ai có lão sư trong nhẫn): hồn thể suy yếu, đoạt Bồ Đề Hóa Thể Tiên (tự đánh, đấu giá, hoặc phái trưởng lão mạnh nhất), luyện Hóa Thể Đan. Thành công thì lão sư có thân thể, cảnh giới và trang bị riêng, tự lên cấp, thỉnh thoảng ra tay hộ đạo.
+- **Tam niên chi ước** (chuỗi 3 hồi): bị hủy hôn, khổ tu, ba năm sau lên Vân Lam sơn ước chiến; có tông môn thì dẫn trưởng lão đi tạo thế.
+- **Sự kiện tông môn mới**: hai trưởng lão tranh ghế Đại trưởng lão, trưởng lão kẹt bình cảnh xin đan hoặc nhờ hộ pháp, thiếu niên dị bẩm lớn lên thành trưởng lão thân truyền.
+- **Luyện hóa và phẩm Chí Tôn**: dung luyện được nhồi quá số ô bình thường tới 9 hiệu ứng; mỗi ô vượt hạn giảm 5% tỷ lệ và giá ×1,45. Đủ 9 hiệu ứng thì món đồ hóa Chí Tôn màu đỏ, hệ số phẩm chất ×3,4.
+- **7 hiệu ứng pháp khí mới** (tổng 18): Cuồng Huyết (chiến lực %), Thiết Cốt (giảm tử nạn), Luyện Khí (tỷ lệ cường hóa và dung luyện), Thiên Hỏa (phẩm chất khi rèn), Khoáng Mạch (mỏ tông môn), Tụ Tài (thuế lãnh địa), Đột Kích (số lần đi cướp).
+
 - **Chuỗi sự kiện nhiều hồi**
   - *Huyết thù Mộ gia*: bị thiếu chủ Mộ gia làm nhục, vài năm sau thích khách tìm tới, cuối cùng đạp cửa Mộ phủ, quyết đấu công khai hoặc buông bỏ. Mỗi lựa chọn dẫn sang hồi khác.
   - *Di tích Đấu Đế viễn cổ*: gom 3 mảnh bản đồ (mua, cướp, hoặc mua tin ở chợ đen) để mở di tích có công pháp, đấu kỹ và trang bị bậc cao.
@@ -59,6 +70,7 @@ Bản lưu cũ luôn được nâng cấp tự động khi mở game, không c�
 
 ### Sửa
 
+- Nút **Dừng** của đập tự động và tẩy luyện không tắt được vòng lặp, máy cứ đập tiếp tới khi hết ngân sách.
 - Ô trang bị hiện cấp cường hóa hai lần (ví dụ «+15» chồng lên nhau).
 - Tab Võ học bị lỗi trắng khi mở.
 - Võ học hiện sai môn so với bậc công pháp, đấu kỹ thật (ví dụ đã có Địa giai mà vẫn hiện Căn bản); chỉ số hiển thị không khớp chỉ số thật; nút tham ngộ bấm được vô hạn miễn phí.

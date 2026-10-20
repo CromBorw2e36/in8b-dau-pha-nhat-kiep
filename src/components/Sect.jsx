@@ -15,6 +15,7 @@ import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy, Card } from './ui.j
 import { GearCard, LockBtn, gradeQ } from './gearUi.jsx';
 import { Ico, NAV_I, UI_I, BUILD_I, TROOP_I, ITEM_I, SLOT_I, EMP_I } from './icons.jsx';
 import WorldMap, { RegionCard } from './WorldMap.jsx';
+import Elders from './Elders.jsx';
 
 // Hiệu quả ngắn gọn của từng công trình ở cấp hiện tại
 const BUILD_EFF = {
@@ -39,11 +40,12 @@ export default function Sect({ s, bump, onClose, initTab }) {
   return (
     <Sheet onClose={onClose} tall>
       <SheetHead icon={NAV_I.sect} title={S ? S.name : 'Tông môn'} sub={S ? sectTier(s) : 'Chưa khai tông'} value={Math.round(warPower(s))} valueIcon={UI_I.power} valueLabel="Thế lực" />
-      <Tabs tab={tab} onTab={go} tabs={[['sect', 'Tông môn', NAV_I.sect], ['vault', 'Kho', UI_I.vault, S?.vaultNew > 0], ['bank', 'Ngân khố', UI_I.gold], ['army', 'Quân đội', UI_I.army], ['map', 'Bản đồ', UI_I.map, canHit]]} />
+      <Tabs tab={tab} onTab={go} tabs={[['sect', 'Tông môn', NAV_I.sect], ['elders', 'Trưởng lão', UI_I.elder], ['vault', 'Kho', UI_I.vault, S?.vaultNew > 0], ['bank', 'Ngân khố', UI_I.gold], ['army', 'Quân đội', UI_I.army], ['map', 'Bản đồ', UI_I.map, canHit]]} />
       {msg && <p className="bag-msg">{msg}</p>}
       <SheetBody>
         {tab === 'sect' && !S && <Found s={s} act={act} />}
         {tab === 'sect' && S && <Builds s={s} act={act} />}
+        {tab === 'elders' && <Elders s={s} act={act} />}
         {tab === 'vault' && <Vault s={s} act={act} />}
         {tab === 'bank' && <Bank s={s} act={act} />}
         {tab === 'army' && <Army s={s} act={act} />}

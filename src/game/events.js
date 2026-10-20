@@ -17,6 +17,7 @@ import { bossPower, dechienP, upHeld, writeRebirth } from './upper.js';
 import { addBeast, owns, ensureBeasts } from './beasts.js';
 import { ensureSkills } from './skills.js';
 import { ARCS } from './arcs.js';
+import { addElder, removeElder, leastLoyal, ensureElders } from './elders.js';
 
 // Vây thành bằng quân đội: chỉ tính quân và tông môn, bạn không ra trận nên không có rủi ro tính mạng
 const armySiegeP = (s) => clamp(1 / (1 + Math.exp(-(armyPower(s) + sectPower(s) + 10 - regionDef(s, region(s.tmp))) / 8)), 0.04, 0.92);
@@ -656,7 +657,7 @@ export const EVENTS = [
         fail: { do: (s) => { armyLoss(s, 0.3); }, fx: { tam: -4 }, log: (s) => `Quân ta tổn thất nặng dưới chân thành ${region(s.tmp).n}, phải lui binh.`, k: 'bad' } },
       { t: (s) => `Phái ${s.sect.elders} trưởng lão xuất chinh, bạn không ra mặt (~${Math.round(conquerP(s, regionDef(s, region(s.tmp)), -0.18) * 100)}%)`, if: (s) => s.sect.elders > 0, fight: 1, roll: (s) => conquerP(s, regionDef(s, region(s.tmp)), -0.18),
         ok: { do: (s) => takeLand(s, s.tmp), log: (s) => `Các trưởng lão khải hoàn trở về, dâng lên bản đồ ${region(s.tmp).n}.`, k: 'key' },
-        fail: { do: (s) => { s.sect.elders--; s.sect.members = Math.round(s.sect.members * 0.9); }, fx: { tam: -4 }, log: 'Quân ta đại bại. Một vị trưởng lão tử trận.', k: 'bad' } },
+        fail: { do: (s) => { s.tmp2 = removeElder(s, (l) => pick(l)); s.sect.members = Math.round(s.sect.members * 0.9); }, fx: { tam: -4 }, log: (s) => `Quân ta đại bại. ${s.tmp2 ? `${s.tmp2.title} trưởng lão ${s.tmp2.n}` : 'Một vị trưởng lão'} tử trận.`, k: 'bad' } },
       { t: 'Gửi chiến thư, ép quy hàng', if: (s) => s.fame >= regionDef(s, region(s.tmp)) * 0.3,
         roll: (s) => clamp(0.12 + (s.fame - regionDef(s, region(s.tmp)) * 0.3) / 50 + (warPower(s) - regionDef(s, region(s.tmp))) / 80, 0.03, 0.85),
         ok: { do: (s) => takeLand(s, s.tmp), log: (s) => `Chỉ một phong thư, ${region(s.tmp).own} đã mở cổng quy hàng. Không tốn một giọt máu!`, k: 'key' },
@@ -686,25 +687,26 @@ export const EVENTS = [
   {
     id: 'elder', w: 0.7, cd: 8, icon: '🧙',
     if: (s) => !!s.sect && s.sect.elders < 3 + bLv(s, 'hien'),
-    prep: (s) => { s.tmp = { name: genName(R() < 0.7 ? 'm' : 'f'), realm: G.REALMS[Math.max(3, s.R - 1)].n, fee: Math.round(unit(s) * rand(1, 2)) }; },
+    prep: (s) => { const g = R() < 0.7 ? 'm' : 'f'; const r = Math.max(3, s.R - 1 - (R() < 0.5 ? 1 : 0)); s.tmp = { name: genName(g), g, R: r, realm: G.REALMS[r].n, fee: Math.round(unit(s) * rand(1, 2)) }; },
     text: (s) => `${s.tmp.name}, một ${s.tmp.realm} tán tu, mến danh ${s.sect.name} mà tìm đến, muốn làm trưởng lão. Lễ nhập môn cần ${fmtGold(s.tmp.fee)} kim tệ, sau đó mỗi năm phải trả bổng lộc.`,
     ch: [
       { t: (s) => `Mời làm trưởng lão (${fmtGold(s.tmp.fee)})`, if: (s) => s.gold >= s.tmp.fee,
-        do: (s) => { spend(s, 'Lễ nhập môn trưởng lão', s.tmp.fee); s.sect.elders++; }, fx: { fame: 1 },
-        log: (s) => `${s.tmp.name} trở thành trưởng lão của ${s.sect.name}. Thế lực tông môn tăng mạnh.`, k: 'good' },
+        do: (s) => { spend(s, 'Lễ nhập môn trưởng lão', s.tmp.fee); s.tmp.e = addElder(s, { n: s.tmp.name, g: s.tmp.g, R: s.tmp.R }); }, fx: { fame: 1 },
+        log: (s) => `${s.tmp.name} trở thành ${s.tmp.e.title} trưởng lão của ${s.sect.name}, mang theo binh khí tùy thân. Xem ở tab Trưởng lão.`, k: 'good' },
       { t: 'Từ chối', log: 'Bạn chưa tin tưởng người này.' },
     ],
   },
   {
     id: 'betray', w: 0.35, cd: 20, icon: '🐍',
-    if: (s) => !!s.sect && s.sect.elders > 0 && s.gold > unit(s) * 3,
-    prep: (s) => { s.tmp = Math.round(s.gold * rand(0.15, 0.3)); },
-    text: (s) => `Một trưởng lão lén mở ngân khố, ôm ${fmtGold(s.tmp)} kim tệ bỏ trốn trong đêm.`,
+    // Chỉ kẻ kém trung thành mới phản; ban thưởng đều tay thì tông môn yên ổn
+    if: (s) => !!s.sect && s.sect.elders > 0 && s.gold > unit(s) * 3 && leastLoyal(s)?.loy < 45,
+    prep: (s) => { const e = leastLoyal(s); s.tmp = { amt: Math.round(s.gold * rand(0.15, 0.3)), id: e.id, n: `${e.title} trưởng lão ${e.n}` }; },
+    text: (s) => `${s.tmp.n} lén mở ngân khố, ôm ${fmtGold(s.tmp.amt)} kim tệ cùng toàn bộ trang bị bỏ trốn trong đêm.`,
     ch: [
       { t: 'Truy sát đến cùng', fight: 1, roll: (s) => winP(s, peer(s, -1)),
-        ok: { fx: { fame: 1, tam: 3 }, do: (s) => { s.sect.elders--; }, log: 'Bạn đuổi kịp hắn ở biên giới. Tiền được thu hồi, kẻ phản đồ đền tội.', k: 'good' },
-        fail: { do: (s) => { s.sect.elders--; lose(s, 'Trưởng lão cuỗm tiền', s.tmp); }, fx: { tam: -5 }, log: 'Hắn trốn thoát. Tiền mất, lòng người dao động.', k: 'bad' } },
-      { t: 'Để hắn đi, chấn chỉnh môn quy', do: (s) => { s.sect.elders--; lose(s, 'Trưởng lão cuỗm tiền', s.tmp); }, fx: { tam: 2 }, log: 'Bạn ban hành môn quy mới. Từ đây ngân khố canh phòng nghiêm ngặt.' },
+        ok: { fx: { fame: 1, tam: 3 }, do: (s) => { removeElder(s, (l) => l.find((x) => x.id === s.tmp.id)); }, log: (s) => `Bạn đuổi kịp ${s.tmp.n} ở biên giới. Tiền được thu hồi, kẻ phản đồ đền tội.`, k: 'good' },
+        fail: { do: (s) => { removeElder(s, (l) => l.find((x) => x.id === s.tmp.id)); lose(s, 'Trưởng lão cuỗm tiền', s.tmp.amt); }, fx: { tam: -5 }, log: 'Hắn trốn thoát. Tiền mất, lòng người dao động.', k: 'bad' } },
+      { t: 'Để hắn đi, chấn chỉnh môn quy', do: (s) => { removeElder(s, (l) => l.find((x) => x.id === s.tmp.id)); lose(s, 'Trưởng lão cuỗm tiền', s.tmp.amt); ensureElders(s).forEach((e) => { e.loy = Math.min(100, e.loy + 8); }); }, fx: { tam: 2 }, log: 'Bạn ban hành môn quy mới. Các trưởng lão còn lại thêm phần kính sợ.' },
     ],
   },
   {

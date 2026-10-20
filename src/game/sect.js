@@ -1,8 +1,9 @@
 import G from './data.js';
-import { R, rand, pick, clamp, cp, unit, earn, spend, lose, give, bankIn, sectPay, sectDrain, applyFx, pillNeed, beastGrade, fmtGold, lastEntry, effLv, levelPlan, tierFor } from './util.js';
+import { R, rand, pick, clamp, cp, unit, earn, spend, lose, give, bankIn, sectPay, sectDrain, applyFx, pillNeed, beastGrade, fmtGold, lastEntry, effLv, levelPlan, tierFor, fxSum } from './util.js';
 import { armyPower, armyLoss, armyYearly, armyUpkeep } from './army.js';
 import { vaultYearly, conquestLoot } from './vault.js';
 import { deFx, unifyFx } from './emperor.js';
+import { eldersPower } from './elders.js';
 
 // ───── Tông môn ─────
 export const genSectName = () => pick(G.SECT_NAME.a) + ' ' + pick(G.SECT_NAME.b) + ' ' + pick(G.SECT_NAME.c);
@@ -57,7 +58,7 @@ export const memberCap = (s) => !s.sect ? 0 : Math.round(30 + bEff(s, 'hien') * 
 export function sectPower(s) {
   if (!s.sect) return 0;
   const S = s.sect;
-  return Math.sqrt(S.members) * (bLv(s, 'kinh') >= 3 ? 1 : 0.8) + S.elders * 2 + bEff(s, 'vo') * 2.5 + landCount(s) * 0.4 + Math.min(5, s.disciples);
+  return Math.sqrt(S.members) * (bLv(s, 'kinh') >= 3 ? 1 : 0.8) + eldersPower(s) + bEff(s, 'vo') * 2.5 + landCount(s) * 0.4 + Math.min(5, s.disciples);
 }
 // Càng bành trướng, các thế lực còn lại càng liên kết chống lại bạn
 export const regionDef = (s, r) => Math.round(r.def * (1 + 0.03 * landCount(s)) * (1 - deFx(s, 'def')) * (1 + (s.ng || 0) * G.NG.def));
@@ -99,7 +100,7 @@ export function develop(s, id, want = 1) {
   return `${region(id).n} khai phát lên cấp ${s.land[id].dev}.`;
 }
 // Mỗi cấp khai phát +8% thu nhập vùng đó
-export const regionInc = (s, id) => (region(id)?.inc || 0) * (1 + 0.08 * devLv(s, id)) * (1 + deFx(s, 'tax') + unifyFx(s, 'tax')) * (1 + (s.ng || 0) * G.NG.inc);
+export const regionInc = (s, id) => (region(id)?.inc || 0) * (1 + 0.08 * devLv(s, id)) * (1 + deFx(s, 'tax') + unifyFx(s, 'tax') + fxSum(s, 'tutai')) * (1 + (s.ng || 0) * G.NG.inc);
 export const landIncome = (s) => landIds(s).reduce((a, id) => a + regionInc(s, id), 0);
 
 const ADJ = {};
@@ -160,7 +161,8 @@ export function sectYearly(s, e, yrs, f) {
   if (inc) bankIn(s, 'Thuế lãnh địa', inc * yrs * rand(0.85, 1.15) * (lead ? 1.2 : 1));
   vaultYearly(s, e, yrs);
 
-  if (!sectPay(s, 'Chi phí tông môn', sectUpkeep(s) * yrs)) {
+  S.broke = !sectPay(s, 'Chi phí tông môn', sectUpkeep(s) * yrs);
+  if (S.broke) {
     sectDrain(s, 'Chi phí tông môn');
     const gone = Math.ceil(S.members * 0.15);
     S.members -= gone;

@@ -118,7 +118,7 @@ export function cp(s) {
   if (hasTrait(s, 'fierce')) v += 2;
   v += gearSum(s, 'cp');
   v += fxSum(s, 'phagiap');
-  return v;
+  return v * (1 + fxSum(s, 'cuonghuyet'));
 }
 
 // ───── Trang bị ─────
@@ -173,7 +173,7 @@ export function fxText(it, f) {
 export const qualityIdx = (it) => Math.max(0, G.QUALITY.findIndex((x) => x[0] === it.q));
 export const gearName = (it) => `${it.n}${it.en ? ` +${it.en}` : ''}${it.q > 1 ? ` · ${G.QUALITY[qualityIdx(it)][1]}` : ''}`;
 // Giảm xác suất tử vong nhờ chiến ngoa và thú cưỡi
-export const dodgeMult = (s) => Math.max(0.2, 1 - gearSum(s, 'dodge') - beastFx(s, 'dodge'));
+export const dodgeMult = (s) => Math.max(0.2, 1 - gearSum(s, 'dodge') - beastFx(s, 'dodge') - fxSum(s, 'thietcot'));
 // Cấp hiệu dụng của công trình: 10 cấp đầu tính đủ, sau đó mỗi cấp 35%
 export const effLv = (lv) => (lv <= 10 ? lv : 10 + (lv - 10) * 0.35);
 // Mua nhiều cấp liền: trả về số cấp mua được và tổng giá (want = Infinity để mua tối đa)

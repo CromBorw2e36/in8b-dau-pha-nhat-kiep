@@ -1,5 +1,5 @@
 import G from './data.js';
-import { R, rand, pick, clamp, unit, earn, spend, give, countOf, tierFor, gearName, fmtGold, itemName, levelPlan, mkIdx, qualityIdx } from './util.js';
+import { R, rand, pick, clamp, unit, earn, spend, give, countOf, tierFor, gearName, fmtGold, itemName, levelPlan, mkIdx, qualityIdx, fxSum } from './util.js';
 import { genGear, obtainGear, rollFresh, affixVal } from './gear.js';
 import { vaultCount, takeFromVault } from './vault.js';
 import { deFx } from './emperor.js';
@@ -50,7 +50,7 @@ export const canCraft = (s, tier) => {
   return tier <= craftTierCap(s) && s.gold >= c.gold && hasMat(s, c.ore, 'ore') && hasMat(s, c.core, 'core');
 };
 // Thêm trọng số phẩm chất cao: cấp lò, dị hỏa, linh hồn
-export const craftBoost = (s) => smithLv(s) / 20 + s.fires.length * 0.4 + Math.max(0, (s.soul - 50) / 50) + deFx(s, 'craft');
+export const craftBoost = (s) => smithLv(s) / 20 + s.fires.length * 0.4 + Math.max(0, (s.soul - 50) / 50) + deFx(s, 'craft') + fxSum(s, 'thienhoa');
 
 // ───── Tế phẩm: dung luyện đồ cũ trong túi để tăng phẩm chất khi rèn hoặc tỷ lệ cường hóa ─────
 export const FODDER_MAX = 5;
@@ -90,7 +90,7 @@ export function enhanceCost(it) {
 // Tới +6 chắc chắn thành công, sau đó giảm dần theo G.ENHANCE_P; lò rèn cấp cao bù lại
 export const enhanceP = (s, it, fodder = []) => {
   const base = G.ENHANCE_P[it.en || 0] ?? 0;
-  return base >= 1 ? 1 : clamp(base + smithLv(s) * 0.002 + deFx(s, 'enh') + fodderEnh(s, fodder, it), 0.1, 1);
+  return base >= 1 ? 1 : clamp(base + smithLv(s) * 0.002 + deFx(s, 'enh') + fxSum(s, 'luyenkhi') + fodderEnh(s, fodder, it), 0.1, 1);
 };
 export const findGear = (s, id) => Object.values(s.gear).find((x) => x?.id === id) || s.armory.find((x) => x.id === id);
 
@@ -161,7 +161,7 @@ export const fuseOver = (main, fxId, replaceId) => {
 export function fuseCost(it, over = 0) {
   return { gold: Math.round(G.GEAR_PRICE[it.tier] * G.FUSE.gold * Math.pow(G.FUSE.overGold, over)), core: [Math.min(9, oreG(it.tier) + 1), 1 + Math.floor(over / 3)] };
 }
-export const fuseP = (s, main, mat, over = 0) => clamp(G.FUSE.p + smithLv(s) * 0.0025 + (mat.tier >= main.tier ? 0.05 : -0.12 * (main.tier - mat.tier)) + deFx(s, 'enh') - over * G.FUSE.over, 0.15, 0.97);
+export const fuseP = (s, main, mat, over = 0) => clamp(G.FUSE.p + smithLv(s) * 0.0025 + (mat.tier >= main.tier ? 0.05 : -0.12 * (main.tier - mat.tier)) + deFx(s, 'enh') + fxSum(s, 'luyenkhi') - over * G.FUSE.over, 0.15, 0.97);
 // Phụ liệu dùng được: trong túi, chưa khóa, có hiệu ứng
 export const fuseMats = (s, mainId) => s.armory.filter((it) => !it.lock && it.id !== mainId && it.fx?.length);
 // Giá trị hiệu ứng khi sang món chính: giữ nguyên độ tốt của lần tung gốc, tính lại theo bậc và phẩm chất món chính

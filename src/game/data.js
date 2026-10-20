@@ -173,9 +173,16 @@ G.AFFIX = [
   { id: 'tambao',     n: 'Tầm Bảo',    base: 0.12,  fmt: 'pct', d: 'cơ hội nhặt được bảo vật' },
   { id: 'kimquang',   n: 'Kim Quang',  base: 0.04,  fmt: 'gold', d: 'kim tệ tự sinh mỗi năm' },
   { id: 'homenh',     n: 'Hộ Mệnh',    base: 0.08,  fmt: 'pct', d: 'cơ hội đỡ một lần tử vong (pháp khí vỡ)' },
+  { id: 'cuonghuyet', n: 'Cuồng Huyết', base: 0.012, fmt: 'pct', d: 'chiến lực nhân thêm' },
+  { id: 'thietcot',   n: 'Thiết Cốt',  base: 0.01,  fmt: 'pct', d: 'giảm nguy cơ tử nạn' },
+  { id: 'luyenkhi',   n: 'Luyện Khí',  base: 0.006, fmt: 'pct', d: 'tỷ lệ cường hóa và dung luyện' },
+  { id: 'thienhoa',   n: 'Thiên Hỏa',  base: 0.06,  fmt: 'num', d: 'cơ hội rèn ra đồ phẩm cao' },
+  { id: 'khoangmach', n: 'Khoáng Mạch', base: 0.03, fmt: 'pct', d: 'sản lượng mỏ tông môn' },
+  { id: 'tutai',      n: 'Tụ Tài',     base: 0.02,  fmt: 'pct', d: 'thuế thu từ lãnh địa' },
+  { id: 'dotkich',    n: 'Đột Kích',   base: 0.03,  fmt: 'pct', d: 'số lần tông môn đi cướp mỗi năm' },
 ];
 // Số hiệu ứng theo phẩm chất: [tối thiểu, tối đa]
-G.AFFIX_COUNT = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 3], [10, 10]];
+G.AFFIX_COUNT = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 3], [9, 9]];
 G.ENHANCE_MAX = 12;
 // Tỷ lệ thành công gốc theo cấp hiện tại: +0..+5 chắc chắn, sau đó giảm dần tới +12
 G.ENHANCE_P = [1, 1, 1, 1, 1, 1, 0.85, 0.72, 0.6, 0.48, 0.36, 0.25];
@@ -185,7 +192,7 @@ G.REFINE = { gold: 0.08, lock: 1.8 };
 // Món chính chứa bình thường (số hiệu ứng tối đa theo phẩm chất + extra), tối thiểu 1.
 // Luyện hóa: nhồi vượt mức đó tới `max`; mỗi hiệu ứng vượt hạn giảm tỷ lệ `over` và nhân giá `overGold`.
 // Đủ `max` hiệu ứng thì món đồ hóa Chí Tôn.
-G.FUSE = { gold: 0.15, p: 0.72, extra: 1, max: 10, over: 0.05, overGold: 1.45 };
+G.FUSE = { gold: 0.15, p: 0.72, extra: 1, max: 9, over: 0.05, overGold: 1.45 };
 
 // ───── Linh thú: thú cưng (đồng hành chiến đấu) và thú cưỡi (tọa kỵ) ─────
 // Nuôi bằng ma hạch tới cấp 10. fx: hiệu ứng mỗi cấp, dùng chung mã với hiệu ứng pháp khí, nhân theo bậc cảnh giới.

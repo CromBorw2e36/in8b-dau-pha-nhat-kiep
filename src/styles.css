@@ -1949,3 +1949,22 @@ img, svg { -webkit-user-drag: none; }
   .side-doll .avatar { width: 170px; height: auto; }
   .side-card { padding: 9px 11px; gap: 6px; }
 }
+
+/* ───── Trưởng lão ───── */
+.elders { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+.elder-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--panel-2); border: 1px solid var(--edge); min-width: 0; }
+.elder-card.mentor { border-color: color-mix(in srgb, var(--gold) 55%, transparent); box-shadow: 0 0 16px color-mix(in srgb, var(--gold) 15%, transparent); }
+.el-top { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.el-ava { flex: none; width: 92px; display: grid; place-items: center; }
+.el-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.el-info .eyebrow { margin: 0; }
+.el-name { font: 700 16px var(--ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.el-realm { font: 600 13px var(--ui); color: var(--gold); }
+.el-stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.el-stats span { display: inline-flex; align-items: center; gap: 3px; }
+.el-loy { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; font-size: 12px; }
+.el-loy.bad b { color: var(--bad); }
+.el-loy.good b { color: var(--good); }
+.el-gear { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.el-detail { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.25); border: 1px solid color-mix(in srgb, var(--qc) 40%, transparent); font-size: 13px; }
+.elder-card .row-btns { display: flex; gap: 6px; flex-wrap: wrap; }

@@ -9,6 +9,7 @@ import { economy, cultivationPill, moneyLine, sellPrice } from './economy.js';
 import { estatesYearly, estateValue, gearSell, artifactYearly } from './gear.js';
 import { sectYearly, bLv, landCount, sectTier } from './sect.js';
 import { smithYearly, smithLv, armCost } from './forge.js';
+import { eldersYearly } from './elders.js';
 import { marketTick, consignTick, bidTick } from './exchange.js';
 import { auctionTick } from './auction.js';
 import { troopCount } from './army.js';
@@ -182,6 +183,7 @@ function yearly(s, e, yrs) {
   beastsYearly(s, yrs);
   estatesYearly(s, e, yrs);
   sectYearly(s, e, yrs, f);
+  eldersYearly(s, e, yrs);
   smithYearly(s, e, yrs);
   economy(s, e, yrs, f);
   consignTick(s, e);
