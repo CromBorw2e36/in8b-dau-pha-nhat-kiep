@@ -545,7 +545,7 @@ button.realm-badge:hover { filter: brightness(1.1); box-shadow: 0 0 12px rgba(24
 .c-body { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px 68px; }
 @media (max-width: 420px) { .c-body { padding-left: 12px; } }
 .c-act { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.c-act > .mats, .c-act > .lv-track, .c-act > .consign, .c-act > .sv { flex-basis: 100%; }
+.c-act > .mats, .c-act > .lv-track, .c-act > .consign, .c-act > .sv, .c-act > .prog { flex-basis: 100%; }
 .card.add {
   display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 66px; border-style: dashed; --qc: var(--gold);
   background: transparent; color: var(--gold); font: 600 14px var(--ui);
@@ -647,7 +647,7 @@ button.realm-badge:hover { filter: brightness(1.1); box-shadow: 0 0 12px rgba(24
 .lv-track { height: 3px; background: rgba(0, 0, 0, 0.45); border-radius: 2px; overflow: hidden; }
 .lv-track i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold-deep), var(--gold-hi)); }
 .lv-track.thick { height: 6px; border-radius: 3px; }
-.prog { display: flex; flex-direction: column; gap: 4px; flex-basis: 100%; }
+.prog { display: flex; flex-direction: column; gap: 4px; }
 
 /* Thị trường */
 .mkt-strip { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -971,7 +971,8 @@ button.mat:hover { border-color: var(--gold); }
   .stat b { grid-column: 1 / -1; text-align: left; font-size: 24px; line-height: 1; }
   .s-name { font-size: 14px; }
   .res-row { grid-area: res; flex-wrap: wrap; align-content: center; align-self: stretch; }
-  .res-scroll { flex-wrap: wrap; overflow: visible; }
+  /* Vàng và nút truyền thừa chung một hàng, các chip tài nguyên xuống hàng dưới và tự xuống dòng */
+  .res-scroll { flex: 1 1 100%; order: 1; flex-wrap: wrap; overflow: visible; }
   .who-name { font-size: 24px; }
 
   /* Cột nhật ký đọc ở giữa */
