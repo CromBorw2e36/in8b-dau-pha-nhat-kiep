@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import G from '../game/data.js';
 import { tick, choose, choicesOf, hints, save, EV, breakNow, rollP } from '../game/engine.js';
-import { lifeOf, realmLabel, canAlch, cp, holding, holdLeft, fmtGold, itemName } from '../game/util.js';
+import { lifeOf, realmLabel, canAlch, cp, fmtCp, holding, holdLeft, fmtGold, itemName } from '../game/util.js';
 import { gradeQ } from './gearUi.jsx';
 import { smithLv } from '../game/forge.js';
 import { troopCount } from '../game/army.js';
@@ -24,6 +24,7 @@ import Sect from './Sect.jsx';
 import Market from './Market.jsx';
 import Emperor from './Emperor.jsx';
 import Forge from './Forge.jsx';
+import HeirReveal from './HeirReveal.jsx';
 
 // ms mỗi lượt. Mặc định chậm để kịp đọc; tốc độ được nhớ giữa các lần chơi.
 const SPEEDS = [3200, 2000, 1100, 500];
@@ -46,6 +47,10 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
   const [panel, setPanel] = useState(demo?.panel || null); // 'bag' | 'forge' | 'market' | 'sect' | 'help'
   const [focusOpen, setFocusOpen] = useState(false);
   const [result, setResult] = useState(null);
+  // Pháp bảo truyền thừa vừa mở phong ấn, chờ diễn cảnh thức tỉnh
+  const heirId = s.heirNew?.[0];
+  const heirIt = heirId ? [...Object.values(s.gear), ...s.armory].find((x) => x?.id === heirId) : null;
+  if (heirId && !heirIt) s.heirNew = s.heirNew.slice(1);
   const [peek, setPeek] = useState(false); // tạm ẩn bảng quyết định để xem thông số
   const [major, setMajor] = useState(() => readKey(FEED_KEY, '0') === '1');
   const [open, setOpen] = useState({}); // nhóm năm bình lặng đã mở
@@ -184,7 +189,7 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
   // Các chỉ báo nhỏ trên HUD: icon + số, di chuột/nhấn giữ để xem tên
   const chips = [
     // [icon, giá trị, nhãn ngắn, chú thích đầy đủ]
-    s.started && [UI_I.cp, Math.round(cp(s)), 'Chiến lực', 'Chiến lực của bản thân'],
+    s.started && [UI_I.cp, fmtCp(cp(s)), 'Chiến lực', 'Chiến lực của bản thân'],
     s.fame >= 1 && [UI_I.fame, Math.round(s.fame), 'Danh vọng', 'Danh vọng'],
     s.gong > 0 && [UI_I.gong, G.GRADES[s.gong], 'Công pháp', `Công pháp ${G.GRADES[s.gong]}`],
     s.skill > 0 && [UI_I.skill, G.GRADES[s.skill], 'Đấu kỹ', `Đấu kỹ ${G.GRADES[s.skill]}`],
@@ -341,6 +346,9 @@ export default function Game({ s, ver, bump, onEnd, onHome, demo }) {
       {panel === 'sect' && <Sect s={s} bump={bump} initTab={demo?.tab} onClose={() => setPanel(null)} />}
       {panel === 'help' && <StatHelp onClose={() => setPanel(null)} />}
       {panel?.startsWith('emperor') && <Emperor s={s} bump={bump} initTab={panel.split(':')[1] || demo?.tab} onClose={() => setPanel(null)} />}
+      {heirIt && !result && !s.pending && (
+        <HeirReveal key={heirIt.id} it={heirIt} s={s} onClose={() => { s.heirNew = s.heirNew.slice(1); save(s); bump(); }} />
+      )}
 
       {showFocus && !result && !peek && (
         <Sheet onClose={s.needFocus ? undefined : () => setFocusOpen(false)} onPeek={s.needFocus ? () => setPeek(true) : undefined}>

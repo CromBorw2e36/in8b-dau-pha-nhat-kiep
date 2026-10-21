@@ -1,6 +1,6 @@
 import G from './data.js';
-import { R, rand, pick, clamp, unit, earn, spend, give, countOf, tierFor, gearName, fmtGold, itemName, levelPlan, mkIdx, qualityIdx, fxSum } from './util.js';
-import { genGear, obtainGear, rollFresh, affixVal } from './gear.js';
+import { R, rand, pick, clamp, unit, earn, spend, give, countOf, tierFor, gearName, fmtGold, itemName, levelPlan, mkIdx, qualityIdx, fxSum, enMax, enTier } from './util.js';
+import { genGear, obtainGear, rollFresh, affixVal, isHeirFx } from './gear.js';
 import { vaultCount, takeFromVault } from './vault.js';
 import { deFx } from './emperor.js';
 
@@ -82,21 +82,36 @@ export function craft(s, sl, tier, fodder = []) {
   return { t: `Lò rèn đỏ rực ba ngày ba đêm. Thành phẩm: ${obtainGear(s, it)}.`, name: gearName(it), q: qualityIdx(it), it };
 }
 
-// ───── Cường hóa +0 → +12 ─────
+// ───── Cường hóa: mỗi tầng 12 cấp, đồ truyền thừa mở thêm tầng ─────
 export function enhanceCost(it) {
-  const en = it.en || 0;
-  return { gold: Math.round(G.GEAR_PRICE[it.tier] * 0.06 * Math.pow(1 + en, 1.6)), ore: [oreG(it.tier), 1 + en] };
+  const en = it.en || 0, k = enTier(en), i = en % G.ENHANCE_MAX;
+  return { gold: Math.round(G.GEAR_PRICE[it.tier] * 0.06 * Math.pow(1 + en, 1.6) * (1 + 0.5 * k)), ore: [oreG(it.tier), 1 + i + 6 * k] };
 }
-// Tới +6 chắc chắn thành công, sau đó giảm dần theo G.ENHANCE_P; lò rèn cấp cao bù lại
+const ownFx = (it, id) => it.fx?.find((f) => f.id === id)?.v || 0;
+// Tỷ lệ gốc theo vị trí trong tầng; tầng truyền thừa nhân thêm hệ số mỗi tầng và không còn cấp chắc chắn
+export function enhanceBase(it) {
+  const en = it.en || 0, k = enTier(en), T = G.ENHANCE_TIER;
+  const b = G.ENHANCE_P[en % G.ENHANCE_MAX] ?? 0;
+  return k ? Math.max(T.floor, Math.min(0.92, b) * Math.pow(T.p, k)) : b;
+}
+// Tầng đầu: tới +6 chắc chắn thành công, sau đó giảm dần; lò rèn cấp cao, Luân Hồi Ấn và tế phẩm bù lại
 export const enhanceP = (s, it, fodder = []) => {
-  const base = G.ENHANCE_P[it.en || 0] ?? 0;
-  return base >= 1 ? 1 : clamp(base + smithLv(s) * 0.002 + deFx(s, 'enh') + fxSum(s, 'luyenkhi') + fodderEnh(s, fodder, it), 0.1, 1);
+  const base = enhanceBase(it);
+  return base >= 1 ? 1 : clamp(base + smithLv(s) * 0.002 + deFx(s, 'enh') + fxSum(s, 'luyenkhi') + ownFx(it, 'luanhoi') + fodderEnh(s, fodder, it), 0.05, 1);
 };
+// Tỷ lệ rớt một cấp khi thất bại. Tầng đầu từ +9; tầng truyền thừa từ cấp thứ hai của tầng. Bất Hủ giảm bớt
+export function enhanceDrop(it) {
+  const en = it.en || 0, k = enTier(en), i = en % G.ENHANCE_MAX, D = G.ENHANCE_DROP;
+  let p = 0;
+  if (!k) p = i >= D.from ? D.p[Math.min(D.p.length - 1, i - D.from)] : 0;
+  else if (i > 0) p = Math.min(0.75, 0.15 + i * 0.03 + k * G.ENHANCE_TIER.drop);
+  return p ? Math.max(0, p - ownFx(it, 'bathu')) : 0;
+}
 export const findGear = (s, id) => Object.values(s.gear).find((x) => x?.id === id) || s.armory.find((x) => x.id === id);
 
 export function enhance(s, id, fodder = []) {
   const it = findGear(s, id);
-  if (!it || (it.en || 0) >= G.ENHANCE_MAX) return null;
+  if (!it || (it.en || 0) >= enMax(it)) return null;
   if (!smithLv(s)) return 'Cần dựng lò rèn trước.';
   const c = enhanceCost(it);
   if (s.gold < c.gold || !hasMat(s, c.ore, 'ore')) return 'Thiếu nguyên liệu hoặc kim tệ.';
@@ -108,6 +123,11 @@ export function enhance(s, id, fodder = []) {
     it.en = (it.en || 0) + 1;
     s.stats.enhance = Math.max(s.stats.enhance || 0, it.en);
     return { ok: true, t: `${gearName(it)}: cường hóa thành công!` };
+  }
+  // Rớt cấp: không bao giờ xuống dưới đầu tầng, cấp đã truyền thừa giữ nguyên
+  if (R() < enhanceDrop(it)) {
+    it.en -= 1;
+    return { ok: false, drop: true, t: `Cường hóa thất bại, linh văn vỡ vụn! ${it.n} rớt xuống +${it.en}.` };
   }
   return { ok: false, t: `Cường hóa thất bại, nguyên liệu tan thành tro. ${it.n} vẫn ở +${it.en || 0}.` };
 }
@@ -128,10 +148,12 @@ export function refine(s, id, locks = []) {
   const it = findGear(s, id);
   if (!it || !canRefineItem(it)) return null;
   if (!smithLv(s)) return 'Cần dựng lò rèn trước.';
-  const keep = (it.fx || []).filter((f) => locks.includes(f.id));
+  // Hiệu ứng truyền thừa gắn liền với món, tẩy luyện không xóa được
+  const keep = (it.fx || []).filter((f) => locks.includes(f.id) || isHeirFx(f.id));
   if (keep.length && keep.length >= (it.fx?.length || 0)) return 'Phải để ít nhất một hiệu ứng không khóa.';
-  const c = refineCost(it, keep.length);
-  if (!canAffordRefine(s, it, keep.length)) return 'Thiếu nguyên liệu hoặc kim tệ.';
+  const nLock = keep.filter((f) => !isHeirFx(f.id)).length;
+  const c = refineCost(it, nLock);
+  if (!canAffordRefine(s, it, nLock)) return 'Thiếu nguyên liệu hoặc kim tệ.';
   spend(s, 'Tẩy luyện trang bị', c.gold);
   takeMat(s, 'ore', ...c.ore);
   // Số hiệu ứng: không ít hơn hiện có, có cơ hội lên tới mức tối đa của phẩm chất

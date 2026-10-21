@@ -123,26 +123,60 @@ export function cp(s) {
 
 // ───── Trang bị ─────
 // en: cấp cường hóa 0..12, mỗi cấp +10% chỉ số chính
+// ───── Cường hóa nhiều tầng ─────
+// Mỗi tầng 12 cấp; đồ mới 1 tầng, mỗi đời truyền thừa mở thêm một tầng
+export const enMax = (it) => G.ENHANCE_MAX * (1 + (it?.gen || 0));
+export const enTier = (en) => Math.floor((en || 0) / G.ENHANCE_MAX);
+// Cấp hiệu dụng: cấp ở tầng k mạnh bằng (1 + gain·k) cấp tầng đầu
+export function enEff(en) {
+  en ||= 0;
+  const N = G.ENHANCE_MAX, g = G.ENHANCE_TIER.gain, k = enTier(en);
+  return N * (k + g * k * (k - 1) / 2) + (en - k * N) * (1 + g * k);
+}
+// Giá trị một hiệu ứng pháp khí của món (Tổ Ấn ...), không tính cường hóa
+const ownFx = (it, id) => it.fx?.find((f) => f.id === id)?.v || 0;
 export function gearStat(it) {
   const D = G.GEAR[it.sl];
-  const en = it.en || 0;
+  const en = enEff(it.en);
   const m = 1 + 0.1 * en;
+  const A = it.attr || {};
+  const all = 1 + ownFx(it, 'toan') * (1 + 0.03 * en); // Tổ Ấn: mọi chỉ số chính của món
   return {
-    cp: D.cp[it.tier] * it.q * m,
-    def: Math.min(0.7, (D.def?.[it.tier] || 0) * Math.min(it.q, 1.3) * (1 + 0.03 * en)),
-    qi: (D.qi?.[it.tier] || 0) * it.q * m,
-    bt: (D.bt?.[it.tier] || 0) * it.q * (1 + 0.05 * en),
-    dodge: Math.min(0.6, (D.dodge?.[it.tier] || 0) * Math.min(it.q, 1.6) * (1 + 0.03 * en)),
+    cp: (D.cp[it.tier] * it.q * m + (A.cp || 0)) * all,
+    def: Math.min(0.7, ((D.def?.[it.tier] || 0) * Math.min(it.q, 1.3) * (1 + 0.03 * en) + (A.def || 0)) * all),
+    qi: ((D.qi?.[it.tier] || 0) * it.q * m + (A.qi || 0)) * all,
+    bt: ((D.bt?.[it.tier] || 0) * it.q * (1 + 0.05 * en) + (A.bt || 0)) * all,
+    dodge: Math.min(0.6, ((D.dodge?.[it.tier] || 0) * Math.min(it.q, 1.6) * (1 + 0.03 * en) + (A.dodge || 0)) * all),
   };
 }
 export const gearSum = (s, k) => Object.values(s.gear || {}).reduce((a, it) => a + (it ? gearStat(it)[k] : 0), 0);
-export const gearScore = (it) => (it ? G.GEAR_PRICE[it.tier] * it.q * (1 + 0.15 * (it.en || 0)) * (1 + 0.15 * (it.fx?.length || 0)) : 0);
-// Tổng giá trị một hiệu ứng pháp khí trên đồ đang mặc (cường hóa tăng thêm 3% mỗi cấp)
-export const fxVal = (it, f) => { const v = f.v * (1 + 0.03 * (it.en || 0)); return f.id === 'homenh' ? Math.min(0.6, v) : v; };
+export const gearScore = (it) => (it ? G.GEAR_PRICE[it.tier] * it.q * (1 + 0.15 * enEff(it.en)) * (1 + 0.15 * (it.fx?.length || 0)) * (1 + 0.2 * (it.gen || 0)) : 0);
+// Tổng giá trị một hiệu ứng pháp khí trên đồ đang mặc (cường hóa tăng thêm 3% mỗi cấp hiệu dụng)
+export const fxVal = (it, f) => { const v = f.v * (1 + 0.03 * enEff(it.en)); return f.id === 'homenh' ? Math.min(0.6, v) : v; };
+// Thuộc tính truyền thừa cộng như hiệu ứng pháp khí
+const HEIR_FX = Object.fromEntries(G.HEIR_ATTR.filter((a) => a.fx).map((a) => [a.fx, a.id]));
 export function fxSum(s, id) {
   let t = beastFx(s, id);
-  for (const it of Object.values(s.gear || {})) if (it?.fx) for (const f of it.fx) if (f.id === id) t += fxVal(it, f);
+  const ha = HEIR_FX[id];
+  for (const it of Object.values(s.gear || {})) {
+    if (it?.fx) for (const f of it.fx) if (f.id === id) t += fxVal(it, f);
+    if (ha && it?.attr?.[ha]) t += it.attr[ha];
+  }
   return t;
+}
+// Phẩm hiệu pháp bảo truyền thừa theo số đời: { n, lv 1..6 } hoặc null
+export function heirRank(it) {
+  const g = it?.gen || 0;
+  if (!g) return null;
+  let i = 0;
+  G.HEIR_RANK.forEach(([at], k) => { if (g >= at) i = k; });
+  return { n: G.HEIR_RANK[i][1], lv: i + 1 };
+}
+// Dòng hiện một thuộc tính truyền thừa
+export function attrText(id, v) {
+  const a = G.HEIR_ATTR.find((x) => x.id === id);
+  const val = a.fmt === 'pct' ? `+${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%` : a.fmt === 'yr' ? `+${Math.round(v)} năm` : a.fmt === 'gold' ? `${v.toFixed(2)} ma hạch` : `+${v.toFixed(v < 10 ? 1 : 0)}`;
+  return { n: a.n, val, d: a.d || a.n.toLowerCase() };
 }
 // ───── Linh thú ─────
 // Hiệu ứng tính theo số tuyệt đối (chiến lực, hồi phục, thọ) lớn dần theo bậc cảnh giới; tỷ lệ % thì không
@@ -364,6 +398,17 @@ export function fmtGold(v) {
   if (v >= 1e6) return (v / 1e6).toFixed(1) + ' tr';
   if (v >= 1e4) return (v / 1e3).toFixed(0) + 'k';
   return v.toLocaleString('vi-VN');
+}
+
+// Chiến lực / thế lực: dưới 100 000 giữ nguyên số, trên đó chia bậc, mỗi bậc gấp 1000 lần bậc trước
+export const CP_TIERS = ['Huyền', 'Địa', 'Thiên', 'Thánh', 'Đế', 'Thần'];
+export function fmtCp(v) {
+  v = Math.round(v);
+  if (Math.abs(v) < 1e5) return String(v);
+  let t = Math.min(CP_TIERS.length, Math.floor(Math.log10(Math.abs(v)) / 3));
+  if (Math.abs(Math.round(v / 10 ** (t * 3))) >= 1000 && t < CP_TIERS.length) t++; // 999 999 → 1 Địa, không phải 1000 Huyền
+  const x = v / 10 ** (t * 3);
+  return `${x.toFixed(Math.abs(x) >= 100 ? 0 : 1).replace(/\.0$/, '')} ${CP_TIERS[t - 1]}`;
 }
 
 export { upgradeSkill, upgradeGong } from './skills.js';

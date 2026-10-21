@@ -39,7 +39,7 @@ G.DE_CANH = [
 // Truyền thừa: món mang sang kiếp sau khi Đấu Đế quy ẩn / phi thăng
 G.LEGACY = [
   { id: 'blood', n: 'Đế huyết',        d: 'Kiếp sau tư chất tăng một bậc (tối đa Thiên tài), khí vận +8.' },
-  { id: 'gear',  n: 'Bản mệnh pháp bảo', d: 'Một món trang bị đang mặc, giữ nửa cấp cường hóa. Phong ấn tới khi đủ cảnh giới dùng bậc đó.' },
+  { id: 'gear',  n: 'Pháp bảo truyền thừa', d: 'Chọn nhiều món trang bị (đang mặc hoặc trong túi). Giữ nguyên cấp cường hóa, mở thêm 12 cấp rèn, thức tỉnh thuộc tính mới mỗi đời. Phong ấn tới khi đủ cảnh giới dùng bậc đó.' },
   { id: 'fire',  n: 'Dị hỏa',          d: 'Một loại dị hỏa, tự thức tỉnh khi kiếp sau đạt Đấu Linh.' },
   { id: 'gong',  n: 'Bí tịch',         d: 'Kiếp sau khởi đầu với công pháp và đấu kỹ Huyền giai (nếu kiếp này đã có).' },
   { id: 'gold',  n: 'Đế khố',          d: 'Một phần tài sản (5%, tối đa 200k kim tệ) trao lại khi kiếp sau tròn 16 tuổi.' },
@@ -157,6 +157,8 @@ G.GEAR_PRICE = [0, 400, 5000, 70000, 1000000, 18000000, 150000000];
 // Phẩm chất: [hệ số, tên, trọng số xuất hiện]. Chí Tôn không rơi ra, chỉ đạt được bằng luyện hóa
 G.QUALITY = [[1, 'Thường', 70], [1.25, 'Tinh phẩm', 24], [1.6, 'Cực phẩm', 6], [2, 'Huyền bảo', 1.2], [2.6, 'Thần phẩm', 0.25], [3.4, 'Chí Tôn', 0]];
 G.ARMORY_MAX = 40;
+// Trần kim tệ: 9999 tỷ. Phần vượt được ban phát cho môn hạ (elders.js goldOverflow)
+G.GOLD_MAX = 9999e9;
 
 // ───── Hiệu ứng pháp khí ─────
 // Trang bị phẩm chất cao mang hiệu ứng đặc biệt. base: giá trị ở bậc 1, nhân theo bậc và phẩm chất khi rèn ra.
@@ -180,12 +182,24 @@ G.AFFIX = [
   { id: 'khoangmach', n: 'Khoáng Mạch', base: 0.03, fmt: 'pct', d: 'sản lượng mỏ tông môn' },
   { id: 'tutai',      n: 'Tụ Tài',     base: 0.02,  fmt: 'pct', d: 'thuế thu từ lãnh địa' },
   { id: 'dotkich',    n: 'Đột Kích',   base: 0.03,  fmt: 'pct', d: 'số lần tông môn đi cướp mỗi năm' },
+  // Chỉ thức tỉnh trên pháp bảo truyền thừa, không rèn hay tẩy luyện ra được
+  { id: 'toan',       n: 'Tổ Ấn',      base: 0.02,  fmt: 'pct', d: 'mọi chỉ số chính của món này', heir: 1 },
+  { id: 'bathu',      n: 'Bất Hủ',     base: 0.025, fmt: 'pct', d: 'giảm tỷ lệ rớt cấp khi cường hóa món này', heir: 1 },
+  { id: 'luanhoi',    n: 'Luân Hồi Ấn', base: 0.006, fmt: 'pct', d: 'tỷ lệ cường hóa món này', heir: 1 },
+  { id: 'dehuyet',    n: 'Đế Huyết',   base: 0.5,   fmt: 'num', d: 'khí vận, thể chất, linh hồn, tâm cảnh mỗi năm', heir: 1 },
 ];
 // Số hiệu ứng theo phẩm chất: [tối thiểu, tối đa]
 G.AFFIX_COUNT = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 3], [9, 9]];
+// Mỗi «tầng» 12 cấp cường hóa. Đồ mới có 1 tầng (+12); mỗi đời truyền thừa mở thêm một tầng.
 G.ENHANCE_MAX = 12;
-// Tỷ lệ thành công gốc theo cấp hiện tại: +0..+5 chắc chắn, sau đó giảm dần tới +12
-G.ENHANCE_P = [1, 1, 1, 1, 1, 1, 0.85, 0.72, 0.6, 0.48, 0.36, 0.25];
+// Tỷ lệ thành công gốc theo vị trí trong tầng: +0..+5 chắc chắn, từ +9 khó hẳn
+G.ENHANCE_P = [1, 1, 1, 1, 1, 1, 0.85, 0.72, 0.6, 0.4, 0.28, 0.18];
+// Cường hóa thất bại từ vị trí `from` trong tầng thì có tỷ lệ rớt một cấp (p[vị trí − from]).
+// Tầng truyền thừa (từ tầng 2): tỷ lệ thành công nhân `p` mỗi tầng (sàn `floor`), rớt cấp từ +1 của tầng,
+// cộng thêm `drop` mỗi tầng. Không bao giờ rớt xuống dưới tầng hiện tại: cấp đã truyền thừa không mất.
+// gain: mỗi cấp ở tầng k mạnh bằng (1 + gain·k) cấp tầng đầu.
+G.ENHANCE_DROP = { from: 9, p: [0.3, 0.4, 0.5] };
+G.ENHANCE_TIER = { p: 0.82, floor: 0.12, drop: 0.08, gain: 0.8 };
 // Tẩy luyện: đổ lại các hiệu ứng chưa khóa. Giá theo giá trang bị, mỗi hiệu ứng khóa nhân thêm `lock`.
 G.REFINE = { gold: 0.08, lock: 1.8 };
 // Dung luyện: chuyển một hiệu ứng từ món phụ liệu sang món chính (phụ liệu mất đi).
@@ -193,6 +207,27 @@ G.REFINE = { gold: 0.08, lock: 1.8 };
 // Luyện hóa: nhồi vượt mức đó tới `max`; mỗi hiệu ứng vượt hạn giảm tỷ lệ `over` và nhân giá `overGold`.
 // Đủ `max` hiệu ứng thì món đồ hóa Chí Tôn.
 G.FUSE = { gold: 0.15, p: 0.72, extra: 1, max: 9, over: 0.05, overGold: 1.45 };
+
+// ───── Pháp bảo truyền thừa ─────
+// Phẩm hiệu theo số đời đã truyền: [đời tối thiểu, tên, sắc độ 1..6]
+G.HEIR_RANK = [[1, 'Gia truyền'], [2, 'Tổ truyền'], [3, 'Thế truyền'], [4, 'Cổ truyền'], [6, 'Thái cổ di bảo'], [9, 'Hồng hoang thần vật']];
+// Thuộc tính truyền thừa: cộng dồn mỗi đời, giá trị theo bậc món × base × (0.6..1.4).
+// st: cộng vào chỉ số chính của món · fx: cộng như một hiệu ứng pháp khí cùng mã
+G.HEIR_ATTR = [
+  { id: 'cp',      n: 'Chiến lực',  base: 0.5,    st: 'cp',    fmt: 'num' },
+  { id: 'def',     n: 'Kim Cang',   base: 0.008,  st: 'def',   fmt: 'pct', d: 'giảm thương tổn' },
+  { id: 'qi',      n: 'Ngộ Đạo',    base: 0.012,  st: 'qi',    fmt: 'pct', d: 'tu luyện' },
+  { id: 'bt',      n: 'Thiên Cơ',   base: 0.002,  st: 'bt',    fmt: 'pct', d: 'đột phá' },
+  { id: 'dodge',   n: 'Phong Ảnh',  base: 0.008,  st: 'dodge', fmt: 'pct', d: 'thoát hiểm' },
+  { id: 'phucvan', n: 'Tiên Duyên', base: 0.8,    fx: 'phucvan', fmt: 'num', d: 'khí vận' },
+  { id: 'dientho', n: 'Trường Sinh', base: 2,     fx: 'dientho', fmt: 'yr',  d: 'thọ nguyên' },
+  { id: 'thietcot',n: 'Bất Diệt',   base: 0.004,  fx: 'thietcot', fmt: 'pct', d: 'giảm nguy cơ tử nạn' },
+  { id: 'tulinh',  n: 'Linh Mạch',  base: 0.01,   fx: 'tulinh', fmt: 'pct', d: 'tu luyện nhanh hơn' },
+  { id: 'kimquang',n: 'Phú Quý',    base: 0.015,  fx: 'kimquang', fmt: 'gold', d: 'kim tệ tự sinh mỗi năm' },
+];
+// Mỗi đời: số thuộc tính tung thêm [tối thiểu, tối đa] (+1 từ đời 3, +1 từ đời 6),
+// tỷ lệ thức tỉnh một hiệu ứng mới (thấp, giảm dần theo số hiệu ứng đã có, sàn `fxMin`), cơ hội hiệu ứng ấy là loại truyền thừa
+G.HEIR = { attr: [1, 2], fxP: 0.35, fxDrop: 0.04, fxMin: 0.08, heirFx: 0.35, gearMax: 5 };
 
 // ───── Linh thú: thú cưng (đồng hành chiến đấu) và thú cưỡi (tọa kỵ) ─────
 // Nuôi bằng ma hạch tới cấp 10. fx: hiệu ứng mỗi cấp, dùng chung mã với hiệu ứng pháp khí, nhân theo bậc cảnh giới.

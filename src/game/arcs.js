@@ -8,9 +8,9 @@ import {
 import { genGear, obtainGear } from './gear.js';
 import { enhanceCost } from './forge.js';
 import { addBeast, owns, beastXp } from './beasts.js';
-import { activeBeast, beastDef } from './util.js';
+import { activeBeast, beastDef, enMax, enTier } from './util.js';
 import { ensureSkills } from './skills.js';
-import { ensureElders, addElder, rebornMentor, elderCp, realmCap } from './elders.js';
+import { ensureElders, addElder, rebornMentor, elderCp, realmCap, elderRoom } from './elders.js';
 
 const since = (s, k) => s.t - (s.flags[k] ?? -99);
 const mark = (s, flag, v) => { s.flags[flag] = v; s.flags[flag + 'T'] = s.t; };
@@ -130,7 +130,7 @@ export const ARCS = [
   // ───────── Kỳ ngộ: thợ rèn lang thang ─────────
   {
     id: 'smith_wander', r: [2, 11], cd: 14, w: 0.6, icon: '⚒️',
-    if: (s) => s.gear.wep && (s.gear.wep.en || 0) < G.ENHANCE_MAX,
+    if: (s) => s.gear.wep && (s.gear.wep.en || 0) < enMax(s.gear.wep),
     title: () => 'Lão thợ rèn lang thang',
     text: (s) => `Một lão già lưng còng gõ búa bên đường, liếc nhìn ${gearName(s.gear.wep)} của bạn: «Hàng tốt, nhưng còn non lửa. Muốn lão rèn thêm không?»`,
     ch: [
@@ -139,9 +139,9 @@ export const ARCS = [
         do: (s) => { spend(s, 'Công thợ rèn lang thang', enhanceCost(s.gear.wep).gold * 2); s.gear.wep.en = (s.gear.wep.en || 0) + 1; s.stats.enhance = Math.max(s.stats.enhance || 0, s.gear.wep.en); },
         log: (s) => `Ba nhát búa, lưỡi binh khí sáng rực. ${gearName(s.gear.wep)}!`, k: 'good' },
       { t: 'Cược thiên hỏa: thành +2, bại −1', roll: (s) => clamp(0.5 + (s.luck - 50) / 150),
-        ok: { do: (s) => { const w = s.gear.wep; w.en = Math.min(G.ENHANCE_MAX, (w.en || 0) + 2); s.stats.enhance = Math.max(s.stats.enhance || 0, w.en); },
+        ok: { do: (s) => { const w = s.gear.wep; w.en = Math.min(enMax(w), (w.en || 0) + 2); s.stats.enhance = Math.max(s.stats.enhance || 0, w.en); },
               log: (s) => `Thiên hỏa bao trùm binh khí rồi thu lại. ${gearName(s.gear.wep)} — lão già cười khà khà bỏ đi.`, k: 'key' },
-        fail: { do: (s) => { const w = s.gear.wep; w.en = Math.max(0, (w.en || 0) - 1); },
+        fail: { do: (s) => { const w = s.gear.wep; w.en = Math.max(enTier(w.en) * G.ENHANCE_MAX, (w.en || 0) - 1); },
                 log: (s) => `Lửa quá mạnh, lưỡi binh khí rạn một đường. ${gearName(s.gear.wep)}. Lão già đã biến mất.`, k: 'bad' } },
       { t: 'Từ chối', log: 'Bạn lắc đầu. Lão già nhún vai, tiếp tục gõ búa.' },
     ],
@@ -246,7 +246,7 @@ export const ARCS = [
         ok: { fx: { body: 10, qi: 600, life: 50 }, log: 'Chín đạo thiên lôi đánh xuống, bạn đứng vững. Nhục thân được lôi điện tôi luyện, thọ nguyên tăng thêm 50 năm!', k: 'key' },
         fail: { fx: { body: -30, tam: -6 }, dieP: 0.12, die: 'Hồn phi phách tán dưới thiên lôi', log: 'Đạo thiên lôi thứ bảy đánh nát hộ thể đấu khí. Bạn gượng sống sót, toàn thân cháy đen.' } },
       { t: (s) => `Dùng ${s.gear.arm ? gearName(s.gear.arm) : 'hộ giáp'} chắn kiếp`, if: (s) => !!s.gear.arm,
-        fx: { qi: 300, body: 3 }, do: (s) => { s.gear.arm.en = Math.max(0, (s.gear.arm.en || 0) - 2); },
+        fx: { qi: 300, body: 3 }, do: (s) => { s.gear.arm.en = Math.max(enTier(s.gear.arm.en) * G.ENHANCE_MAX, (s.gear.arm.en || 0) - 2); },
         log: (s) => `Hộ giáp gánh phần lớn thiên lôi rồi rạn nứt, còn ${gearName(s.gear.arm)}. Bạn vượt kiếp an toàn.`, k: 'good' },
       { t: 'Trốn vào hư không', fx: { tam: -4 }, log: 'Bạn né được lôi kiếp lần này. Nhưng trời cao vẫn nhớ tên bạn.' },
     ],
@@ -407,6 +407,73 @@ export const ARCS = [
         ok: { do: (s) => { elderBy(s, s.tmp.id).R++; addLoy(s, s.tmp.id, 10); }, log: (s) => `Có tông chủ hộ pháp, ${s.tmp.n} đột phá ${s.tmp.to}.`, k: 'good' },
         fail: { do: (s) => addLoy(s, s.tmp.id, 4), log: (s) => `${s.tmp.n} vẫn chưa phá được bình cảnh, nhưng cảm kích tấm lòng tông chủ.` } },
       { t: 'Tu hành là chuyện của mỗi người', do: (s) => addLoy(s, s.tmp.id, -10), log: (s) => `${s.tmp.n} lặng lẽ cáo lui, ánh mắt có phần thất vọng.` },
+    ],
+  },
+  // ───────── Chuỗi 6: Cầu hiền (có trưởng lão nhờ cốt truyện) ─────────
+  {
+    id: 'elder_rescue', r: [3, 11], cd: 16, w: 0.6, icon: '🩹',
+    if: (s) => elderRoom(s) > 0,
+    prep: (s) => { s.tmp = { g: R() < 0.7 ? 'm' : 'f', foe: pick(['Hồn Điện', 'Huyết Tông', 'Hắc Hoàng Tông', 'một đám cướp tu']) }; },
+    title: () => 'Lão giả bị truy sát',
+    text: (s) => `Trên đường về sơn môn, bạn gặp một ${s.tmp.g === 'f' ? 'lão bà' : 'lão giả'} toàn thân đẫm máu đang bị người của ${s.tmp.foe} truy sát. Người ấy ngã quỵ ngay trước mặt bạn.`,
+    ch: [
+      { t: 'Ra tay cứu người', fight: 1, roll: (s) => winP(s, peer(s, 0)),
+        ok: { do: (s) => { s.tmp.e = addElder(s, { g: s.tmp.g, R: realmCap(s), loy: 90, title: 'Hộ Pháp' }); }, fx: { fame: 2 },
+          log: (s) => `Bạn đánh lui truy binh. Dưỡng thương xong, ${s.tmp.e.n} quỳ xuống: «Mạng này là của tông chủ.» Từ nay là Hộ Pháp trưởng lão của ${s.sect.name}.`, k: 'key' },
+        fail: { fx: { body: -12 }, log: (s) => `Truy binh quá đông. Bạn chỉ kịp thoát thân, người kia bị ${s.tmp.foe} bắt đi.`, k: 'bad' } },
+      { t: 'Không dây vào chuyện người khác', fx: { tam: -2 }, log: 'Bạn quay đi. Sau lưng vang lên một tiếng thét rồi tắt lịm.' },
+    ],
+  },
+  {
+    // Tam cố thảo lư: ba lần lên núi mới mời được ẩn sĩ
+    id: 'hermit_1', r: [4, 11], once: true, w: 0.7, icon: '🏔️',
+    if: (s) => elderRoom(s) > 0 && !s.flags.hermit,
+    title: () => 'Ẩn sĩ Vân Vụ Sơn',
+    text: () => 'Đệ tử đi hái thuốc về kể: trên đỉnh Vân Vụ Sơn có một lão nhân chặt củi, một rìu chẻ đôi cả tảng đá. Dân quanh vùng nói lão đã ẩn cư trăm năm.',
+    ch: [
+      { t: 'Đích thân lên núi mời', do: (s) => mark(s, 'hermit', 1), log: 'Lão nhân không ngẩng đầu: «Lão phu chỉ biết chặt củi.» Bạn đành xuống núi.' },
+      { t: 'Ẩn sĩ thì cứ để ẩn', do: (s) => mark(s, 'hermit', -1), log: 'Bạn không làm phiền người ẩn cư.' },
+    ],
+  },
+  {
+    id: 'hermit_2', r: [4, 11], cd: 3, w: 3, icon: '🏔️',
+    if: (s) => s.flags.hermit === 1 && since(s, 'hermitT') >= 3 && elderRoom(s) > 0,
+    title: () => 'Lần thứ hai lên núi',
+    text: () => 'Bạn lên Vân Vụ Sơn lần nữa. Lão nhân đang pha trà, liếc nhìn bạn một cái rồi lại cúi xuống ấm nước.',
+    ch: [
+      { t: (s) => `Dâng lễ vật quý (${fmtG(3 * unit(s))} kim tệ)`, if: (s) => s.gold >= 3 * unit(s),
+        do: (s) => { spend(s, 'Lễ vật mời ẩn sĩ', 3 * unit(s)); mark(s, 'hermit', 2); },
+        log: 'Lão nhân đẩy lễ vật sang một bên, nhưng rót cho bạn một chén trà: «Lần sau hẵng nói.»' },
+      { t: 'Ngồi uống trà cùng lão, không nhắc chuyện mời', fx: { tam: 2 }, do: (s) => mark(s, 'hermit', 2),
+        log: 'Hai người ngồi đến khi trăng lên, không ai nói câu nào. Lúc bạn đi, lão khẽ gật đầu.' },
+      { t: 'Thôi, không mời nữa', do: (s) => mark(s, 'hermit', -1), log: 'Bạn bỏ cuộc. Có những người không thể cưỡng cầu.' },
+    ],
+  },
+  {
+    id: 'hermit_3', r: [4, 11], cd: 3, w: 3, icon: '❄️',
+    if: (s) => s.flags.hermit === 2 && since(s, 'hermitT') >= 3 && elderRoom(s) > 0,
+    title: () => 'Tuyết phủ Vân Vụ Sơn',
+    text: () => 'Lần thứ ba lên núi, gặp lúc đại tuyết. Cửa thảo lư đóng chặt, tiểu đồng nói lão nhân đang ngủ trưa.',
+    ch: [
+      { t: 'Đứng chờ ngoài tuyết đến khi lão tỉnh', fx: { body: -6, tam: 4 },
+        do: (s) => { s.tmp = addElder(s, { R: realmCap(s), loy: 95, title: 'Thái Thượng' }); mark(s, 'hermit', 3); },
+        log: (s) => `Lão nhân mở cửa, thấy bạn tuyết phủ đầy vai thì thở dài: «Trăm năm rồi mới có người chịu đợi.» ${s.tmp.n} xuống núi, thành Thái Thượng trưởng lão của ${s.sect.name}.`, k: 'key' },
+      { t: 'Gõ cửa đánh thức', do: (s) => mark(s, 'hermit', -1), fx: { fame: -1 },
+        log: 'Trong nhà vọng ra: «Kẻ nóng vội không làm nên việc lớn.» Từ đó cửa thảo lư không bao giờ mở cho bạn nữa.', k: 'bad' },
+    ],
+  },
+  {
+    id: 'elder_surrender', r: [4, 11], cd: 18, w: 0.5, icon: '🏳️',
+    if: (s) => elderRoom(s) > 0 && s.sect.members >= 40,
+    prep: (s) => { s.tmp = { foe: pick(['Thiên Xà Phủ', 'Vân Lam Tông', 'Hắc Hoàng Tông', 'Huyết Tông', 'Băng Hà Cốc']), g: R() < 0.75 ? 'm' : 'f' }; },
+    title: () => 'Trưởng lão địch quy hàng',
+    text: (s) => `${s.tmp.foe} nội loạn. Một vị trưởng lão bị đồng môn hãm hại chạy đến sơn môn ${s.sect.name}, xin quy hàng và dâng bí mật của tông cũ.`,
+    ch: [
+      { t: 'Thu nhận, cho làm trưởng lão', do: (s) => { s.tmp.e = addElder(s, { g: s.tmp.g, R: realmCap(s), loy: 40 }); }, fx: { fame: 1 },
+        log: (s) => `${s.tmp.e.n} thành ${s.tmp.e.title} trưởng lão. Kẻ đã phản một lần, liệu có phản lần hai? (trung thành thấp, nên sớm ban thưởng)` },
+      { t: 'Nhận bí mật, tặng lộ phí rồi tiễn đi', do: (s) => { spend(s, 'Lộ phí khách quy hàng', 2 * unit(s)); }, fx: { qi: 60 },
+        log: 'Bạn nhận bí pháp luyện công của tông kia, người nọ cầm lộ phí đi biệt tích.' },
+      { t: 'Không nhận kẻ phản tông', fx: { fame: 1, tam: 2 }, log: 'Bạn đóng cửa sơn môn. Thiên hạ khen tông chủ có khí tiết.' },
     ],
   },
   {

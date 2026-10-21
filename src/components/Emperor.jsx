@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import G from '../game/data.js';
-import { fmtGold, gearName, retire } from '../game/util.js';
+import { fmtGold, fmtCp, gearName, retire } from '../game/util.js';
 import { save } from '../game/engine.js';
 import {
-  deStep, deReached, deNext, landsHeld, unifyLeft, unified, legacySlots, canAscend, legacyAvail, legacyGold, bestGear, writeLegacy,
+  deStep, deReached, deNext, landsHeld, unifyLeft, unified, legacySlots, canAscend, legacyAvail, legacyGold, bestGear, writeLegacy, legacyGearMax, legacyGearList,
 } from '../game/emperor.js';
 import { regionDef, warPower } from '../game/sect.js';
 import { ascendUp, upRegion, upBlock, upP, upDef, upHeld, upTurns, dechienIn, bossPower, dechienP, attackUp } from '../game/upper.js';
@@ -98,7 +98,7 @@ function Unify({ s }) {
           <div className="cards">
             {left.map((r) => (
               <Card key={r.id} icon={UI_I.land} title={r.n} sub={<span className="c-desc">{G.ZONES[r.z].n} · {r.own}</span>}
-                right={<span className="price" title="Phòng thủ"><Ico i={UI_I.cp} size={13} />{regionDef(s, r)}</span>} />
+                right={<span className="price" title="Phòng thủ"><Ico i={UI_I.cp} size={13} />{fmtCp(regionDef(s, r))}</span>} />
             ))}
           </div>
         </>
@@ -112,11 +112,22 @@ function Legacy({ s, bump, onClose, onAscended }) {
   const [picks, setPicks] = useState({});
   const [armed, setArmed] = useState(null);
   const n = Object.keys(picks).length;
-  const gears = Object.values(s.gear).filter(Boolean);
+  const gears = legacyGearList(s);
+  const gMax = legacyGearMax(s);
   const toggle = (id, v = true) => setPicks((p) => {
     const q = { ...p };
     if (q[id] && v === true) delete q[id];
-    else if (q[id] || Object.keys(q).length < slots) q[id] = v;
+    else if (q[id] || Object.keys(q).length < slots) q[id] = id === 'gear' && v === true ? [bestGear(s)?.id || gears[0]?.id] : v;
+    return q;
+  });
+  // Pháp bảo: bật tắt từng món trong danh sách, tối đa gMax món
+  const toggleGear = (gid) => setPicks((p) => {
+    const cur = p.gear || [];
+    const next = cur.includes(gid) ? cur.filter((x) => x !== gid) : cur.length < gMax ? [...cur, gid] : cur;
+    const q = { ...p };
+    if (next.length) q.gear = next;
+    else delete q.gear;
+    if (!p.gear && Object.keys(p).length >= slots) return p;
     return q;
   });
   const finish = (ascend) => {
@@ -131,10 +142,17 @@ function Legacy({ s, bump, onClose, onAscended }) {
   };
   const detail = (id) => {
     if (id === 'gear') {
-      const cur = picks.gear === true ? bestGear(s)?.id : picks.gear;
-      return gears.map((it) => (
-        <button key={it.id} className={'mini' + (cur === it.id ? ' buy' : '')} onClick={() => toggle('gear', it.id)}><Ico i={LEG_I.gear} />{gearName(it)}</button>
-      ));
+      const cur = picks.gear || [];
+      return (
+        <>
+          <span className="muted small">Đã chọn {cur.length}/{gMax} món · mỗi món mở thêm 12 cấp rèn, thức tỉnh thuộc tính mới</span>
+          {gears.map((it) => (
+            <button key={it.id} className={'mini' + (cur.includes(it.id) ? ' buy' : '') + (it.gen ? ' heir-pick' : '')} disabled={!cur.includes(it.id) && cur.length >= gMax} onClick={() => toggleGear(it.id)}>
+              <Ico i={LEG_I.gear} />{gearName(it)}{it.gen ? ` · ${it.gen} đời` : ''}
+            </button>
+          ))}
+        </>
+      );
     }
     if (id === 'fire') {
       const cur = picks.fire === true ? s.fires[0] : picks.fire;
@@ -209,8 +227,8 @@ function Upper({ s, act, onAscend }) {
     <>
       <div className="stat-tiles">
         <div title="Thánh vực đã chiếm"><Ico i={UI_I.land} size={20} /><b className="num">{upHeld(s)}<small>/{G.UP_REGIONS.length}</small></b><small>thánh vực</small></div>
-        <div title="Thế lực của bạn (gồm đế nguyên)"><Ico i={UI_I.power} size={20} /><b className="num">{Math.round(warPower(s))}</b><small>thế lực</small></div>
-        <div title="Thực lực Thiên Đế, tăng dần mỗi lượt"><Ico i={UI_I.cp} size={20} /><b className="num">{bossPower(s)}</b><small>Thiên Đế</small></div>
+        <div title="Thế lực của bạn (gồm đế nguyên)"><Ico i={UI_I.power} size={20} /><b className="num">{fmtCp(warPower(s))}</b><small>thế lực</small></div>
+        <div title="Thực lực Thiên Đế, tăng dần mỗi lượt"><Ico i={UI_I.cp} size={20} /><b className="num">{fmtCp(bossPower(s))}</b><small>Thiên Đế</small></div>
         <div title="Lượt còn lại trước Đế chiến"><Ico i={UI_I.time} size={20} /><b className="num">{upHeld(s) >= G.UP_REGIONS.length ? 0 : left}</b><small>lượt tới Đế chiến</small></div>
       </div>
       <div className="prog">
@@ -225,7 +243,7 @@ function Upper({ s, act, onAscend }) {
         <div className="recipe-title"><Ico i={r.id === 'thiende' ? EMP_I.de : UI_I.land} size={22} /><b>{r.n}</b></div>
         <span className="sv muted"><Ico i={UI_I.help} size={14} />{r.d}</span>
         <span className="sv"><Ico i={UI_I.members} size={14} />Chủ nhân: {r.own}</span>
-        <span className="sv"><Ico i={UI_I.cp} size={14} />Phòng thủ <b className="num">{upDef(s, r)}</b> · thế lực ta <b className="num">{Math.round(warPower(s))}</b></span>
+        <span className="sv"><Ico i={UI_I.cp} size={14} />Phòng thủ <b className="num">{fmtCp(upDef(s, r))}</b> · thế lực ta <b className="num">{fmtCp(warPower(s))}</b></span>
         <span className="sv"><Ico i={UI_I.gold} size={14} />Cống phẩm {fmtGold(r.inc)}/năm · <Ico i={ITEM_I.ore} size={14} />15 huyền thiết 9 phẩm/năm</span>
         {st === 'own'
           ? <span className="sv"><Ico i={UI_I.ok} size={14} />Đã thuộc về bạn · đế nguyên +{G.UP_POWER}</span>

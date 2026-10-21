@@ -1,7 +1,7 @@
 // Hai cột bên của màn chơi trên máy tính rộng (≥ 1280px): nhân vật bên trái, thế cục bên phải.
 // Màn hẹp hơn thì ẩn đi (CSS), mọi thông tin vẫn có trong các bảng.
 import G from '../game/data.js';
-import { cp, realmLabel, btChance, fmtGold, activeBeast, beastDef, holding } from '../game/util.js';
+import { cp, fmtCp, realmLabel, btChance, fmtGold, activeBeast, beastDef, holding } from '../game/util.js';
 import { ACH, readAch } from '../game/ach.js';
 import { outfitOf } from '../game/wardrobe.js';
 import Avatar from './Avatar.jsx';
@@ -18,12 +18,12 @@ export function SideLeft({ s, onOpen }) {
     <aside className="side left" aria-label="Nhân vật">
       <button className="side-doll" onClick={() => onOpen('bag:gear')} title="Mở trang bị">
         <Avatar s={s} size={210} />
-        <span className="side-cp"><Ico i={UI_I.cp} size={16} /><b className="num">{Math.round(cp(s))}</b><small>chiến lực</small></span>
+        <span className="side-cp"><Ico i={UI_I.cp} size={16} /><b className="num">{fmtCp(cp(s))}</b><small>chiến lực</small></span>
       </button>
       <p className="side-look muted small"><Ico i={UI_I.outfit} size={13} /> {outfitOf(s).n}</p>
       <div className="side-slots">
         {G.GEAR_SLOTS.map((k) => (s.gear[k]
-          ? <GearTile key={k} it={s.gear[k]} onClick={() => onOpen('bag:gear')} />
+          ? <GearTile key={k} it={s.gear[k]} peek onClick={() => onOpen('bag:gear')} />
           : <button key={k} className="tile dim" title={`${G.GEAR[k].n} trống`} onClick={() => onOpen('bag:gear')}><SlotFallbackArt sl={k} size={36} dim /></button>))}
         {pet ? (
           <button className="tile beast-tile-btn" onClick={() => onOpen('bag:beast')} title={beastDef('pet', pet.id).n}>

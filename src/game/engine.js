@@ -3,13 +3,13 @@ import { EVENTS, MOMENTS, FILLERS } from './events.js';
 import {
   R, rand, pick, wpick, clamp, realm, lifeOf, unit, hasAttr, hasTrait, trait, lastEntry, focusObj,
   canAlch, realmLabel, level, die, addQi, applyFx, snapshot, diff, genName,
-  give, earn, pillNeed, priceOf, parseKey, fmtGold, gearSum, gearName, dodgeMult, holding, fxSum,
+  give, earn, pillNeed, priceOf, parseKey, fmtGold, gearSum, gearName, dodgeMult, holding, fxSum, enMax,
 } from './util.js';
 import { economy, cultivationPill, moneyLine, sellPrice } from './economy.js';
 import { estatesYearly, estateValue, gearSell, artifactYearly } from './gear.js';
 import { sectYearly, bLv, landCount, sectTier } from './sect.js';
 import { smithYearly, smithLv, armCost } from './forge.js';
-import { eldersYearly } from './elders.js';
+import { eldersYearly, goldOverflow } from './elders.js';
 import { marketTick, consignTick, bidTick } from './exchange.js';
 import { auctionTick } from './auction.js';
 import { troopCount } from './army.js';
@@ -317,6 +317,7 @@ export function tick(s) {
     if (ev) setPending(s, ev);
   }
 
+  goldOverflow(s, e);
   if (!e.items.length && !s.pending) e.items.push({ t: pick(FILLERS[s.started ? s.focus || 'tu' : 'baby']), k: 'dim' });
   const ml = moneyLine(s);
   if (ml) e.items.push({ ...ml, k: 'money' });
@@ -372,6 +373,7 @@ export function choose(s, ch) {
   const text = typeof res.log === 'function' ? res.log(s) : res.log;
   if (text) e.items.push({ t: text, k: res.k || (ok === false ? 'bad' : ok ? 'good' : '') });
   if (s.post?.length) { e.items.push(...s.post); s.post = []; }
+  goldOverflow(s, e);
   if (res.die && !s.dead && s.R < 11) {
     const p = (res.dieP == null ? 1 : typeof res.dieP === 'function' ? res.dieP(s) : res.dieP) * (res.dieP == null ? 1 : dodgeMult(s));
     if (R() < p) die(s, res.die);
@@ -453,8 +455,7 @@ export function migrate(v) {
   // Bản lưu cũ có chồng vượt giới hạn thì cắt về 999
   for (const inv of [v.inv, v.sect?.vault?.inv]) if (inv) for (const k of Object.keys(inv)) inv[k] = Math.min(inv[k], G.STACK_MAX);
   // Cường hóa cũ tới +100 nay chỉ còn +12 (mỗi cấp mạnh hơn nên không mất sức mạnh)
-  for (const it of [...Object.values(v.gear), ...v.armory, ...(v.sect?.vault?.gear || [])]) if (it?.en > G.ENHANCE_MAX) it.en = G.ENHANCE_MAX;
-  if (v.stats.enhance > G.ENHANCE_MAX) v.stats.enhance = G.ENHANCE_MAX;
+  for (const it of [...Object.values(v.gear), ...v.armory, ...(v.sect?.vault?.gear || [])]) if (it?.en > enMax(it)) it.en = enMax(it);
   if (v.focus === 'mon') v.focus = 'nv';
   ensureBeasts(v);
   ensureSkills(v);

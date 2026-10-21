@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { motion, LayoutGroup, AnimatePresence } from 'motion/react';
 import G from '../game/data.js';
-import { parseKey, itemName, fmtGold, gearScore, gearName, cp, qualityIdx, countOf } from '../game/util.js';
+import { parseKey, itemName, fmtGold, gearScore, gearName, cp, fmtCp, qualityIdx, countOf } from '../game/util.js';
 import { equip, unequip, sellGear, sellWorse, gearSell, bagSellQ, setBagSellQ } from '../game/gear.js';
 import { sell, useItem, sellPrice } from '../game/economy.js';
 import { netWorth, save } from '../game/engine.js';
@@ -63,7 +63,7 @@ function Slot({ s, k, sel, onPick, refs }) {
     <div className={'doll-slot' + (sel ? ' sel' : '')} ref={(el) => { refs.current[k] = el; }}>
       {it ? (
         <motion.div layoutId={'g' + it.id} transition={{ type: 'spring', stiffness: 420, damping: 32 }}>
-          <GearTile it={it} sel={sel} onClick={() => onPick(it.id)} />
+          <GearTile it={it} sel={sel} peek onClick={() => onPick(it.id)} />
         </motion.div>
       ) : (
         <button className="tile dim" onClick={() => onPick(null)} title={`${G.GEAR[k].n} trống`}>
@@ -117,7 +117,7 @@ function Gear({ s, act, onOpenTab }) {
   const [slot, setSlot] = useState('all');
   const [sel, setSel] = useState(null);
   const refs = useRef({});
-  const cpRef = useCountUp(cp(s), (v) => Math.round(v));
+  const cpRef = useCountUp(cp(s), (v) => fmtCp(v));
   const worn = Object.values(s.gear).find((x) => x?.id === sel);
   const item = worn || s.armory.find((x) => x.id === sel);
   const armory = s.armory
@@ -204,7 +204,7 @@ function Gear({ s, act, onOpenTab }) {
             <div className="grid">
               {armory.map((it) => (
                 <motion.div key={it.id} layoutId={'g' + it.id} transition={{ type: 'spring', stiffness: 420, damping: 32 }}>
-                  <GearTile it={it} sel={sel === it.id} mark={better(it) ? 'better' : it.lock ? 'worn' : null} onClick={() => { setSel(sel === it.id ? null : it.id); play('tap'); }} />
+                  <GearTile it={it} sel={sel === it.id} peek={{ s, compare: true }} mark={better(it) ? 'better' : it.lock ? 'worn' : null} onClick={() => { setSel(sel === it.id ? null : it.id); play('tap'); }} />
                 </motion.div>
               ))}
             </div>

@@ -112,9 +112,9 @@ export function Tabs({ tabs, tab, onTab }) {
 
 // Ô vuông kiểu game: icon, phẩm chất (viền màu), nhãn ở góc trên, số lượng ở góc dưới
 // countTone: lớp phụ cho số ở góc dưới (vd. sắc độ cấp cường hóa)
-export function Tile({ icon, customArt, q = 0, badge, count, countTone, foot, sel, onClick, dim, title, mark }) {
+export function Tile({ icon, customArt, q = 0, badge, count, countTone, foot, sel, onClick, dim, title, mark, cls }) {
   return (
-    <button className={`tile q-b${q}` + (sel ? ' sel' : '') + (dim ? ' dim' : '') + (customArt ? ' has-art' : '')} onClick={onClick} title={title} aria-label={title} aria-pressed={!!sel}>
+    <button className={`tile q-b${q}` + (sel ? ' sel' : '') + (dim ? ' dim' : '') + (customArt ? ' has-art' : '') + (cls ? ' ' + cls : '')} onClick={onClick} title={title} aria-label={title} aria-pressed={!!sel}>
       {customArt || <Ico i={icon} size={30} />}
       {badge != null && <span className="t-badge">{badge}</span>}
       {count != null && <span className={'t-count num' + (countTone ? ' ' + countTone : '')}>{count}</span>}
@@ -125,9 +125,9 @@ export function Tile({ icon, customArt, q = 0, badge, count, countTone, foot, se
 }
 
 // Thẻ vật phẩm: hiện sẵn tên và thông tin chính, bấm vào thì mở rộng tại chỗ để xem thêm và thao tác
-export function Card({ icon, customArt, q = 0, badge, count, countTone, title, sub, right, tag, tone, open, onToggle, children, fx, dim }) {
+export function Card({ icon, customArt, q = 0, badge, count, countTone, title, sub, right, tag, tone, open, onToggle, children, fx, dim, cls }) {
   return (
-    <div className={`card q-b${q}` + (open ? ' open' : '') + (fx ? ' aura' : '') + (dim ? ' dim' : '')}>
+    <div className={`card q-b${q}` + (open ? ' open' : '') + (fx ? ' aura' : '') + (dim ? ' dim' : '') + (cls ? ' ' + cls : '')}>
       <button className="c-head" onClick={onToggle} aria-expanded={!!open} disabled={!onToggle}>
         <span className="c-ico">
           {customArt || <Ico i={icon} size={26} />}
@@ -231,7 +231,7 @@ const STAT_HELP = [
   { k: 'gold', d: 'Kim tệ. Mua đan dược, trang bị, sản nghiệp, xây tông môn, nuôi quân.' },
 ];
 const MORE_HELP = [
-  [UI_I.cp, 'Chiến lực', 'Sức đánh của riêng bạn: cảnh giới, thể chất, đấu kỹ, dị hỏa, trang bị.'],
+  [UI_I.cp, 'Chiến lực', 'Sức đánh của riêng bạn: cảnh giới, thể chất, đấu kỹ, dị hỏa, trang bị. Từ 100 000 trở lên tính theo bậc, mỗi bậc gấp nghìn lần: Huyền, Địa, Thiên, Thánh, Đế, Thần (vd. 250 Huyền = 250 000).'],
   [UI_I.power, 'Thế lực', 'Chiến lực cộng thực lực tông môn và quân đội. Dùng khi chinh phạt và giữ lãnh địa.'],
   [UI_I.fame, 'Danh vọng', 'Cần để khai tông, thu hút đệ tử, ép địch quy hàng.'],
   [UI_I.dice, 'May rủi', 'Lựa chọn có tung xúc xắc, có thể thành hoặc bại.'],

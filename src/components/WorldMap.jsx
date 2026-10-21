@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import G from '../game/data.js';
-import { fmtGold } from '../game/util.js';
+import { fmtGold, fmtCp } from '../game/util.js';
 import { regionDef, conquerP, attackBlock, devLv, devPlan, develop, regionInc, zoneOpen, warPower } from '../game/sect.js';
 import { LevelBuy } from './ui.jsx';
 import { Ico, UI_I, ITEM_I } from './icons.jsx';
@@ -201,8 +201,8 @@ export function RegionCard({ s, id, onAttack, act }) {
       </div>
       <p className="d-desc">{r.d}</p>
       <div className="rc-facts">
-        {!own && <span className="sv" title="Thực lực trấn thủ"><Ico i={UI_I.army} size={15} />{def}</span>}
-        {!own && s.sect && <span className="sv" title="Thế lực của bạn"><Ico i={UI_I.power} size={15} />{Math.round(warPower(s))}</span>}
+        {!own && <span className="sv" title="Thực lực trấn thủ"><Ico i={UI_I.army} size={15} />{fmtCp(def)}</span>}
+        {!own && s.sect && <span className="sv" title="Thế lực của bạn"><Ico i={UI_I.power} size={15} />{fmtCp(warPower(s))}</span>}
         <span className="sv" title="Thu nhập mỗi năm"><Ico i={UI_I.gold} size={15} />{fmtGold(own ? regionInc(s, r.id) : r.inc)}/năm</span>
         {r.item && <span className="sv" title="Sản vật"><Ico i={ITEM_I[r.item]} size={15} />+</span>}
         {own && <span className="sv" title="Cấp khai phát, mỗi cấp +8% thu nhập"><Ico i={UI_I.up} size={15} />{devLv(s, r.id)}/{G.DEV_MAX}</span>}

@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { animate } from 'animejs';
 import { motion, AnimatePresence } from 'motion/react';
 import G from '../game/data.js';
-import { fmtGold, itemName, countOf, gearName, gearScore, qualityIdx, fxText } from '../game/util.js';
+import { fmtGold, itemName, countOf, gearName, gearScore, qualityIdx, fxText, enMax, enTier } from '../game/util.js';
 import {
   smithLv, smithPlan, upgradeSmith, craftTierCap, nextTierAt, craftCost, canCraft, craft, qualityOdds,
-  enhanceCost, enhanceP, enhance, armCost, armValue, armRate, fulfill, sellArms, matHave, fodderList, fodderBoost, FODDER_MAX, findGear,
+  enhanceCost, enhanceP, enhanceDrop, enhance, armCost, armValue, armRate, fulfill, sellArms, matHave, fodderList, fodderBoost, FODDER_MAX, findGear,
   canRefineItem, refineCost, canAffordRefine, refine, refineHit, fuseBase, fuseCap, fuseOver, fuseCost, fuseP, fuseMats, fusedVal, fuse, ASCEND_Q,
 } from '../game/forge.js';
 import { rollPct } from '../game/gear.js';
@@ -13,11 +13,11 @@ import { troopCount } from '../game/army.js';
 import { placeBid, bidFor, itemFair } from '../game/exchange.js';
 import { save } from '../game/engine.js';
 import { Sheet, SheetBody, SheetHead, Tabs, UpRow, LevelBuy } from './ui.jsx';
-import { GearTile, GearStats, FxList, ROMAN } from './gearUi.jsx';
+import { GearTile, GearStats, FxList, HeirInfo, HeirSeal, heirCls, ROMAN } from './gearUi.jsx';
 import GearArt from './gearArt.jsx';
 import { Ico, ITEM_I, SLOT_I, NAV_I, UI_I, TROOP_I } from './icons.jsx';
 import { calm, pulse, wobble } from './motion.js';
-import { burst, sparks, ring, flash, Q_PAL, PAL } from '../fx/fx.js';
+import { burst, sparks, ring, flash, shake, Q_PAL, PAL } from '../fx/fx.js';
 import { play } from '../fx/sfx.js';
 
 export default function Forge({ s, bump, onClose, initTab }) {
@@ -142,7 +142,7 @@ function FodderPick({ s, sel, setSel, exceptId, hint }) {
 function Anvil({ it, stageRef, children, big }) {
   const q = qualityIdx(it);
   return (
-    <div className={`anvil q-b${q}` + (big ? ' big' : '')} ref={stageRef}>
+    <div className={`anvil q-b${q}` + (big ? ' big' : '') + (heirCls(it) ? ' ' + heirCls(it) : '')} ref={stageRef}>
       <span className="anv-rays" aria-hidden="true" />
       <span className="anv-hammer" aria-hidden="true"><Ico i={UI_I.craft} size={38} /></span>
       <div className="anv-item">
@@ -152,13 +152,14 @@ function Anvil({ it, stageRef, children, big }) {
           <motion.span key={it.en || 0} className="anv-en num" initial={{ scale: 2.2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0, y: -10 }} transition={{ type: 'spring', stiffness: 500, damping: 20 }}>+{it.en || 0}</motion.span>
         </AnimatePresence>
       </div>
-      <b className={'anv-name q' + q}>{it.n}</b>
+      <b className={'anv-name q' + q}><HeirSeal it={it} />{it.n}</b>
       {children}
     </div>
   );
 }
-// Một nhát búa: thành thì lóe sáng, bại thì nứt và lắc. quiet: chế độ tự động, ít âm thanh hơn
-function strike(el, ok, quiet) {
+// Một nhát búa: thành thì lóe sáng, bại thì nứt và lắc, rớt cấp thì vỡ vụn và rung màn hình.
+// quiet: chế độ tự động, ít âm thanh hơn
+function strike(el, ok, quiet, drop) {
   if (!el) return;
   const hammer = el.querySelector('.anv-hammer');
   const tile = el.querySelector('.anv-item');
@@ -167,7 +168,12 @@ function strike(el, ok, quiet) {
     play(quiet ? (ok ? 'tap' : 'hit') : 'hammer');
     sparks(tile, { n: quiet ? 10 : 28 });
     if (ok) { pulse(tile, 1.12); if (!quiet) ring(tile, { to: 100, life: 520, width: 3 }); }
-    else { wobble(tile, 6); el.classList.add('cracked'); setTimeout(() => el.classList.remove('cracked'), 450); }
+    else {
+      wobble(tile, drop ? 12 : 6);
+      el.classList.add(drop ? 'shattered' : 'cracked');
+      setTimeout(() => el.classList.remove('cracked', 'shattered'), drop ? 700 : 450);
+      if (drop) { play('shatter'); burst(tile, { n: quiet ? 16 : 34, colors: [...PAL.red, ...PAL.ink], speed: 6 }); if (!quiet) shake(null, 8, 320); }
+    }
   }, calm() ? 0 : 150);
 }
 
@@ -176,7 +182,7 @@ function Picker({ list, sel, onPick, s }) {
   return (
     <div className="picker">
       {list.map((it) => (
-        <GearTile key={it.id} it={it} sel={sel === it.id} mark={Object.values(s.gear).some((x) => x?.id === it.id) ? 'worn' : null} onClick={() => { onPick(it.id); play('tap'); }} />
+        <GearTile key={it.id} it={it} sel={sel === it.id} peek={{ s, compare: true }} mark={Object.values(s.gear).some((x) => x?.id === it.id) ? 'worn' : null} onClick={() => { onPick(it.id); play('tap'); }} />
       ))}
     </div>
   );
@@ -284,6 +290,7 @@ function Reveal({ it, s, onClose, keep }) {
           {worn && !keep && <span className="c-tag info">Đã tự trang bị</span>}
           <GearStats it={it} s={s} compare={!worn && !keep} />
           <FxList it={it} />
+          <HeirInfo it={it} />
         </div>
         <button className="btn primary" autoFocus onClick={onClose}>Nhận</button>
       </div>
@@ -302,7 +309,8 @@ function Enhance({ s, act, bump }) {
   const [log, setLog] = useState(null);
   const stage = useRef(null);
   const it = findGear(s, id) || list[0];
-  const tgt = Math.max((it?.en || 0) + 1, Math.min(G.ENHANCE_MAX, target ?? G.ENHANCE_MAX));
+  const cap = it ? enMax(it) : G.ENHANCE_MAX;
+  const tgt = Math.max((it?.en || 0) + 1, Math.min(cap, target ?? Math.min(cap, (enTier(it?.en) + 1) * G.ENHANCE_MAX)));
   const run0 = useRef(null);
 
   const [running, setRunning] = useAuto(() => {
@@ -313,7 +321,8 @@ function Enhance({ s, act, bump }) {
     if (!r || typeof r === 'string') return finishAuto(false, r || 'Đã tới giới hạn.');
     st.n++;
     if (r.ok) st.ok++;
-    strike(stage.current, r.ok, true);
+    if (r.drop) st.drop++;
+    strike(stage.current, r.ok, true, r.drop);
     setLog({ ...st, spent: st.gold0 - s.gold });
     save(s);
     bump();
@@ -335,22 +344,26 @@ function Enhance({ s, act, bump }) {
   const c = enhanceCost(it);
   const base = enhanceP(s, it);
   const p = enhanceP(s, it, fod);
-  const max = (it.en || 0) >= G.ENHANCE_MAX;
+  const max = (it.en || 0) >= cap;
+  const drop = enhanceDrop(it);
+  // Thanh pip hiện tầng đang rèn: tầng đầu rủi ro từ +7, rớt cấp từ +9; tầng truyền thừa rớt từ cấp thứ hai
+  const tier = Math.min(enTier(it.en), cap / G.ENHANCE_MAX - 1);
+  const inTier = (it.en || 0) - tier * G.ENHANCE_MAX;
   const can = !max && s.gold >= c.gold && matHave(s, 'ore', c.ore[0]) >= c.ore[1];
   const tryN = (n) => {
-    let ok = 0, last = null;
+    let ok = 0, last = null, dropped = false;
     for (let i = 0; i < n; i++) {
       const r = enhance(s, it.id, i ? [] : fod);
       if (!r || typeof r === 'string') { last = r; break; }
-      if (r.ok) ok++; else { last = r.t; break; }
+      if (r.ok) ok++; else { last = r.t; dropped = !!r.drop; break; }
     }
     setFod([]);
-    strike(stage.current, ok > 0 && !last);
+    strike(stage.current, ok > 0 && !last, false, dropped);
     if (ok && !last && n === 1) setTimeout(() => play('bell'), 260);
     return ok ? { t: `${gearName(it)}: thành công ${ok} lần${last ? ', rồi thất bại' : ''}.`, name: gearName(it), q: qualityIdx(it) } : last;
   };
   const start = () => {
-    run0.current = { target: tgt, budget: s.gold * budget, gold0: s.gold, n: 0, ok: 0 };
+    run0.current = { target: tgt, budget: s.gold * budget, gold0: s.gold, n: 0, ok: 0, drop: 0 };
     setLog(null);
     play('charge');
     setRunning(true);
@@ -362,13 +375,17 @@ function Enhance({ s, act, bump }) {
       <div className="split-l">
       <Picker s={s} list={list} sel={it.id} onPick={(x) => { if (!running) { setId(x); setFod([]); setLog(null); } }} />
       <Anvil it={it} stageRef={stage} big>
-        <div className="anv-bar">
-          <div className="en-pips" aria-label={`Cường hóa ${it.en || 0}/${G.ENHANCE_MAX}`}>
-            {Array.from({ length: G.ENHANCE_MAX }, (_, i) => <i key={i} className={(i < (it.en || 0) ? 'on' : '') + (i >= 6 ? ' risk' : '')} />)}
+        <div className={'anv-bar' + (tier ? ' heir-tier' : '')}>
+          {cap > G.ENHANCE_MAX && <span className="en-tier" title={`Tầng ${tier + 1}/${cap / G.ENHANCE_MAX}: mỗi cấp mạnh hơn, khó hơn và dễ rớt hơn`}>{ROMAN[tier + 1] || tier + 1}</span>}
+          <div className="en-pips" aria-label={`Cường hóa ${it.en || 0}/${cap}`}>
+            {Array.from({ length: G.ENHANCE_MAX }, (_, i) => <i key={i} className={(i < inTier ? 'on' : '') + (tier ? (i >= 1 ? ' drop' : ' risk') : i >= G.ENHANCE_DROP.from ? ' drop' : i >= 6 ? ' risk' : '')} />)}
           </div>
-          <span className="num">+{it.en || 0}/{G.ENHANCE_MAX}</span>
+          <span className="num">+{it.en || 0}/{cap}</span>
         </div>
-        <span className={'anv-p num ' + (p >= 0.8 ? 'up' : p >= 0.5 ? '' : 'down')}><Ico i={UI_I.dice} size={15} /> {Math.round(p * 100)}%</span>
+        <span className="anv-odds">
+          <span className={'anv-p num ' + (p >= 0.8 ? 'up' : p >= 0.5 ? '' : 'down')} title="Tỷ lệ thành công"><Ico i={UI_I.dice} size={15} /> {Math.round(p * 100)}%</span>
+          {!max && drop > 0 && <span className="anv-p num down" title="Thất bại thì có tỷ lệ này rớt một cấp">rớt {Math.round(drop * 100)}%</span>}
+        </span>
       </Anvil>
       </div>
       <div className="split-r">
@@ -384,16 +401,16 @@ function Enhance({ s, act, bump }) {
             budget={budget} setBudget={setBudget}
             title={<>Đập tự động đến <b className="num">+{tgt}</b></>}>
             <div className="auto-target">
-              {[6, 9, 10, 11, 12].filter((v) => v > (it.en || 0)).map((v) => (
+              {[6, 9, 10, 11, 12].map((v) => v + tier * G.ENHANCE_MAX).filter((v) => v > (it.en || 0) && v <= cap).map((v) => (
                 <button key={v} className={tgt === v ? 'on' : ''} disabled={running} onClick={() => setTarget(v)}>+{v}</button>
               ))}
-              <input type="range" min={(it.en || 0) + 1} max={G.ENHANCE_MAX} value={tgt} disabled={running} onChange={(e) => setTarget(+e.target.value)} aria-label="Cấp mục tiêu" />
+              <input type="range" min={(it.en || 0) + 1} max={cap} value={tgt} disabled={running} onChange={(e) => setTarget(+e.target.value)} aria-label="Cấp mục tiêu" />
             </div>
           </AutoBox>
         </>
       )}
       {max && <p className="note center"><Ico i={UI_I.ok} /> Đã cường hóa tới cực hạn.</p>}
-      <p className="note">Tối đa +{G.ENHANCE_MAX}. Mỗi cấp +10% chỉ số chính và +3% hiệu ứng pháp khí. Tới +6 chắc chắn thành công, từ +7 tỷ lệ giảm dần (+12 gốc chỉ 25%); lò rèn cấp cao và tế phẩm bù thêm. Thất bại chỉ mất nguyên liệu, không tụt cấp.</p>
+      <p className="note">Đồ mới tối đa +{G.ENHANCE_MAX}; mỗi đời truyền thừa mở thêm một tầng 12 cấp. Mỗi cấp +10% chỉ số chính và +3% hiệu ứng pháp khí, cấp ở tầng truyền thừa mạnh hơn nhiều. Tới +6 chắc chắn thành công, từ +7 giảm dần; từ +9 thất bại có thể rớt một cấp. Tầng truyền thừa khó hơn và dễ rớt hơn, nhưng không bao giờ rớt dưới đầu tầng. Lò rèn cấp cao, tế phẩm, Luân Hồi Ấn và Bất Hủ bù lại.</p>
       </div>
       </div>
     </>
@@ -419,6 +436,7 @@ function AutoBox({ title, running, onStart, onStop, can, log, budget, setBudget,
         <div className="auto-log">
           <span><Ico i={UI_I.dice} size={13} /> <b className="num">{log.n}</b> lần</span>
           {log.ok != null && <span className="up"><Ico i={UI_I.ok} size={13} /> <b className="num">{log.ok}</b></span>}
+          {log.drop > 0 && <span className="down" title="Số lần rớt cấp">rớt <b className="num">{log.drop}</b></span>}
           <span><Ico i={UI_I.gold} size={13} /> <b className="num">{fmtGold(log.spent)}</b></span>
           {log.done && <b className="auto-done">{log.done}</b>}
         </div>

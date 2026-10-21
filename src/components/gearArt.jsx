@@ -297,7 +297,6 @@ export default function GearArt({ it, size = 48, className = '', glow = true }) 
         placeItems: 'center',
         filter: glow && qIdx >= 2 ? `drop-shadow(0 0 8px ${qc.glow})` : undefined,
       }}
-      title={it.n}
     >
       {/* Cấp cường hóa do khung bọc ngoài (Tile, Card, đe rèn) hiện, ở đây không vẽ lại */}
       <ArtComponent name={it.n || ''} qIdx={qIdx} size={size} />

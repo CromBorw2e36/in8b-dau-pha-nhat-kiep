@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import G from '../game/data.js';
-import { fmtGold, cp, effLv, parseKey, itemName } from '../game/util.js';
+import { fmtGold, fmtCp, cp, effLv, parseKey, itemName } from '../game/util.js';
 import { save } from '../game/engine.js';
 import {
   sectReqs, canFound, foundSect, genSectName, memberCap, sectPower, warPower, sectTier, bLv, buildPlan, upgradeBuild,
@@ -39,7 +39,7 @@ export default function Sect({ s, bump, onClose, initTab }) {
 
   return (
     <Sheet onClose={onClose} tall>
-      <SheetHead icon={NAV_I.sect} title={S ? S.name : 'Tông môn'} sub={S ? sectTier(s) : 'Chưa khai tông'} value={Math.round(warPower(s))} valueIcon={UI_I.power} valueLabel="Thế lực" />
+      <SheetHead icon={NAV_I.sect} title={S ? S.name : 'Tông môn'} sub={S ? sectTier(s) : 'Chưa khai tông'} value={fmtCp(warPower(s))} valueIcon={UI_I.power} valueLabel="Thế lực" />
       <Tabs tab={tab} onTab={go} tabs={[['sect', 'Tông môn', NAV_I.sect], ['elders', 'Trưởng lão', UI_I.elder], ['vault', 'Kho', UI_I.vault, S?.vaultNew > 0], ['bank', 'Ngân khố', UI_I.gold], ['army', 'Quân đội', UI_I.army], ['map', 'Bản đồ', UI_I.map, canHit]]} />
       {msg && <p className="bag-msg">{msg}</p>}
       <SheetBody>
@@ -83,8 +83,8 @@ function Builds({ s, act }) {
         <div title="Trưởng lão"><Ico i={UI_I.elder} size={20} /><b className="num">{S.elders}</b><small>trưởng lão</small></div>
         <div title="Lãnh địa"><Ico i={UI_I.land} size={20} /><b className="num">{landCount(s)}<small>/{G.REGIONS.length}</small></b><small>lãnh địa</small></div>
         <div title="Thuế lãnh địa mỗi năm"><Ico i={UI_I.gold} size={20} /><b className="num">{fmtGold(landIncome(s))}</b><small>thuế/năm</small></div>
-        <div title="Chiến lực bản thân"><Ico i={UI_I.cp} size={20} /><b className="num">{Math.round(cp(s))}</b><small>bản thân</small></div>
-        <div title="Thực lực tông môn"><Ico i={NAV_I.sect} size={20} /><b className="num">+{Math.round(sectPower(s))}</b><small>tông môn</small></div>
+        <div title="Chiến lực bản thân"><Ico i={UI_I.cp} size={20} /><b className="num">{fmtCp(cp(s))}</b><small>bản thân</small></div>
+        <div title="Thực lực tông môn"><Ico i={NAV_I.sect} size={20} /><b className="num">+{fmtCp(sectPower(s))}</b><small>tông môn</small></div>
       </div>
       <ul className="up-list">
         {G.BUILDS.map((b) => {
@@ -216,7 +216,7 @@ function Army({ s, act }) {
     <>
       <div className="stat-tiles">
         <div title="Quân số / giới hạn"><Ico i={UI_I.members} size={20} /><b className="num">{n}<small>/{armyCap(s)}</small></b><small>quân</small></div>
-        <div title="Sức chiến cộng vào thế lực"><Ico i={UI_I.army} size={20} /><b className="num">+{Math.round(armyPower(s))}</b><small>sức chiến</small></div>
+        <div title="Sức chiến cộng vào thế lực"><Ico i={UI_I.army} size={20} /><b className="num">+{fmtCp(armyPower(s))}</b><small>sức chiến</small></div>
         <div title="Tỷ lệ binh sĩ có binh khí"><Ico i={TROOP_I.bo} size={20} /><b className="num">{armedPct(s)}%</b><small>có binh khí</small></div>
         <div title="Quân lương mỗi năm"><Ico i={UI_I.buy} size={20} /><b className="num">{fmtGold(armyUpkeep(s))}</b><small>lương/năm</small></div>
       </div>

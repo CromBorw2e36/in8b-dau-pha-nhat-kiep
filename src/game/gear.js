@@ -24,9 +24,10 @@ export function affixVal(a, it, r = 0.8 + R() * 0.4) {
   const v = a.base * it.tier * it.q * r;
   return a.id === 'homenh' ? Math.min(0.6, v) : v;
 }
-// Tung n hiệu ứng mới, không trùng các mã trong `keep`
-export function rollFresh(it, n, keep) {
-  const pool = G.AFFIX.filter((a) => !keep.includes(a.id));
+export const isHeirFx = (id) => !!G.AFFIX.find((a) => a.id === id)?.heir;
+// Tung n hiệu ứng mới, không trùng các mã trong `keep` (hiệu ứng truyền thừa chỉ thức tỉnh qua truyền thừa)
+export function rollFresh(it, n, keep, heir = false) {
+  const pool = G.AFFIX.filter((a) => !keep.includes(a.id) && !!a.heir === heir);
   const out = [];
   for (let i = 0; i < n && pool.length; i++) {
     const a = pool.splice(Math.floor(R() * pool.length), 1)[0];
@@ -182,6 +183,8 @@ export function artifactYearly(s, yrs) {
   add('body', fxSum(s, 'hoixuan'));
   add('soul', fxSum(s, 'duonghon'));
   add('tam', fxSum(s, 'tinhtam'));
+  const dh = fxSum(s, 'dehuyet'); // Đế Huyết: bồi bổ mọi mặt
+  if (dh) for (const k of ['luck', 'body', 'soul', 'tam']) add(k, dh);
   const g = fxSum(s, 'kimquang');
   if (g) earn(s, 'Pháp khí Kim Quang', g * unit(s) * yrs);
 }

@@ -38,6 +38,8 @@ export default function App() {
       // #demo/event/<id>: mở sẵn một sự kiện
       if (panel === 'event') import('./game/engine.js').then(({ EV }) => { EV[tab]?.prep?.(life.current); life.current.pending = tab; bump(); });
       // #demo/end: xem bia ký cuối đời
+      // #demo/heir: xem cảnh thức tỉnh pháp bảo truyền thừa
+      if (panel === 'heir') life.current.heirNew = [life.current.gear.wep.id];
       if (panel === 'end') { Object.assign(life.current, { dead: true, cause: 'Vẫn lạc trong trận Đế chiến' }); setScreen('end'); return; }
       setDemo({ panel: panel === 'event' ? null : panel, tab });
       setScreen('game');

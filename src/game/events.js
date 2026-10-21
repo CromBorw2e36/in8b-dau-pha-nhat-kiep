@@ -1,6 +1,6 @@
 import G from './data.js';
 import {
-  R, rand, pick, wpick, clamp, realm, nextRealm, lifeOf, unit, hasTrait, canAlch, realmLabel,
+  R, rand, pick, fmtCp, wpick, clamp, realm, nextRealm, lifeOf, unit, hasTrait, canAlch, realmLabel,
   winP, peer, cp, btChance, advance, btFail, hold, upgradeSkill, upgradeGong, genName, pronoun,
   beastGrade, pillNeed, priceOf, give, peekBest, takeBest, countOf, spend, earn, lose, itemName, fmtGold, tierFor, die,
 } from './util.js';
@@ -17,7 +17,7 @@ import { bossPower, dechienP, upHeld, writeRebirth } from './upper.js';
 import { addBeast, owns, ensureBeasts } from './beasts.js';
 import { ensureSkills } from './skills.js';
 import { ARCS } from './arcs.js';
-import { addElder, removeElder, leastLoyal, ensureElders } from './elders.js';
+import { addElder, removeElder, leastLoyal, ensureElders, askTarget, giftGear, elderRoom } from './elders.js';
 
 // Vây thành bằng quân đội: chỉ tính quân và tông môn, bạn không ra trận nên không có rủi ro tính mạng
 const armySiegeP = (s) => clamp(1 / (1 + Math.exp(-(armyPower(s) + sectPower(s) + 10 - regionDef(s, region(s.tmp))) / 8)), 0.04, 0.92);
@@ -644,7 +644,7 @@ export const EVENTS = [
     title: (s) => `Chinh phạt ${region(s.tmp).n}`,
     text: (s) => {
       const r = region(s.tmp);
-      return `${r.d} Nơi này đang do ${r.own} trấn giữ (thực lực ~${regionDef(s, r)}). Thế lực của bạn cộng cả tông môn: ${Math.round(warPower(s))}. Chiếm được sẽ thu ${fmtGold(r.inc)} kim tệ mỗi năm.`;
+      return `${r.d} Nơi này đang do ${r.own} trấn giữ (thực lực ~${fmtCp(regionDef(s, r))}). Thế lực của bạn cộng cả tông môn: ${fmtCp(warPower(s))}. Chiếm được sẽ thu ${fmtGold(r.inc)} kim tệ mỗi năm.`;
     },
     ch: [
       { t: (s) => `Đích thân dẫn quân công phạt (~${Math.round(conquerP(s, regionDef(s, region(s.tmp))) * 100)}%)`, fight: 1, roll: (s) => conquerP(s, regionDef(s, region(s.tmp))),
@@ -673,7 +673,7 @@ export const EVENTS = [
       const r = region(id);
       s.tmp = { id, foe: R() < 0.5 ? r.own : pick(['Hồn Điện', 'Một liên minh tông môn', 'Tàn dư của ' + r.own, 'Một lão quái vật ẩn thế']), atk: Math.round(regionDef(s, r) * 0.9 + rand(-4, 10)) };
     },
-    text: (s) => `${s.tmp.foe} bất ngờ tập kích ${region(s.tmp.id).n} — lãnh địa của ${s.sect.name}. Kẻ địch có thực lực ~${s.tmp.atk}, thế lực của bạn ${Math.round(warPower(s))}.`,
+    text: (s) => `${s.tmp.foe} bất ngờ tập kích ${region(s.tmp.id).n} — lãnh địa của ${s.sect.name}. Kẻ địch có thực lực ~${fmtCp(s.tmp.atk)}, thế lực của bạn ${fmtCp(warPower(s))}.`,
     ch: [
       { t: 'Đích thân ra trận', fight: 1, roll: (s) => defendP(s, s.tmp.atk),
         ok: { fx: { fame: 2, tam: 4, gold: 2, why: 'Thu chiến lợi phẩm' }, log: (s) => `Bạn đánh tan ${s.tmp.foe}. Lãnh địa vững như bàn thạch.`, k: 'good' },
@@ -686,7 +686,7 @@ export const EVENTS = [
   },
   {
     id: 'elder', w: 0.7, cd: 8, icon: '🧙',
-    if: (s) => !!s.sect && s.sect.elders < 3 + bLv(s, 'hien'),
+    if: (s) => elderRoom(s) > 0,
     prep: (s) => { const g = R() < 0.7 ? 'm' : 'f'; const r = Math.max(3, s.R - 1 - (R() < 0.5 ? 1 : 0)); s.tmp = { name: genName(g), g, R: r, realm: G.REALMS[r].n, fee: Math.round(unit(s) * rand(1, 2)) }; },
     text: (s) => `${s.tmp.name}, một ${s.tmp.realm} tán tu, mến danh ${s.sect.name} mà tìm đến, muốn làm trưởng lão. Lễ nhập môn cần ${fmtGold(s.tmp.fee)} kim tệ, sau đó mỗi năm phải trả bổng lộc.`,
     ch: [
@@ -694,6 +694,21 @@ export const EVENTS = [
         do: (s) => { spend(s, 'Lễ nhập môn trưởng lão', s.tmp.fee); s.tmp.e = addElder(s, { n: s.tmp.name, g: s.tmp.g, R: s.tmp.R }); }, fx: { fame: 1 },
         log: (s) => `${s.tmp.name} trở thành ${s.tmp.e.title} trưởng lão của ${s.sect.name}, mang theo binh khí tùy thân. Xem ở tab Trưởng lão.`, k: 'good' },
       { t: 'Từ chối', log: 'Bạn chưa tin tưởng người này.' },
+    ],
+  },
+  {
+    // Trưởng lão / lão sư xin món trong kho mà tông chủ không dùng. Không hỏi dồn: 12 lượt một lần, bị từ chối thì 30 lượt
+    id: 'elder_ask', w: 3, cd: 12, icon: '🙏',
+    if: (s) => (s.flags.askNo == null || s.t - s.flags.askNo >= 30) && !!askTarget(s),
+    prep: (s) => { s.tmp = askTarget(s); },
+    text: (s) => `${s.tmp.who} xin vào ${s.tmp.vault ? 'kho tông môn' : 'kho pháp bảo'} lấy ${s.tmp.item} thay cho ${s.tmp.old || `ô ${G.GEAR[s.tmp.sl].n.toLowerCase()} còn trống`}: "Tông chủ, bảo vật nằm trong kho cũng phí, xin ban cho lão phu đem ra trận."`,
+    ch: [
+      { t: 'Ban cho', do: (s) => { s.tmp.msg = giftGear(s, s.tmp.eid, s.tmp.iid); }, log: (s) => s.tmp.msg || 'Món đồ đã không còn trong kho.', k: 'good' },
+      { t: 'Từ chối', do: (s) => {
+        s.flags.askNo = s.t;
+        const el = s.tmp.eid === 'mentor' ? s.mentor : ensureElders(s).find((x) => x.id === s.tmp.eid);
+        if (el) el.loy = clamp(el.loy - 3, 0, 100);
+      }, log: (s) => `${s.tmp.who} cúi đầu lui ra, một thời gian dài không dám nhắc lại.` },
     ],
   },
   {
@@ -713,7 +728,7 @@ export const EVENTS = [
     id: 'sect_war', w: 0.45, cd: 15, icon: '🚩',
     if: (s) => !!s.sect && s.sect.members >= 40,
     prep: (s) => { s.tmp = { foe: pick(['Thiên Xà Phủ', 'Vân Lam Tông', 'Hoa Tông', 'Băng Hà Cốc', 'Huyết Tông', 'Thiên Minh Tông', 'Hắc Hoàng Tông']), atk: Math.round(warPower(s) + rand(-10, 12)) }; },
-    text: (s) => `${s.tmp.foe} tuyên chiến với ${s.sect.name}, đòi bạn giải tán tông môn. Hai bên dàn trận dưới chân núi (thực lực địch ~${s.tmp.atk}, ta ${Math.round(warPower(s))}).`,
+    text: (s) => `${s.tmp.foe} tuyên chiến với ${s.sect.name}, đòi bạn giải tán tông môn. Hai bên dàn trận dưới chân núi (thực lực địch ~${fmtCp(s.tmp.atk)}, ta ${fmtCp(warPower(s))}).`,
     ch: [
       { t: 'Toàn tông nghênh chiến', fight: 1, roll: (s) => defendP(s, s.tmp.atk),
         ok: { fx: { fame: 5, tam: 6, gold: 5, why: 'Thu ngân khố địch' }, do: (s) => { s.sect.members += 20; },
@@ -838,7 +853,7 @@ export const EVENTS = [
     id: 'hon_invasion', r: [10, 11], w: 0.9, cd: 10, icon: '👁️',
     if: (s) => !!s.sect,
     prep: (s) => { s.tmp = { atk: Math.round(250 + (s.R - 10) * 120 + landCount(s) * 6 + rand(-20, 40)) }; },
-    text: (s) => `Không gian nứt toác. Đại quân Hồn tộc tràn vào đại lục, mũi nhọn chĩa thẳng vào ${s.sect.name} (thực lực ~${s.tmp.atk}, ta ${Math.round(warPower(s))}).`,
+    text: (s) => `Không gian nứt toác. Đại quân Hồn tộc tràn vào đại lục, mũi nhọn chĩa thẳng vào ${s.sect.name} (thực lực ~${fmtCp(s.tmp.atk)}, ta ${fmtCp(warPower(s))}).`,
     ch: [
       { t: 'Toàn tông nghênh chiến', fight: 1, roll: (s) => defendP(s, s.tmp.atk),
         ok: { fx: { fame: 10, tam: 8, gold: 40, why: 'Chiến lợi phẩm Hồn tộc', item: [['tho', 9, 1], ['hon', 9, 3]] }, do: (s) => { armyLoss(s, 0.06); s.stats.honWins = (s.stats.honWins || 0) + 1; },
@@ -915,7 +930,7 @@ export const EVENTS = [
   {
     // Ép xảy ra từ engine khi đủ điều kiện (xem dechienReady), không rút ngẫu nhiên
     id: 'dechien', w: 0, once: true, force: true, icon: '⚔️',
-    text: (s) => `Trời thượng giới tối sầm. Thiên Đế đích thân giáng lâm, đế uy ép nát mây trời: kẻ phi thăng từ hạ giới không được phép đứng ngang hàng. Đế chiến không thể tránh (Thiên Đế ~${bossPower(s)}, ta ${Math.round(warPower(s))}).`,
+    text: (s) => `Trời thượng giới tối sầm. Thiên Đế đích thân giáng lâm, đế uy ép nát mây trời: kẻ phi thăng từ hạ giới không được phép đứng ngang hàng. Đế chiến không thể tránh (Thiên Đế ~${fmtCp(bossPower(s))}, ta ${fmtCp(warPower(s))}).`,
     ch: [
       { t: (s) => `Nghênh chiến Thiên Đế (~${Math.round(dechienP(s) * 100)}%)`, fight: 1, roll: (s) => dechienP(s),
         ok: { do: (s) => { writeRebirth(s, true); die(s, 'Đánh bại Thiên Đế trong Đế chiến, đế thể vỡ nát, chân linh chuyển thế trùng tu', true, false); }, log: 'Một quyền xuyên thủng Thiên Đế Điện. Thiên Đế ngã xuống — nhưng đế thể của bạn cũng nứt toác như đồ sứ.', k: 'key' },

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { animate } from 'animejs';
 import G from '../game/data.js';
-import { cp } from '../game/util.js';
+import { cp, fmtCp } from '../game/util.js';
 import { SKILL_CATALOG, SKILL_TIERS } from '../game/skills.js';
 import Avatar from './Avatar.jsx';
 import { Seal } from './glyphs.jsx';
@@ -174,12 +174,12 @@ export function Clash({ s, ev, name, p, ok, onDone }) {
           play('boom');
           spawnElementalFx(activeSkill.elem, at(target), mid(), host.current);
           knock(target, d);
-          hitNum(host.current, target, `BẠO KÍCH! −${Math.round(myCp * 0.9 + 15)}`, 'good');
+          hitNum(host.current, target, `BẠO KÍCH! −${fmtCp(myCp * 0.9 + 15)}`, 'good');
         } else {
           play(i === 1 ? 'hit' : 'clash');
           sparks(mid(), { n: 30, spread: Math.PI * 2, dir: 0, g: 0.18 });
           knock(target, d);
-          hitNum(host.current, target, `−${Math.round(myCp * (0.3 + Math.random() * 0.4) + 3)}`, d > 0 ? 'good' : 'bad');
+          hitNum(host.current, target, `−${fmtCp(myCp * (0.3 + Math.random() * 0.4) + 3)}`, d > 0 ? 'good' : 'bad');
         }
       }]);
 
@@ -204,7 +204,7 @@ export function Clash({ s, ev, name, p, ok, onDone }) {
         // 3. Thi triển bạo kích nguyên tố theo hệ của Đấu Kỹ
         spawnElementalFx(activeSkill.elem, at(foe.current), mid(), host.current);
         knock(foe.current, 1);
-        hitNum(host.current, foe.current, `BẠO KÍCH! −${Math.round(myCp * (1.8 + Math.random() * 0.4) + 40)}`, 'good');
+        hitNum(host.current, foe.current, `BẠO KÍCH! −${fmtCp(myCp * (1.8 + Math.random() * 0.4) + 40)}`, 'good');
         animate(foe.current, { translateX: [0, 130], rotate: [0, 18], opacity: [1, 0.3], duration: 600, ease: 'outCubic' });
       } else {
         flash('#ea6a4e', 0.5, 500);
@@ -212,7 +212,7 @@ export function Clash({ s, ev, name, p, ok, onDone }) {
         burst(at(me.current), { n: 60, colors: PAL.red, speed: 9 });
         shake(host.current, 12);
         knock(me.current, -1);
-        hitNum(host.current, me.current, `−${Math.round(myCp * 1.4 + 25)}`, 'bad');
+        hitNum(host.current, me.current, `−${fmtCp(myCp * 1.4 + 25)}`, 'bad');
         animate(me.current, { translateX: [0, -120], rotate: [0, -18], opacity: [1, 0.35], duration: 600, ease: 'outCubic' });
       }
     }]);
@@ -246,7 +246,7 @@ export function Clash({ s, ev, name, p, ok, onDone }) {
       <div className="cl-side me" ref={me}>
         <Avatar s={s} size={150} beasts={false} still />
         <b>{s.name}</b>
-        <small className="num"><Ico i={UI_I.cp} size={13} /> {myCp}</small>
+        <small className="num"><Ico i={UI_I.cp} size={13} /> {fmtCp(myCp)}</small>
         <div className="cl-skill-tag" title={activeSkill.d}>
           <span className="cl-elem-dot" data-elem={activeSkill.elem} />
           <span>{activeSkill.n}</span>
